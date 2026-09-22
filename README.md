@@ -1,16 +1,82 @@
-# women_community_support
+# Women Community Support
 
-A new Flutter project.
+A Flutter mobile application developed as a Final Year Project.
 
-## Getting Started
+> **🚧 This project is still in progress.**
 
-This project is a starting point for a Flutter application.
+The app is being developed as an online community where women can share experiences, discuss different topics, and interact with other users. Users can also make posts anonymously.
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+* User registration and login
+* Google Sign-In
+* Anonymous posts
+* Create and view community posts
+* Comments and replies
+* Discussion categories:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+  * Health & Wellness
+  * Education
+  * Career Development
+  * Personal Safety
+* Post reporting / flagging
+* Custom onboarding screens
+* Light and dark theme support
+
+## Tech Stack
+
+* Flutter
+* Dart
+* Firebase Authentication
+* Cloud Firestore
+* Google Sign-In
+* Git / GitHub
+
+## Project Structure
+
+```text
+lib/
+├── core/
+│   └── theme/
+├── data/
+│   └── models/
+├── presentation/
+│   ├── providers/
+│   ├── screens/
+│   └── widgets/
+└── main.dart
+```
+
+The project uses a basic separation between models, providers, screens and reusable widgets.
+
+## Firebase Configuration
+
+The Firebase configuration files are not included in this public repository.
+
+```text
+android/app/google-services.json
+lib/firebase_options.dart
+```
+
+These files are kept locally and need to be configured separately when running the project.
+
+## Current Development
+
+This application is **still under development**. The current version is being worked on and may change as new features are added and existing features are improved.
+
+Current work includes:
+ 
+* Improving the UI
+* Working on authentication
+* Community posts and comments
+* Post reporting
+* Firebase integration
+* Testing and fixing bugs
+
+## Screenshots
+
+Screenshots and UI designs will be added as development continues.
+
+## Project
+
+This project is being developed as part of a Final Year Project using Flutter and Firebase.
