@@ -6,10 +6,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../widgets/brand_mark.dart';
+import '../../../core/utils/haptics.dart';
 import '../../widgets/content_width.dart';
+import '../../widgets/fade_slide_in.dart';
+import '../../widgets/looma_button.dart';
+import '../../widgets/looma_character.dart';
+import 'sign_in_hold.dart';
 
-/// Sign in / create account / continue as guest.
+/// Sign in / create account (email + password, or Google).
 /// After success, AuthGate swaps this screen for the app automatically.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.initialSignUp = false, this.onBack});
@@ -21,12 +25,16 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with EntranceOnce<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   late bool _isSignUp;
+
+  /// Which button shows the success tick (null = none).
+  _Method? _succeeded;
   String? _message;
   bool _messageIsError = true;
 
@@ -51,19 +59,35 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// Runs a sign-in / sign-up / reset action with a spinner and error text.
+  /// For [signIn] actions: on success the button shows a tick for 400 ms,
+  /// then AuthGate opens the app.
+  Future<void> _run(Future<void> Function() action, {_Method? signIn}) async {
     FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
       _message = null;
     });
+    // Keep this screen up after Firebase signs in, so the tick can show.
+    if (signIn != null) SignInHold.active.value = true;
     try {
       await action();
+      final signedIn = FirebaseAuth.instance.currentUser != null;
+      if (signIn != null && signedIn && mounted) {
+        AppHaptics.medium();
+        setState(() {
+          _isLoading = false;
+          _succeeded = signIn;
+        });
+        await Future<void>.delayed(SignInHold.tickDuration);
+      }
     } on FirebaseAuthException catch (error) {
       _setMessage(_authErrorMessage(error));
     } catch (_) {
       _setMessage('Something went wrong. Please try again.');
     } finally {
+      // Always let go, whatever happened, so nobody is stuck here.
+      if (signIn != null) SignInHold.active.value = false;
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -95,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         await auth.signInWithEmailAndPassword(email: email, password: password);
       }
-    });
+    }, signIn: _Method.email);
   }
 
   Future<void> _continueWithGoogle() async {
@@ -116,11 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: googleAuth.idToken,
       );
       await auth.signInWithCredential(credential);
-    });
-  }
-
-  Future<void> _continueAsGuest() async {
-    await _run(() => FirebaseAuth.instance.signInAnonymously());
+    }, signIn: _Method.google);
   }
 
   Future<void> _resetPassword() async {
@@ -173,180 +193,186 @@ class _LoginScreenState extends State<LoginScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: widget.onBack == null
-          ? null
-          : AppBar(
-              leading: IconButton(
-                onPressed: _isLoading ? null : widget.onBack,
-                tooltip: 'Back',
-                icon: const Icon(Icons.arrow_back),
+      appBar:
+          widget.onBack == null
+              ? null
+              : AppBar(
+                leading: IconButton(
+                  onPressed: _isLoading ? null : widget.onBack,
+                  tooltip: 'Back',
+                  icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                ),
+                shape: const Border(),
               ),
-              shape: const Border(),
-            ),
       body: SafeArea(
         child: ContentWidth(
           maxWidth: 440,
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.xl,
+              AppSpacing.screenHorizontal,
+              AppSpacing.sm,
+              AppSpacing.screenHorizontal,
               AppSpacing.xl,
             ),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: AutofillGroup(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Wordmark(),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    _isSignUp ? 'Create your account' : 'Welcome back',
-                    style: theme.textTheme.headlineMedium,
+                  entrance.character(
+                    const Center(child: LoomaCharacter(height: 150)),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    _isSignUp
-                        ? 'Your email is only used to sign in. It is never '
-                            'shown next to anything you write.'
-                        : 'Sign in to pick up where you left off.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  TextField(
-                    controller: _emailController,
-                    enabled: !_isLoading,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.email],
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Email address',
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  TextField(
-                    controller: _passwordController,
-                    enabled: !_isLoading,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _isLoading ? null : _continueWithEmail(),
-                    autofillHints: [
-                      _isSignUp
-                          ? AutofillHints.newPassword
-                          : AutofillHints.password,
-                    ],
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      helperText: _isSignUp ? 'At least 8 characters' : null,
-                      suffixIcon: IconButton(
-                        tooltip:
-                            _obscurePassword ? 'Show password' : 'Hide password',
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                        ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (!_isSignUp)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _isLoading ? null : _resetPassword,
-                        child: const Text('Forgot password?'),
-                      ),
-                    )
-                  else
+                  ...entrance.items([
                     const SizedBox(height: AppSpacing.lg),
-                  if (_message != null) ...[
-                    Semantics(
-                      liveRegion: true,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: _messageIsError
-                              ? palette.dangerSoft
-                              : palette.primarySoft,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.control),
+                    Text(
+                      _isSignUp ? 'Create your space' : 'Welcome back',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontSize: 32,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'We only use your email to sign you in. '
+                      'It is never shown to anyone.',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    TextField(
+                      controller: _emailController,
+                      enabled: !_isLoading,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
+                      autocorrect: false,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: _passwordController,
+                      enabled: !_isLoading,
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted:
+                          (_) => _isLoading ? null : _continueWithEmail(),
+                      autofillHints: [
+                        _isSignUp
+                            ? AutofillHints.newPassword
+                            : AutofillHints.password,
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        helperText: _isSignUp ? 'At least 8 characters' : null,
+                        suffixIcon: IconButton(
+                          tooltip:
+                              _obscurePassword
+                                  ? 'Show password'
+                                  : 'Hide password',
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed:
+                              () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                         ),
-                        child: Text(
-                          _message!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: _messageIsError
-                                ? palette.danger
-                                : palette.primary,
+                      ),
+                    ),
+                    if (!_isSignUp)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading ? null : _resetPassword,
+                          style: TextButton.styleFrom(
+                            foregroundColor: palette.textSecondary,
+                            textStyle: theme.textTheme.bodyMedium,
+                          ),
+                          child: const Text('Forgot password?'),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: AppSpacing.lg),
+                    if (_message != null) ...[
+                      Semantics(
+                        liveRegion: true,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color:
+                                _messageIsError
+                                    ? palette.dangerSoft
+                                    : palette.softFill,
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.control,
+                            ),
+                          ),
+                          child: Text(
+                            _message!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color:
+                                  _messageIsError
+                                      ? palette.danger
+                                      : palette.text,
+                            ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    LoomaButton.primary(
+                      label: 'Continue',
+                      loading: _isLoading,
+                      success: _succeeded == _Method.email,
+                      onPressed: _continueWithEmail,
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                  ],
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _isLoading ? null : _continueWithEmail,
-                      child: _isLoading
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: palette.onPrimary,
-                              ),
-                            )
-                          : Text(_isSignUp ? 'Create account' : 'Sign in'),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          child: Text('or', style: theme.textTheme.bodySmall),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
+                    const SizedBox(height: AppSpacing.lg),
+                    LoomaButton.outline(
+                      label: 'Continue with Google',
+                      success: _succeeded == _Method.google,
                       onPressed: _isLoading ? null : _continueWithGoogle,
-                      child: const Text('Continue with Google'),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () => setState(() {
-                                _isSignUp = !_isSignUp;
-                                _message = null;
-                              }),
-                      child: Text(
-                        _isSignUp
-                            ? 'Already have an account? Sign in'
-                            : 'New here? Create an account',
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'By continuing you agree to keep Looma kind and '
+                      'respectful. Looma is a space for women.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Center(
+                      child: TextButton(
+                        onPressed:
+                            _isLoading
+                                ? null
+                                : () => setState(() {
+                                  _isSignUp = !_isSignUp;
+                                  _message = null;
+                                }),
+                        child: Text(
+                          _isSignUp
+                              ? 'Already have an account? Sign in'
+                              : 'New to Looma? Create an account',
+                        ),
                       ),
                     ),
-                  ),
-                  const Divider(),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Just looking around?',
-                    style: theme.textTheme.labelLarge,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Use HerCircle as a guest without an email address. '
-                    'Guest posts are tied to this device, so signing out '
-                    'means you lose access to them.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  OutlinedButton(
-                    onPressed: _isLoading ? null : _continueAsGuest,
-                    child: const Text('Continue as guest'),
-                  ),
+                  ]),
                 ],
               ),
             ),
@@ -356,3 +382,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+/// How someone signed in, to put the success tick on the right button.
+enum _Method { email, google }

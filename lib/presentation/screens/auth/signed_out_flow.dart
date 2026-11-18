@@ -13,10 +13,16 @@ class SignedOutFlow extends StatefulWidget {
 }
 
 class _SignedOutFlowState extends State<SignedOutFlow> {
-  bool _showLogin = false;
+  /// Onboarding is shown once per app launch. After signing out, people go
+  /// straight to "Welcome back". (Remembering it across launches would need
+  /// local storage, which would mean adding a package.)
+  static bool _seenOnboarding = false;
+
+  late bool _showLogin = _seenOnboarding;
   bool _startInSignUp = false;
 
   void _openLogin({required bool signUp}) {
+    _seenOnboarding = true;
     setState(() {
       _showLogin = true;
       _startInSignUp = signUp;
