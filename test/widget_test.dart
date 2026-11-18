@@ -11,6 +11,8 @@ import 'package:women_community_support/core/utils/greeting.dart';
 import 'package:women_community_support/core/utils/time_format.dart';
 import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/models/user_profile.dart';
+import 'package:women_community_support/data/repositories/chat_repository.dart';
+import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/screens/auth/login_screen.dart';
 import 'package:women_community_support/presentation/screens/auth_gate.dart';
 import 'package:women_community_support/presentation/screens/membership/membership_flow.dart';
@@ -312,24 +314,67 @@ void main() {
   // ───────────────────────── AliasGenerator ─────────────────────────
 
   group('AliasGenerator', () {
+    final key = 'a' * 64;
+
     test('gives the same alias for the same person in the same thread', () {
-      final a = AliasGenerator.forThread(uid: 'user-1', postId: 'post-1');
-      final b = AliasGenerator.forThread(uid: 'user-1', postId: 'post-1');
+      final a = AliasGenerator.forThread(key: key, postId: 'post-1');
+      final b = AliasGenerator.forThread(key: key, postId: 'post-1');
       expect(a, b);
     });
 
+    test('is HMAC-SHA256 of the secret key (same on every platform)', () {
+      // Python: hmac.new(b'a'*64, b'post-1', hashlib.sha256), first 4 bytes.
+      expect(
+        AliasGenerator.forThread(key: key, postId: 'post-1'),
+        'Genuine Turtle',
+      );
+    });
+
     test('looks like "Adjective Noun"', () {
-      final alias = AliasGenerator.forThread(uid: 'user-1', postId: 'post-1');
+      final alias = AliasGenerator.forThread(key: key, postId: 'post-1');
       expect(alias, matches(RegExp(r'^[A-Z][a-z]+ [A-Z][a-z]+$')));
     });
 
     test('changes between threads so posts cannot be linked', () {
       final aliases = {
         for (var i = 0; i < 20; i++)
-          AliasGenerator.forThread(uid: 'user-1', postId: 'post-$i'),
+          AliasGenerator.forThread(key: key, postId: 'post-$i'),
       };
       // A collision now and then is fine; all 20 the same is not.
       expect(aliases.length, greaterThan(10));
+    });
+
+    test('depends on the secret key, not on anything public', () {
+      final mine = {
+        for (var i = 0; i < 20; i++)
+          AliasGenerator.forThread(key: key, postId: 'post-$i'),
+      };
+      final other = {
+        for (var i = 0; i < 20; i++)
+          AliasGenerator.forThread(key: 'b' * 64, postId: 'post-$i'),
+      };
+      expect(mine, isNot(equals(other)));
+    });
+
+    test('new keys are random 64-character hex strings', () {
+      final a = AliasGenerator.newKey();
+      final b = AliasGenerator.newKey();
+      expect(a, matches(AliasGenerator.keyPattern));
+      expect(b, matches(AliasGenerator.keyPattern));
+      expect(a, isNot(b));
+    });
+  });
+
+  group('reporter id', () {
+    test('is a one-way hash, different from the chat profile id', () {
+      // Python: hashlib.sha256(b'looma-report:amira').hexdigest()
+      final id = PostRepository.reporterIdFor('amira');
+      expect(
+        id,
+        '65fb23d3b2c7d9cab1a1547de319c70b9fc4bb809d0f9fbdd72f485583fbef56',
+      );
+      expect(id, isNot(contains('amira')));
+      expect(id, isNot(ChatRepository.chatIdFor('amira')));
     });
   });
 

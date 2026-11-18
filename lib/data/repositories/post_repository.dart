@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -16,6 +19,9 @@ import '../models/user_profile.dart';
 ///  * `posts/{id}` and `posts/{id}/comments/{id}` hold NO author id.
 ///  * `authors/{postId}` and `posts/{id}/commentAuthors/{commentId}` hold the
 ///    author id, and security rules let ONLY that author read them.
+///  * Aliases come from a secret key only she can read (users/{uid}.aliasKey),
+///    never from the uid alone.
+///  * Reports store a one-way hash of the reporter's uid, not the uid.
 class PostRepository {
   PostRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
     : _db = firestore ?? FirebaseFirestore.instance,
@@ -38,6 +44,12 @@ class PostRepository {
       _db.collection('posts').doc(id);
 
   // ───────────────────────── Account & profile ─────────────────────────
+
+  /// sha256('looma-report:' + uid): who reported, without revealing the uid.
+  /// firestore.rules (`reporterIdOf`) computes the same value. A different
+  /// salt from chat profiles, so the two ids cannot be matched up.
+  static String reporterIdFor(String uid) =>
+      sha256.convert(utf8.encode('looma-report:$uid')).toString();
 
   DocumentReference<Map<String, dynamic>> _me() =>
       _db.collection('users').doc(_requireUid());
@@ -125,6 +137,17 @@ class PostRepository {
     }
   }
 
+  /// How long until the account can be deleted. The rules refuse deleting
+  /// users/{uid} within 60 seconds of a post (so deleting it cannot be used
+  /// to dodge the 1-post-per-minute limit). 5 seconds extra for clock drift.
+  Future<Duration> waitBeforeAccountDeletion() async {
+    final last = (await _me().get()).data()?['lastPostAt'];
+    if (last is! Timestamp) return Duration.zero;
+    final ready = last.toDate().add(const Duration(seconds: 65));
+    final left = ready.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
   /// Deletes everything she wrote or saved, then her private profile.
   /// Call [reauthenticate] first and [deleteLogin] after.
   ///
@@ -206,6 +229,77 @@ class PostRepository {
     await signOut();
   }
 
+  // ───────────────────────── Secret alias key ─────────────────────────
+
+  String? _keyUid;
+  String? _aliasKey;
+
+  /// Her alias per discussion, once known (cleared when the user changes).
+  final Map<String, String> _threadAliases = {};
+
+  /// Her secret alias key, created the first time it is needed.
+  Future<String> _myAliasKey() async {
+    final uid = _requireUid();
+    if (_keyUid != uid) {
+      _keyUid = uid;
+      _aliasKey = null;
+      _threadAliases.clear();
+    }
+    if (_aliasKey != null) return _aliasKey!;
+
+    var key = (await _me().get()).data()?['aliasKey'] as String?;
+    if (key == null) {
+      final fresh = AliasGenerator.newKey();
+      try {
+        // The rules allow setting it once only.
+        await _me().set({'aliasKey': fresh}, SetOptions(merge: true));
+        key = fresh;
+      } on FirebaseException {
+        // Another phone of hers set it first: use that one.
+        key = (await _me().get()).data()?['aliasKey'] as String?;
+        if (key == null) rethrow;
+      }
+    }
+    return _aliasKey = key;
+  }
+
+  /// The alias she has (or will have) in this discussion.
+  ///
+  /// If she already wrote here (her post or an earlier reply), the alias
+  /// stored there is reused, so threads from before the secret key keep one
+  /// name per person. Otherwise it comes from her secret key.
+  Future<String> myAliasFor(String postId) async {
+    final key = await _myAliasKey();
+    final known = _threadAliases[postId];
+    if (known != null) return known;
+
+    String? alias;
+    if (await isMyPost(postId)) {
+      alias = (await _post(postId).get()).data()?['alias'] as String?;
+    }
+    if (alias == null) {
+      try {
+        final mine =
+            await _post(postId)
+                .collection('commentAuthors')
+                .where('authorId', isEqualTo: _requireUid())
+                .limit(1)
+                .get();
+        if (mine.docs.isNotEmpty) {
+          final comment =
+              await _post(
+                postId,
+              ).collection('comments').doc(mine.docs.first.id).get();
+          alias = comment.data()?['alias'] as String?;
+        }
+      } on FirebaseException {
+        // Fall back to the key below.
+      }
+    }
+    alias ??= AliasGenerator.forThread(key: key, postId: postId);
+    return _threadAliases[postId] = alias;
+  }
+
   // ───────────────────────── Feed & posts ─────────────────────────
 
   /// Newest posts first. Hidden/removed posts are filtered out here.
@@ -233,10 +327,6 @@ class PostRepository {
   /// The signed-in person's id, or null when signed out.
   String? get myUid => _auth.currentUser?.uid;
 
-  /// The alias the signed-in person has (or will have) in this discussion.
-  String myAliasFor(String postId) =>
-      AliasGenerator.forThread(uid: _requireUid(), postId: postId);
-
   /// Creates a post and returns the alias the author will use in that thread.
   Future<String> createPost({
     required String categoryId,
@@ -245,7 +335,10 @@ class PostRepository {
   }) async {
     final uid = _requireUid();
     final postRef = _db.collection('posts').doc();
-    final alias = AliasGenerator.forThread(uid: uid, postId: postRef.id);
+    final alias = AliasGenerator.forThread(
+      key: await _myAliasKey(),
+      postId: postRef.id,
+    );
 
     final batch = _db.batch();
     batch.set(postRef, {
@@ -270,6 +363,7 @@ class PostRepository {
     }, SetOptions(merge: true));
     await batch.commit();
 
+    _threadAliases[postRef.id] = alias;
     return alias;
   }
 
@@ -357,7 +451,7 @@ class PostRepository {
     String? parentCommentId,
   }) async {
     final uid = _requireUid();
-    final alias = AliasGenerator.forThread(uid: uid, postId: postId);
+    final alias = await myAliasFor(postId);
     final commentRef = _post(postId).collection('comments').doc();
 
     final batch = _db.batch();
@@ -405,10 +499,10 @@ class PostRepository {
   // ───────────────────────── Reports ─────────────────────────
 
   Future<bool> hasReported(String postId) async {
-    final uid = _requireUid();
+    final reporter = reporterIdFor(_requireUid());
     try {
       final snapshot =
-          await _db.collection('reports').doc('${postId}_$uid').get();
+          await _db.collection('reports').doc('${postId}_$reporter').get();
       return snapshot.exists;
     } on FirebaseException {
       return false;
@@ -418,16 +512,16 @@ class PostRepository {
   /// One report per person per post (the document id enforces it).
   /// The third report from different people hides the post automatically.
   Future<void> reportPost({required Post post, required String reason}) async {
-    final uid = _requireUid();
+    final reporter = reporterIdFor(_requireUid());
     final newCount = post.flagCount + 1;
     final shouldHide = newCount >= 3 && post.status == 'visible';
 
     final batch = _db.batch();
-    batch.set(_db.collection('reports').doc('${post.id}_$uid'), {
+    batch.set(_db.collection('reports').doc('${post.id}_$reporter'), {
       'postId': post.id,
       'postTitle': post.title,
       'reason': reason,
-      'reporterId': uid,
+      'reporterId': reporter,
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'open',
     });
@@ -440,10 +534,10 @@ class PostRepository {
 
   /// Reports I made, so I can see what happened to them.
   Stream<List<Report>> watchMyReports() {
-    final uid = _requireUid();
+    final reporter = reporterIdFor(_requireUid());
     return _db
         .collection('reports')
-        .where('reporterId', isEqualTo: uid)
+        .where('reporterId', isEqualTo: reporter)
         .snapshots()
         .map((snapshot) {
           final reports = snapshot.docs.map(Report.fromFirestore).toList();

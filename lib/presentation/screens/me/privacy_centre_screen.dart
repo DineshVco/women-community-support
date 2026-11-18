@@ -65,6 +65,26 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
+    // Rules: no deleting within a minute of posting (stops the post limit
+    // being dodged by deleting and re-creating the account record).
+    try {
+      final wait = await posts.waitBeforeAccountDeletion();
+      if (wait > Duration.zero) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'You posted less than a minute ago. Please wait '
+              '${wait.inSeconds + 1} seconds, then try again.',
+            ),
+          ),
+        );
+        return;
+      }
+    } catch (_) {
+      // Could not check (offline?): the delete below will say so.
+    }
+    if (!mounted) return;
+
     final confirmed = await showConfirmDialog(
       context,
       title: 'Delete your account?',

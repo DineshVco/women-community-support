@@ -58,6 +58,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final _replyFocus = FocusNode();
 
   bool _isMine = false;
+
+  /// Her alias in this discussion, for "Reply as …" (null while loading).
+  String? _myAlias;
   bool _sending = false;
   bool _meTooBusy = false;
   bool _deleting = false;
@@ -77,6 +80,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _commentsStream = _repo.watchComments(widget.postId);
     _meTooStream = _repo.watchMeToo(widget.postId);
     _savedStream = _repo.watchSaved(widget.postId);
+
+    _repo
+        .myAliasFor(widget.postId)
+        .then((alias) {
+          if (mounted) setState(() => _myAlias = alias);
+        })
+        .catchError((Object _) {});
 
     _repo.isMyPost(widget.postId).then((mine) {
       if (mounted) setState(() => _isMine = mine);
@@ -359,7 +369,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             sending: _sending,
             replyingToAlias: _replyingTo?.alias,
             onCancelReply: _cancelReply,
-            hintText: 'Reply as ${_repo.myAliasFor(widget.postId)}',
+            hintText: _myAlias == null ? 'Write a reply' : 'Reply as $_myAlias',
           ),
       ],
     );
