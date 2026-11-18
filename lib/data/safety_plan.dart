@@ -1,8 +1,5 @@
-import 'dart:convert';
-
-import 'package:cryptography/cryptography.dart';
-
 import '../core/security/secure_store.dart';
+import 'encrypted_box.dart';
 
 /// Someone she can contact.
 class SafeContact {
@@ -88,56 +85,26 @@ class SafetyPlan {
 }
 
 /// Saves the safety plan encrypted (AES-256-GCM) in secure storage on this
-/// phone. The key is random and also kept in secure storage. Nothing is
-/// ever sent to Firestore or any server, and it is not included in backups
-/// (iOS: "this device only" Keychain items; Android: app backup is off).
-/// If she loses the phone, the plan is gone too.
+/// phone (see [EncryptedBox]). Nothing is ever sent to Firestore or any
+/// server, and it is not included in backups. If she loses the phone, the
+/// plan is gone too.
 class SafetyPlanStore {
-  SafetyPlanStore(this._store);
+  SafetyPlanStore(SecureStore store)
+    : _box = EncryptedBox(store, keyName: keyKey, dataName: dataKey);
 
-  final SecureStore _store;
-  final AesGcm _cipher = AesGcm.with256bits();
+  final EncryptedBox _box;
 
   static const String keyKey = 'looma.plan.key';
   static const String dataKey = 'looma.plan.data';
 
-  Future<SecretKey> _key({required bool create}) async {
-    final saved = await _store.read(keyKey);
-    if (saved != null) return SecretKey(base64Decode(saved));
-    if (!create) throw StateError('No key yet.');
-    final key = await _cipher.newSecretKey();
-    await _store.write(keyKey, base64Encode(await key.extractBytes()));
-    return key;
-  }
-
   Future<SafetyPlan> load() async {
-    final data = await _store.read(dataKey);
-    if (data == null) return const SafetyPlan();
-    final box = SecretBox.fromConcatenation(
-      base64Decode(data),
-      nonceLength: _cipher.nonceLength,
-      macLength: _cipher.macAlgorithm.macLength,
-    );
-    final clear = await _cipher.decrypt(
-      box,
-      secretKey: await _key(create: false),
-    );
-    return SafetyPlan.fromJson(
-      jsonDecode(utf8.decode(clear)) as Map<String, dynamic>,
-    );
+    final json = await _box.read();
+    if (json == null) return const SafetyPlan();
+    return SafetyPlan.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<void> save(SafetyPlan plan) async {
-    final box = await _cipher.encrypt(
-      utf8.encode(jsonEncode(plan.toJson())),
-      secretKey: await _key(create: true),
-    );
-    await _store.write(dataKey, base64Encode(box.concatenation()));
-  }
+  Future<void> save(SafetyPlan plan) => _box.write(plan.toJson());
 
   /// "Clear my plan": deletes the plan and its key.
-  Future<void> clear() async {
-    await _store.delete(dataKey);
-    await _store.delete(keyKey);
-  }
+  Future<void> clear() => _box.clear();
 }

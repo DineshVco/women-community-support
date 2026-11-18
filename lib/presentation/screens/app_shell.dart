@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptics.dart';
 import '../widgets/ios.dart';
-import 'help_screen.dart';
+import 'care/care_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 
-/// The signed-in app: three tabs under an iOS-style tab bar that is
-/// translucent and blurred (content scrolls under it).
+/// The signed-in app: Discuss, Care and Me under an iOS-style tab bar that
+/// is translucent and blurred (content scrolls under it). Connect joins
+/// between Discuss and Care once it exists. "Get help" lives in Care.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -26,7 +27,7 @@ class _AppShellState extends State<AppShell> {
 
   static const List<Widget> _tabs = [
     HomeScreen(),
-    HelpScreen(),
+    CareScreen(),
     ProfileScreen(),
   ];
 
@@ -67,7 +68,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.heart),
             activeIcon: Icon(CupertinoIcons.heart_fill),
-            label: 'Get help',
+            label: 'Care',
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.person_crop_circle),

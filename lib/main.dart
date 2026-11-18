@@ -8,6 +8,8 @@ import 'core/security/app_lock.dart';
 import 'core/security/secure_store.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/chat_repository.dart';
+import 'data/journal.dart';
+import 'data/mood.dart';
 import 'data/repositories/post_repository.dart';
 import 'data/safety_plan.dart';
 import 'firebase_options.dart';
@@ -42,6 +44,8 @@ Future<void> main() async {
   final appLock = AppLock(secureStore);
   await appLock.load();
   final safetyPlan = SafetyPlanStore(secureStore);
+  final moodLog = MoodStore(secureStore);
+  final journal = JournalStore(secureStore);
 
   runApp(
     MultiProvider(
@@ -52,6 +56,8 @@ Future<void> main() async {
         Provider<PostRepository>(create: (_) => PostRepository()),
         Provider<ChatRepository>(create: (_) => ChatRepository()),
         Provider<SafetyPlanStore>.value(value: safetyPlan),
+        Provider<MoodStore>.value(value: moodLog),
+        Provider<JournalStore>.value(value: journal),
       ],
       child: LoomaApp(appLock: appLock),
     ),
@@ -66,13 +72,18 @@ class LoomaApp extends StatelessWidget {
   /// Lets "Forgot PIN" (shown above every screen) go back to the start.
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 
-  /// "Forgot PIN": sign out, delete the safety plan (only the PIN protected
-  /// it), then remove the lock. Her data on the server stays.
+  /// "Forgot PIN": sign out, delete the safety plan and the journal (only
+  /// the PIN protected them), then remove the lock. Her data on the server
+  /// stays.
   Future<void> _forgotPin(BuildContext context) async {
     final posts = context.read<PostRepository>();
     final plan = context.read<SafetyPlanStore>();
+    final journal = context.read<JournalStore>();
     try {
       await plan.clear();
+    } catch (_) {}
+    try {
+      await journal.clear();
     } catch (_) {}
     try {
       await posts.signOut();

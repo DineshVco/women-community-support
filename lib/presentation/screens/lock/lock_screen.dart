@@ -402,9 +402,9 @@ class _ForgotPanel extends StatelessWidget {
 
   static const String text =
       'You will be signed out and App lock will be turned off. Your safety '
-      'plan on this phone will be deleted, because only your PIN protected '
-      'it.\n\nYour posts, replies and chat profile stay on the server. Sign '
-      'in again with your email or Google to get back to them.';
+      'plan and journal on this phone will be deleted, because only your PIN '
+      'protected them.\n\nYour posts, replies and chat profile stay on the '
+      'server. Sign in again with your email or Google to get back to them.';
 
   @override
   Widget build(BuildContext context) {

@@ -99,15 +99,15 @@ class HelpScreen extends StatelessWidget {
                 children: entrance.items([
                   const _Header(),
                   const SizedBox(height: AppSpacing.xl),
-                  const _EmergencyCard(),
+                  const EmergencyCard(),
                   const SizedBox(height: AppSpacing.xl),
                   for (final group in Helplines.groups) ...[
-                    _GroupSection(group: group),
+                    HelplineGroupSection(group: group),
                     const SizedBox(height: AppSpacing.xl),
                   ],
-                  const _SafeWaysCard(),
+                  const SafeWaysCard(),
                   const SizedBox(height: AppSpacing.lg),
-                  const _QuickExitCard(),
+                  const QuickExitCard(),
                 ]),
               ),
             ),
@@ -161,8 +161,8 @@ class _Header extends StatelessWidget {
 }
 
 /// Soft blush-white card with a thin danger-coloured left edge.
-class _EmergencyCard extends StatelessWidget {
-  const _EmergencyCard();
+class EmergencyCard extends StatelessWidget {
+  const EmergencyCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -229,8 +229,8 @@ class _EmergencyCard extends StatelessWidget {
   }
 }
 
-class _GroupSection extends StatelessWidget {
-  const _GroupSection({required this.group});
+class HelplineGroupSection extends StatelessWidget {
+  const HelplineGroupSection({super.key, required this.group});
 
   final HelplineGroup group;
 
@@ -362,8 +362,8 @@ class _HelplineRow extends StatelessWidget {
   }
 }
 
-class _SafeWaysCard extends StatelessWidget {
-  const _SafeWaysCard();
+class SafeWaysCard extends StatelessWidget {
+  const SafeWaysCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -397,8 +397,8 @@ class _SafeWaysCard extends StatelessWidget {
   }
 }
 
-class _QuickExitCard extends StatelessWidget {
-  const _QuickExitCard();
+class QuickExitCard extends StatelessWidget {
+  const QuickExitCard({super.key});
 
   @override
   Widget build(BuildContext context) {
