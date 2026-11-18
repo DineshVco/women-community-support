@@ -1,0 +1,6 @@
+node_modules/
+# Never commit Firebase private keys.
+service-account*.json
+*-firebase-adminsdk-*.json
+firebase-debug.log
+firestore-debug.log

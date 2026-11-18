@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// HerCircle security rules.
+// Looma security rules.
 //
 // Privacy model
 //  * Posts and comments contain NO author id.
@@ -19,8 +19,22 @@ service cloud.firestore {
 
     // ───────────── helpers ─────────────
 
+    // A real account (email/password or Google). Anonymous "guest" logins
+    // are refused everywhere, even if Anonymous sign-in is left switched on
+    // in the Firebase console.
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Finished Looma sign-up: confirmed "I am a woman" and passed the age
+    // step. Both are self-declared in the app; the rules can only check that
+    // the steps were completed, not that the answers are true.
+    function isWomanMember() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.get('isWoman', false) == true
+        && get(userPath(request.auth.uid)).data.get('birthYear', 0) > 0;
     }
 
     function isModerator() {
@@ -49,7 +63,9 @@ service cloud.firestore {
 
     // One post per minute per person.
     function postRateOk() {
+      // (The same document is read several times; Firestore counts it once.)
       return !exists(userPath(request.auth.uid)) ||
+        !('lastPostAt' in get(userPath(request.auth.uid)).data) ||
         request.time >
           get(userPath(request.auth.uid)).data.lastPostAt + duration.value(60, 's');
     }
@@ -115,7 +131,7 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow read: if signedIn();
-      allow create: if signedIn() && validNewPost(postId);
+      allow create: if isWomanMember() && validNewPost(postId);
       allow update: if signedIn() && (
         isReportUpdate(postId) ||
         isMeTooUpdate(postId) ||
@@ -128,7 +144,7 @@ service cloud.firestore {
 
       match /comments/{commentId} {
         allow read: if signedIn();
-        allow create: if signedIn()
+        allow create: if isWomanMember()
           && request.resource.data.keys().hasOnly(
                ['alias', 'content', 'timestamp', 'parentCommentId'])
           && request.resource.data.keys().hasAll(
@@ -188,14 +204,55 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // ───────────── per-user bookkeeping ─────────────
+    // ───────────── private profile + bookkeeping ─────────────
+    //
+    // users/{uid} holds: lastPostAt (rate limit), isWoman (women-only
+    // self-confirmation), birthYear (the YEAR only, after the age check) and
+    // createdAt. Only the owner can read, create or update it; nobody else
+    // can, and nobody can delete it from the app. isWoman can only ever be set to true, and
+    // birthYear is set once and never changed.
+    // NOTE: the app checks the exact age; the rules can only check the year.
+    // Keep 18 here in step with Membership.minimumAge in the app.
+
+    function userKeysChanged() {
+      return resource == null
+        ? request.resource.data.keys().toSet()
+        : request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function validUserDoc() {
+      let d = request.resource.data;
+      let changed = userKeysChanged();
+      return d.keys().hasOnly(['lastPostAt', 'isWoman', 'birthYear', 'createdAt'])
+        && (!changed.hasAny(['lastPostAt']) || d.lastPostAt == request.time)
+        // createdAt: server time, set once, never changed.
+        && (!changed.hasAny(['createdAt']) || (
+             (resource == null || !('createdAt' in resource.data))
+             && d.createdAt == request.time))
+        && (!changed.hasAny(['isWoman']) || d.isWoman == true)
+        && (!changed.hasAny(['birthYear']) || (
+             (resource == null || !('birthYear' in resource.data))
+             && d.get('isWoman', false) == true
+             && d.birthYear is int
+             && d.birthYear >= 1900
+             && d.birthYear <= request.time.year() - 18));
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['lastPostAt'])
-        && request.resource.data.lastPostAt == request.time;
-      allow delete: if false;
+        && validUserDoc();
+      // Only as part of "Delete my account and data".
+      allow delete: if signedIn() && request.auth.uid == uid;
+
+      // Saved posts: a private bookmark list. Only she can see it.
+      match /saved/{postId} {
+        allow read, delete: if signedIn() && request.auth.uid == uid;
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+      }
     }
 
     // ───────────── reports ─────────────
@@ -228,6 +285,101 @@ service cloud.firestore {
         && request.resource.data.status in ['dismissed', 'removed']
         && request.resource.data.reviewedAt == request.time;
       allow delete: if false;
+    }
+
+    // ───────────── my replies, for "Delete my account and data" ─────────────
+    // A collection-group query (`commentAuthors` where authorId == me) finds
+    // every reply she wrote. She can only ever read her own.
+
+    match /{path=**}/commentAuthors/{commentId} {
+      allow read: if signedIn() && resource.data.authorId == request.auth.uid;
+    }
+
+    // ───────────── Looma Connect: chat profiles ─────────────
+    //
+    // chatProfiles/{chatId}: alias, avatar, bio, interests, lookingFor, open.
+    //
+    // The document id is NOT the uid. It is sha256('looma-chat:' + uid) in
+    // hex. Why: post aliases are computed from the uid, so anyone who knew a
+    // uid could find that person's posts. A one-way hash lets the rules
+    // check ownership without ever showing the uid to other members.
+    // (ChatRepository.chatIdFor in the app computes the same value.)
+    //
+    // Other women members can read a profile only while open == true, and
+    // must query with where('open', '==', true). Only the owner can write or
+    // delete it.
+
+    function chatIdOf(uid) {
+      return hashing.sha256('looma-chat:' + uid).toHexString().lower();
+    }
+
+    function isMyChatProfile(chatId) {
+      return signedIn() && chatId == chatIdOf(request.auth.uid);
+    }
+
+    // Links, web addresses, emails, @handles, phone numbers (9+ digits).
+    // Same patterns as ContactFilter in the app.
+    function noContact(text) {
+      return !text.matches('(?i).*(https?://|www[.]).*')
+        && !text.matches('(?i).*[a-z0-9-]+[.](com|net|org|my|io|me|co|app|ly|gg|xyz|info|biz)([^a-z].*)?')
+        && !text.matches('.*@[A-Za-z0-9_].*')
+        && !text.matches('.*([0-9][ ()+.-]*){9,}.*');
+    }
+
+    // 24 hours since sign-up before "Open to chat" can be on.
+    function accountOldEnough() {
+      let user = get(userPath(request.auth.uid)).data;
+      return 'createdAt' in user
+        && request.time >= user.createdAt + duration.value(24, 'h');
+    }
+
+    function validChatProfile() {
+      let d = request.resource.data;
+      let fields = ['alias', 'avatarId', 'bio', 'interests', 'lookingFor',
+                    'open', 'createdAt', 'updatedAt'];
+      return d.keys().hasOnly(fields) && d.keys().hasAll(fields)
+        && d.alias is string
+        && d.alias.matches('[A-Za-z0-9 _.-]{3,20}')
+        && !d.alias.matches('.*[0-9]{7,}.*')
+        && noContact(d.alias)
+        && d.avatarId in ['cat_01', 'cat_02', 'cat_03', 'cat_04', 'cat_05',
+                          'cat_06', 'cat_07', 'cat_08', 'cat_09', 'cat_10',
+                          'cat_11', 'cat_12']
+        && d.bio is string && d.bio.size() <= 120 && noContact(d.bio)
+        && d.interests is list && d.interests.size() <= 5
+        && d.interests.toSet().size() == d.interests.size()
+        && d.interests.hasOnly(['health', 'study', 'career', 'safety',
+                                'family', 'money', 'friendship',
+                                'mental_wellbeing', 'new_in_town', 'hobbies'])
+        && d.lookingFor is list && d.lookingFor.size() <= 2
+        && d.lookingFor.toSet().size() == d.lookingFor.size()
+        && d.lookingFor.hasOnly(['talk', 'study_buddy', 'career_advice',
+                                 'friends'])
+        && d.open is bool
+        && (d.open == false || accountOldEnough())
+        && d.updatedAt == request.time
+        && (resource == null
+              ? d.createdAt == request.time
+              : d.createdAt == resource.data.createdAt);
+    }
+
+    match /chatProfiles/{chatId} {
+      allow read: if isMyChatProfile(chatId)
+        || (isWomanMember() && resource.data.open == true);
+      allow create, update: if isWomanMember() && isMyChatProfile(chatId)
+        && validChatProfile();
+      // Turning "Open to chat" off is an update. Deleting happens only when
+      // she deletes her account.
+      allow delete: if isMyChatProfile(chatId);
+    }
+
+    // ───────────── badges (set by an admin script only) ─────────────
+    // badges/{uid}: { foundingMember: true } for the first 50 accounts.
+    // Written with the Admin SDK (tool/founding-members.mjs), never the app.
+
+    match /badges/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // ───────────── moderators (read your own, never write) ─────────────

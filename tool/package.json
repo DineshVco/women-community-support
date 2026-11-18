@@ -1,0 +1,16 @@
+{
+  "name": "looma-tools",
+  "private": true,
+  "description": "Developer tools for Looma: Firestore rules tests and the demo-content seed script. Not part of the app. firebase-tools is pinned to 13.x here because it runs on Java 17; the global CLI (15.x) needs Java 21.",
+  "type": "module",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --project demo-looma --only firestore --config ../firebase.json \"node --test rules.test.mjs\"",
+    "seed": "node seed.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0",
+    "firebase-admin": "^13.0.0",
+    "firebase-tools": "13.35.1"
+  }
+}
