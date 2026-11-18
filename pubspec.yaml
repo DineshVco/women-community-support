@@ -89,6 +89,7 @@ flutter:
     # Looma Care content (offline). guides.json holds the journal prompts
     # now and the guides library later.
     - content/guides.json
+    - content/directory.json
     # Caveat (handwriting), bundled so google_fonts never downloads it at
     # runtime. Used only for the onboarding line and the Home greeting.
     - assets/google_fonts/Caveat-Regular.ttf

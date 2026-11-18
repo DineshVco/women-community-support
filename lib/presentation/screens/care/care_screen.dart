@@ -15,7 +15,9 @@ import '../help_screen.dart';
 import '../me/app_lock_settings_screen.dart';
 import '../me/safety_plan_screen.dart';
 import 'breathe_screen.dart';
+import 'directory_screen.dart';
 import 'ground_screen.dart';
+import 'guides_screen.dart';
 import 'journal_screen.dart';
 import 'mood_screen.dart';
 
@@ -31,8 +33,8 @@ Future<void> openJournal(BuildContext context) async {
   ).push(MaterialPageRoute<void>(builder: (_) => const JournalScreen()));
 }
 
-/// The Care tab: calm tools that work offline, the help lines, and (soon)
-/// the guides library. "Get help" now lives here.
+/// The Care tab: calm tools that work offline, the help lines, the guides
+/// library and the directory. "Get help" now lives here.
 class CareScreen extends StatelessWidget {
   const CareScreen({super.key});
 
@@ -156,15 +158,20 @@ class CareScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xl),
 
                 // ───────── 4. Guides ─────────
-                const GroupedSection(
+                GroupedSection(
                   header: 'Guides',
                   children: [
                     GroupedRow(
                       icon: CupertinoIcons.book_circle,
                       title: 'Guides library',
-                      subtitle:
-                          'Short, kind guides. Coming in the next update.',
-                      enabled: false,
+                      subtitle: 'Short, kind guides you can read offline',
+                      onTap: () => _push(context, const GuidesScreen()),
+                    ),
+                    GroupedRow(
+                      icon: CupertinoIcons.phone_circle,
+                      title: 'Directory',
+                      subtitle: 'Organisations and help lines',
+                      onTap: () => _push(context, const DirectoryScreen()),
                     ),
                   ],
                 ),

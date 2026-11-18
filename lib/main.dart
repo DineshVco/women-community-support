@@ -8,6 +8,7 @@ import 'core/security/app_lock.dart';
 import 'core/security/secure_store.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/chat_repository.dart';
+import 'data/content_library.dart';
 import 'data/journal.dart';
 import 'data/local_private_data.dart';
 import 'data/mood.dart';
@@ -47,6 +48,7 @@ Future<void> main() async {
   final safetyPlan = SafetyPlanStore(secureStore);
   final moodLog = MoodStore(secureStore);
   final journal = JournalStore(secureStore);
+  final guideBookmarks = GuideBookmarks(secureStore);
 
   runApp(
     MultiProvider(
@@ -64,8 +66,10 @@ Future<void> main() async {
             moodLog: moodLog,
             journal: journal,
             safetyPlan: safetyPlan,
+            guideBookmarks: guideBookmarks,
           ),
         ),
+        Provider<GuideBookmarks>.value(value: guideBookmarks),
       ],
       child: LoomaApp(appLock: appLock),
     ),

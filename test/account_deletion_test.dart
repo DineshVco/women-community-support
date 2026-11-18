@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:women_community_support/core/security/secure_store.dart';
+import 'package:women_community_support/data/content_library.dart';
 import 'package:women_community_support/data/journal.dart';
 import 'package:women_community_support/data/local_private_data.dart';
 import 'package:women_community_support/data/mood.dart';
@@ -32,13 +33,20 @@ Future<LocalPrivateData> _filled(MemorySecureStore secure) async {
       codeWord: 'pineapple',
     ),
   );
-  return LocalPrivateData(moodLog: mood, journal: journal, safetyPlan: plan);
+  final bookmarks = GuideBookmarks(secure);
+  await bookmarks.toggle('low-mood');
+  return LocalPrivateData(
+    moodLog: mood,
+    journal: journal,
+    safetyPlan: plan,
+    guideBookmarks: bookmarks,
+  );
 }
 
 void main() {
   group('Delete my account and data', () {
     test(
-      'also deletes the mood log, journal and safety plan',
+      'also deletes the mood log, journal, safety plan and bookmarks',
       () async {
         final secure = MemorySecureStore();
         final local = await _filled(secure);
@@ -51,7 +59,8 @@ void main() {
         expect(await local.moodLog.load(), isEmpty);
         expect(await local.journal.load(), isEmpty);
         expect((await local.safetyPlan.load()).isEmpty, isTrue);
-        },
+        expect(await local.guideBookmarks!.load(), isEmpty);
+      },
     );
 
     test('keeps going if one part cannot be deleted', () async {
