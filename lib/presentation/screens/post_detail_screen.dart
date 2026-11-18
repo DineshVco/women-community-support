@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +11,6 @@ import '../../core/utils/haptics.dart';
 import '../../core/utils/time_format.dart';
 import '../../data/models/comment.dart';
 import '../../data/models/post.dart';
-import '../../data/models/report.dart';
 import '../../data/repositories/post_repository.dart';
 import '../providers/app_settings.dart';
 import '../widgets/adaptive.dart';
@@ -19,9 +19,11 @@ import '../widgets/comment_composer.dart';
 import '../widgets/comment_tile.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/post_actions.dart';
 import '../widgets/post_title_hero.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
+import '../widgets/ios.dart';
 
 /// One discussion: the post, "Me too", replies (one level deep) and the
 /// reply box. Everything updates live.
@@ -172,43 +174,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   // ───────────────────────── Report ─────────────────────────
 
-  Future<void> _report(Post post) async {
-    if (await _repo.hasReported(post.id)) {
-      if (mounted) {
-        _showMessage(
-          'You already reported this post. You can see what '
-          'happened to it under Me.',
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-
-    final reason = await showOptionsSheet<String>(
-      context,
-      title: 'Report this post',
-      message:
-          'Your report is private. The author is not told who reported it.',
-      options: [
-        for (final reason in ReportReasons.all)
-          SheetOption(value: reason, label: reason),
-      ],
-    );
-    if (reason == null || !mounted) return;
-
-    try {
-      await _repo.reportPost(post: post, reason: reason);
-      AppHaptics.medium();
-      if (mounted) {
-        _showMessage(
-          'Thank you. A moderator will review it. You can follow '
-          'the outcome under Me.',
-        );
-      }
-    } catch (_) {
-      if (mounted) _showMessage('Could not send the report. Please try again.');
-    }
-  }
+  /// Same report flow as the long-press menu in the feed.
+  Future<void> _report(Post post) => PostActions.report(context, post);
 
   // ───────────────────────── Delete ─────────────────────────
 
@@ -283,14 +250,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            actions: [
-              const QuickExitButton(),
-              if (post != null && post.isVisible && !_deleting)
-                _buildSaveButton(),
-              if (post != null && !_deleting) _buildMenu(post),
-              const SizedBox(width: AppSpacing.xs),
-            ],
+          appBar: loomaNavBar(
+            context,
+            trailing: NavBarActions(
+              children: [
+                if (post != null && post.isVisible && !_deleting)
+                  _buildSaveButton(),
+                if (post != null && !_deleting) _buildMenu(post),
+                const QuickExitButton(),
+              ],
+            ),
           ),
           body: SafeArea(top: false, child: body),
         );
@@ -298,44 +267,41 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  /// "..." in the bar: an iOS action sheet (Report, or Delete for her own
+  /// post, in red).
   Widget _buildMenu(Post post) {
     final canReport = !_isMine && post.isVisible;
     if (!canReport && !_isMine) return const SizedBox.shrink();
 
-    return PopupMenuButton<String>(
-      tooltip: 'More options',
-      icon: const Icon(Icons.more_horiz),
-      onSelected: (value) {
-        if (value == 'report') _report(post);
-        if (value == 'delete') _confirmDelete();
-      },
-      itemBuilder:
-          (_) => [
-            if (canReport)
-              const PopupMenuItem(
-                value: 'report',
-                child: ListTile(
-                  leading: Icon(Icons.flag_outlined),
-                  title: Text('Report post'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minSize: 44,
+      onPressed: () async {
+        AppHaptics.light();
+        final choice = await showOptionsSheet<String>(
+          context,
+          title: 'This post',
+          options: [
+            if (canReport) const SheetOption(value: 'report', label: 'Report'),
             if (_isMine)
-              PopupMenuItem(
+              const SheetOption(
                 value: 'delete',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.delete_outline,
-                    color: context.palette.danger,
-                  ),
-                  title: Text(
-                    'Delete my post',
-                    style: TextStyle(color: context.palette.danger),
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
+                label: 'Delete',
+                isDestructive: true,
               ),
           ],
+        );
+        if (!mounted) return;
+        if (choice == 'report') _report(post);
+        if (choice == 'delete') _confirmDelete();
+      },
+      child: Semantics(
+        label: 'More options',
+        child: Icon(
+          CupertinoIcons.ellipsis_circle,
+          color: context.palette.text,
+        ),
+      ),
     );
   }
 
@@ -473,8 +439,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         return IconButton(
           tooltip: saved ? 'Remove from saved' : 'Save',
           isSelected: saved,
-          icon: const Icon(Icons.bookmark_border),
-          selectedIcon: const Icon(Icons.bookmark),
+          icon: const Icon(CupertinoIcons.bookmark),
+          selectedIcon: const Icon(CupertinoIcons.bookmark_fill),
           onPressed:
               snapshot.hasData
                   ? () async {

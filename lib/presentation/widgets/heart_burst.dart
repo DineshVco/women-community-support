@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
+import 'transient_overlays.dart';
 
 /// A small, soft burst of blush hearts that rise and fade (800 ms).
 /// Shown once, after her very first post. Never blocks taps.
@@ -14,9 +15,9 @@ void showHeartBurst(BuildContext context) {
   final overlay = Overlay.of(context, rootOverlay: true);
   late final OverlayEntry entry;
   entry = OverlayEntry(
-    builder: (_) => HeartBurst(onDone: () => entry.remove()),
+    builder: (_) => HeartBurst(onDone: () => TransientOverlays.remove(entry)),
   );
-  overlay.insert(entry);
+  TransientOverlays.insert(overlay, entry);
 }
 
 class HeartBurst extends StatefulWidget {

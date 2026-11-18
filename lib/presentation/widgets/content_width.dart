@@ -20,7 +20,8 @@ class ContentWidth extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
-        child: child,
+        // Full width up to the limit (never shrink-wrapped and centred).
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }

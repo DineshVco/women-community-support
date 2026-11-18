@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 
@@ -112,7 +113,7 @@ class _FloatingIllustrationState extends State<FloatingIllustration>
       picture = Container(
         padding: EdgeInsets.all(h * 0.05),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppPalette.illustrationCard,
           borderRadius: BorderRadius.circular(AppRadius.card + 8),
         ),
         child: picture,

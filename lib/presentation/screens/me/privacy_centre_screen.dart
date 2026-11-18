@@ -9,7 +9,9 @@ import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/post_repository.dart';
 import '../../widgets/adaptive.dart';
 import '../../widgets/content_width.dart';
+import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// Plain words on who can see what, and "Delete my account and data".
 class PrivacyCentreScreen extends StatefulWidget {
@@ -141,34 +143,14 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     }
   }
 
-  Future<String?> _askPassword() {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Confirm it is you'),
-            content: TextField(
-              controller: controller,
-              obscureText: true,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Your password'),
-              onSubmitted: (value) => Navigator.of(dialogContext).pop(value),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed:
-                    () => Navigator.of(dialogContext).pop(controller.text),
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-    ).whenComplete(controller.dispose);
-  }
+  Future<String?> _askPassword() => showTextDialog(
+    context,
+    title: 'Confirm it is you',
+    message: 'Type your password to delete your account.',
+    placeholder: 'Password',
+    confirmLabel: 'Continue',
+    obscure: true,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +159,7 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     final email = FirebaseAuth.instance.currentUser?.email;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy centre')),
+      appBar: loomaNavBar(context, title: 'Privacy centre'),
       body: SafeArea(
         top: false,
         child: ContentWidth(
@@ -210,6 +192,22 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
                   Text(body, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: AppSpacing.xl),
                 ],
+                Text('Quick exit', style: theme.textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Tap Quick exit at the top of any page and Looma is '
+                  'replaced by a weather screen straight away. To come back, '
+                  'press and hold anywhere for 1 second, or tap the '
+                  'temperature 3 times. With the calculator, type your PIN '
+                  'and press =.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                LoomaButton.outline(
+                  label: 'Practice Quick exit',
+                  onPressed: () => QuickExit.practice(context),
+                ),
+                const SizedBox(height: AppSpacing.xl),
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(

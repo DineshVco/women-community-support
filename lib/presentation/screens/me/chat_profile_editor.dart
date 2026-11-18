@@ -10,6 +10,7 @@ import '../../../data/models/chat_profile.dart';
 import '../../widgets/cat_avatar.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/looma_button.dart';
+import '../../widgets/ios.dart';
 
 /// What the editor hands back when she taps Save.
 class ChatProfileDraft {
@@ -142,10 +143,9 @@ class _ChatProfileEditorState extends State<ChatProfileEditor> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.initial == null ? 'Set up chat profile' : 'Chat profile',
-        ),
+      appBar: loomaNavBar(
+        context,
+        title: widget.initial == null ? 'Set up chat profile' : 'Chat profile',
       ),
       body: SafeArea(
         top: false,

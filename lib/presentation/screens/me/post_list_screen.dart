@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -8,6 +9,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/post_card.dart';
 import '../post_detail_screen.dart';
+import '../../widgets/ios.dart';
 
 /// A simple list of posts for "My posts" and "Saved posts" (Me tab).
 /// Only she can see these lists.
@@ -62,66 +64,72 @@ class _PostListScreenState extends State<PostListScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: loomaNavBar(context, title: widget.title),
       body: SafeArea(
         top: false,
         child: ContentWidth(
-          child: RefreshIndicator(
-            onRefresh: _reload,
-            child: FutureBuilder<List<Post>>(
-              future: _posts,
-              builder: (context, snapshot) {
-                final List<Widget> children;
-                if (snapshot.hasError) {
-                  children = [
-                    EmptyState(
-                      title: 'Could not load this list',
-                      message: 'Check your internet connection and try again.',
-                      actionLabel: 'Try again',
-                      onAction: _reload,
-                    ),
-                  ];
-                } else if (!snapshot.hasData) {
-                  children = const [
+          child: FutureBuilder<List<Post>>(
+            future: _posts,
+            builder: (context, snapshot) {
+              final List<Widget> children;
+              if (snapshot.hasError) {
+                children = [
+                  EmptyState(
+                    title: 'Could not load this list',
+                    message: 'Check your internet connection and try again.',
+                    actionLabel: 'Try again',
+                    onAction: _reload,
+                  ),
+                ];
+              } else if (!snapshot.hasData) {
+                children = const [
+                  Padding(
+                    padding: EdgeInsets.all(AppSpacing.xxl),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ];
+              } else if (snapshot.data!.isEmpty) {
+                children = [
+                  EmptyState(
+                    illustration: LoomaCats.heart,
+                    title: widget.emptyTitle,
+                    message: widget.emptyMessage,
+                  ),
+                ];
+              } else {
+                children = [
+                  if (widget.note != null)
                     Padding(
-                      padding: EdgeInsets.all(AppSpacing.xxl),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ];
-                } else if (snapshot.data!.isEmpty) {
-                  children = [
-                    EmptyState(
-                      illustration: LoomaCats.heart,
-                      title: widget.emptyTitle,
-                      message: widget.emptyMessage,
-                    ),
-                  ];
-                } else {
-                  children = [
-                    if (widget.note != null)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.md,
-                          AppSpacing.screenHorizontal,
-                          0,
-                        ),
-                        child: Text(
-                          widget.note!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: palette.textSecondary,
-                          ),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.screenHorizontal,
+                        AppSpacing.md,
+                        AppSpacing.screenHorizontal,
+                        0,
+                      ),
+                      child: Text(
+                        widget.note!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textSecondary,
                         ),
                       ),
-                    for (final post in snapshot.data!) ...[
-                      PostCard(post: post, onTap: () => _open(post)),
-                      const Divider(height: 1),
-                    ],
-                  ];
-                }
-                return ListView(children: children);
-              },
-            ),
+                    ),
+                  for (final post in snapshot.data!) ...[
+                    PostCard(post: post, onTap: () => _open(post)),
+                    const Divider(height: 1),
+                  ],
+                ];
+              }
+              // iOS pull-to-refresh spinner.
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                slivers: [
+                  CupertinoSliverRefreshControl(onRefresh: _reload),
+                  SliverList(delegate: SliverChildListDelegate(children)),
+                ],
+              );
+            },
           ),
         ),
       ),

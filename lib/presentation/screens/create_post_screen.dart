@@ -11,6 +11,7 @@ import '../../data/repositories/post_repository.dart';
 import '../widgets/adaptive.dart';
 import '../widgets/content_width.dart';
 import '../widgets/looma_button.dart';
+import '../widgets/ios.dart';
 import 'help_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
@@ -141,7 +142,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New post')),
+      appBar: loomaNavBar(context, title: 'New post'),
       body: SafeArea(
         child: ContentWidth(
           child: SingleChildScrollView(

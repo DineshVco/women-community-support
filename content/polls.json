@@ -1,0 +1,15 @@
+{
+  "note": "10 starter polls, posted as Looma Team. Options max 60 characters.",
+  "polls": [
+    {"categoryId":"health_wellness","title":"Do you feel guilty when you rest?","options":["Yes, often","Sometimes","Rarely","No"]},
+    {"categoryId":"health_wellness","title":"How many hours do you usually sleep?","options":["Less than 5","5 to 6","7 to 8","More than 8"]},
+    {"categoryId":"education","title":"How do you study best?","options":["Alone and quiet","With friends","With music","Last minute, honestly"]},
+    {"categoryId":"education","title":"Do you speak up in class?","options":["Always","Sometimes","Only if I am sure","Almost never"]},
+    {"categoryId":"career_development","title":"Have you ever asked for a raise?","options":["Yes","No, but I want to","No, I would be too nervous","Not applicable yet"]},
+    {"categoryId":"career_development","title":"Do you feel heard in meetings?","options":["Yes","Mostly","Not really","No"]},
+    {"categoryId":"personal_safety","title":"Do you share your live location with someone when you travel alone?","options":["Always","Sometimes","Never","I did not know I could"]},
+    {"categoryId":"personal_safety","title":"Do you feel safe walking home at night?","options":["Yes","It depends on the place","Not really","No"]},
+    {"categoryId":"health_wellness","title":"What helps you most when you feel stressed?","options":["Talking to someone","Being alone","Moving my body","Sleeping or eating"]},
+    {"categoryId":"career_development","title":"Do family expectations affect your career choices?","options":["A lot","A little","Not at all","I am still figuring it out"]}
+  ]
+}

@@ -44,6 +44,10 @@ dependencies:
   shared_preferences: ^2.5.3
   # sha256 for the chat profile id (already used by Flutter itself).
   crypto: ^3.0.6
+  flutter_secure_storage: ^10.3.4
+  local_auth: ^2.3.0
+  cryptography: ^2.9.0
+  http: ^1.6.0
 
 
 

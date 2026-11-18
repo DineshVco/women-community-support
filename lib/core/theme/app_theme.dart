@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
@@ -65,6 +66,26 @@ class AppTheme {
       ),
       brightness: brightness,
       colorScheme: scheme,
+      // iOS widgets (navigation bars, lists, switches, alerts) in Looma's
+      // colours. Body text uses the phone's own font.
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: brightness,
+        primaryColor: p.primary,
+        primaryContrastingColor: p.onPrimary,
+        scaffoldBackgroundColor: p.background,
+        barBackgroundColor: p.background.withValues(alpha: 0.82),
+        textTheme: CupertinoTextThemeData(
+          primaryColor: p.primary,
+          textStyle: TextStyle(fontSize: 17, color: p.text),
+          actionTextStyle: TextStyle(fontSize: 17, color: p.primary),
+          navTitleTextStyle: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: p.text,
+          ),
+          navLargeTitleTextStyle: AppTypography.heading(34, p.text),
+        ),
+      ),
       scaffoldBackgroundColor: p.background,
       canvasColor: p.background,
       textTheme: text,

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -236,7 +237,7 @@ void main() {
     final now = DateTime(2026, 11, 18, 12);
     const profile = ChatProfile(alias: 'moonreader', avatarId: 'cat_01');
 
-    Future<SwitchListTile> pumpTile(
+    Future<CupertinoSwitch> pumpTile(
       WidgetTester tester, {
       ChatProfile? profile,
       DateTime? joinedAt,
@@ -251,13 +252,13 @@ void main() {
           ),
         ),
       );
-      return tester.widget<SwitchListTile>(find.byType(SwitchListTile));
+      return tester.widget<CupertinoSwitch>(find.byType(CupertinoSwitch));
     }
 
     testWidgets('explains exactly what others can see', (tester) async {
       await pumpTile(tester, profile: profile);
       expect(
-        find.text(
+        find.textContaining(
           'Other women can see your alias, avatar, interests and bio. '
           'Never your name, email or posts.',
         ),
@@ -268,7 +269,10 @@ void main() {
     testWidgets('off without a chat profile', (tester) async {
       final tile = await pumpTile(tester, joinedAt: DateTime(2020));
       expect(tile.onChanged, isNull);
-      expect(find.text('Set up your chat profile first.'), findsOneWidget);
+      expect(
+        find.textContaining('Set up your chat profile first.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('waits 24 hours after sign-up', (tester) async {

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,14 +17,17 @@ import '../providers/app_settings.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/adaptive.dart';
 import '../widgets/cat_avatar.dart';
+import '../widgets/ios.dart';
 import '../widgets/content_width.dart';
-import '../widgets/looma_button.dart';
 import '../widgets/quick_exit_button.dart';
+import '../widgets/app_lock_gate.dart';
+import 'me/app_lock_settings_screen.dart';
 import 'me/chat_profile_editor.dart';
 import 'me/my_reports_screen.dart';
 import 'me/open_to_chat_tile.dart';
 import 'me/post_list_screen.dart';
 import 'me/privacy_centre_screen.dart';
+import 'me/safety_plan_screen.dart';
 import 'moderator_screen.dart';
 
 /// The "Me" tab, top to bottom:
@@ -109,6 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       title: 'Sign out?',
       message: 'You can sign back in at any time.',
       confirmLabel: 'Sign out',
+      destructive: true,
     );
     if (!confirmed) return;
 
@@ -119,69 +124,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
+    final lock = AppLockScope.maybeOf(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Me'),
-        automaticallyImplyLeading: false,
-        actions: const [QuickExitButton(), SizedBox(width: AppSpacing.sm)],
-      ),
-      body: SafeArea(
-        child: ContentWidth(
-          child: StreamBuilder<ChatProfile?>(
-            stream: _chatProfile,
-            builder: (context, chatSnapshot) {
-              final profile = chatSnapshot.data;
-              final loaded =
-                  chatSnapshot.hasData ||
-                  chatSnapshot.connectionState == ConnectionState.active;
+    return StreamBuilder<ChatProfile?>(
+      stream: _chatProfile,
+      builder: (context, chatSnapshot) {
+        final profile = chatSnapshot.data;
+        final loaded =
+            chatSnapshot.hasData ||
+            chatSnapshot.connectionState == ConnectionState.active;
 
-              return ListView(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                children: [
-                  // ───────── Chat profile ─────────
-                  StreamBuilder<bool>(
-                    stream: _founding,
-                    builder:
-                        (context, founding) => ChatProfileHeader(
+        return LargeTitleScaffold(
+          title: 'Me',
+          trailing: const QuickExitButton(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: ContentWidth(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ───────── Chat profile ─────────
+                    _Card(
+                      child: StreamBuilder<bool>(
+                        stream: _founding,
+                        builder:
+                            (context, founding) => ChatProfileHeader(
+                              profile: profile,
+                              loading: !loaded && !chatSnapshot.hasError,
+                              foundingMember: founding.data ?? false,
+                              onEdit: () => _editChatProfile(profile),
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // ───────── Open to chat ─────────
+                    StreamBuilder<UserProfile>(
+                      stream: _account,
+                      builder:
+                          (context, account) => OpenToChatTile(
+                            profile: profile,
+                            joinedAt: account.data?.createdAt,
+                            busy: _switching,
+                            onChanged: _setOpen,
+                          ),
+                    ),
+
+                    // ───────── Interests ─────────
+                    GroupedSection(
+                      header: 'Interests and looking for',
+                      children: [
+                        _InterestsSummary(
                           profile: profile,
-                          loading: !loaded && !chatSnapshot.hasError,
-                          foundingMember: founding.data ?? false,
                           onEdit: () => _editChatProfile(profile),
                         ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // ───────── Open to chat ─────────
-                  StreamBuilder<UserProfile>(
-                    stream: _account,
-                    builder:
-                        (context, account) => OpenToChatTile(
-                          profile: profile,
-                          joinedAt: account.data?.createdAt,
-                          busy: _switching,
-                          onChanged: _setOpen,
-                        ),
-                  ),
-                  const Divider(height: AppSpacing.xl),
-
-                  // ───────── Interests ─────────
-                  _Section(
-                    title: 'Interests and looking for',
-                    child: _InterestsSummary(
-                      profile: profile,
-                      onEdit: () => _editChatProfile(profile),
+                      ],
                     ),
-                  ),
 
-                  // ───────── My space ─────────
-                  _Section(
-                    title: 'My space',
-                    padChild: false,
-                    child: Column(
+                    // ───────── My space ─────────
+                    GroupedSection(
+                      header: 'My space',
                       children: [
-                        _Row(
-                          icon: Icons.article_outlined,
+                        GroupedRow(
+                          icon: CupertinoIcons.shield,
+                          title: 'Safety plan',
+                          subtitle: 'Private, only on this phone',
+                          onTap: () => openSafetyPlan(context),
+                        ),
+                        GroupedRow(
+                          icon: CupertinoIcons.doc_text,
                           title: 'My posts',
                           subtitle: 'Only you can see this list',
                           onTap:
@@ -199,10 +212,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                         ),
-                        _Row(
-                          icon: Icons.bookmark_border,
+                        GroupedRow(
+                          icon: CupertinoIcons.bookmark,
                           title: 'Saved posts',
-                          subtitle: 'Tap the bookmark on a discussion',
                           onTap:
                               () => _push(
                                 PostListScreen(
@@ -211,124 +223,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   emptyTitle: 'Nothing saved yet',
                                   emptyMessage:
                                       'Tap the bookmark at the top of a '
-                                      'discussion to keep it here.',
+                                      'discussion, or press and hold a post, '
+                                      'to keep it here.',
                                 ),
                               ),
                         ),
-                        _Row(
-                          icon: Icons.flag_outlined,
+                        GroupedRow(
+                          icon: CupertinoIcons.flag,
                           title: 'My reports',
-                          subtitle: 'What happened to posts you reported',
                           onTap: () => _push(const MyReportsScreen()),
                         ),
-                        const _Row(
-                          icon: Icons.mail_outline,
+                        const GroupedRow(
+                          icon: CupertinoIcons.envelope,
                           title: 'My requests',
                           subtitle: 'Arrives with Connect',
+                          enabled: false,
                         ),
-                        const _Row(
-                          icon: Icons.block,
+                        const GroupedRow(
+                          icon: CupertinoIcons.nosign,
                           title: 'Blocked list',
                           subtitle: 'Arrives with Connect',
+                          enabled: false,
                         ),
                       ],
                     ),
-                  ),
 
-                  // ───────── Moderation ─────────
-                  FutureBuilder<bool>(
-                    future: _isModerator,
-                    builder: (context, snapshot) {
-                      if (snapshot.data != true) {
-                        return const SizedBox.shrink();
-                      }
-                      return _Section(
-                        title: 'Moderation',
-                        padChild: false,
-                        child: _Row(
-                          icon: Icons.shield_outlined,
-                          title: 'Report queue',
-                          subtitle: 'Review reported posts',
-                          onTap: () => _push(const ModeratorScreen()),
-                        ),
-                      );
-                    },
-                  ),
+                    // ───────── Moderation ─────────
+                    FutureBuilder<bool>(
+                      future: _isModerator,
+                      builder: (context, snapshot) {
+                        if (snapshot.data != true) {
+                          return const SizedBox.shrink();
+                        }
+                        return GroupedSection(
+                          header: 'Moderation',
+                          children: [
+                            GroupedRow(
+                              icon: CupertinoIcons.checkmark_shield,
+                              title: 'Report queue',
+                              onTap: () => _push(const ModeratorScreen()),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
 
-                  // ───────── Privacy centre ─────────
-                  _Section(
-                    title: 'Privacy centre',
-                    padChild: false,
-                    child: Column(
+                    // ───────── Privacy centre ─────────
+                    GroupedSection(
+                      header: 'Privacy centre',
                       children: [
-                        _Row(
-                          icon: Icons.visibility_outlined,
+                        GroupedRow(
+                          icon: CupertinoIcons.lock,
+                          title: 'App lock',
+                          value: (lock?.enabled ?? false) ? 'On' : 'Off',
+                          onTap: () => _push(const AppLockSettingsScreen()),
+                        ),
+                        GroupedRow(
+                          icon: CupertinoIcons.eye,
                           title: 'Who can see what',
-                          subtitle: 'Plain words, including the limits',
                           onTap: () => _push(const PrivacyCentreScreen()),
                         ),
-                        _Row(
-                          icon: Icons.delete_outline,
+                        GroupedRow(
+                          icon: CupertinoIcons.delete,
                           title: 'Delete my account and data',
-                          danger: true,
+                          destructive: true,
                           onTap: () => _push(const PrivacyCentreScreen()),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.screenHorizontal,
-                            AppSpacing.md,
-                            AppSpacing.screenHorizontal,
-                            0,
-                          ),
-                          child: LoomaButton.outline(
-                            label: 'Sign out',
-                            onPressed: _signOut,
-                          ),
-                        ),
                       ],
                     ),
-                  ),
 
-                  // ───────── Settings ─────────
-                  _Section(
-                    title: 'Settings',
-                    padChild: false,
-                    divider: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    // ───────── Settings ─────────
+                    SettingsSection(settings: settings),
+
+                    // ───────── Sign out ─────────
+                    GroupedSection(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.screenHorizontal,
-                          ),
-                          child: Text(
-                            'Dark mode',
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
+                        GroupedRow(
+                          icon: CupertinoIcons.square_arrow_right,
+                          title: 'Sign out',
+                          destructive: true,
+                          onTap: _signOut,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSpacing.screenHorizontal,
-                          ),
-                          child: _ThemeChoice(),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        SettingsSwitches(settings: settings),
                       ],
                     ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
 // ───────────────────────── Pieces ─────────────────────────
+
+/// A rounded card on the grouped background (same inset as the lists).
+class _Card extends StatelessWidget {
+  const _Card({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: context.palette.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: child,
+    );
+  }
+}
 
 /// Avatar, alias, bio and badge, or an invitation to set them up.
 class ChatProfileHeader extends StatelessWidget {
@@ -456,181 +465,128 @@ class _InterestsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final palette = context.palette;
     final p = profile;
     final ids = [...?p?.interests];
     final looking = [...?p?.lookingFor];
 
-    if (ids.isEmpty && looking.isEmpty) {
-      return Text(
-        'Choose up to 5 interests and what you are looking for, so women who '
-        'relate can find you.',
-        style: theme.textTheme.bodyMedium,
-      );
-    }
-
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        for (final id in ids)
-          Chip(
-            label: Text(ConnectOptions.labelFor(ConnectOptions.interests, id)),
-          ),
-        for (final id in looking)
-          Chip(
-            avatar: const Icon(Icons.search, size: 16),
-            label: Text(ConnectOptions.labelFor(ConnectOptions.lookingFor, id)),
-          ),
-      ],
-    );
-  }
-}
-
-class _ThemeChoice extends StatelessWidget {
-  const _ThemeChoice();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: SegmentedButton<ThemeMode>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(value: ThemeMode.system, label: Text('System')),
-          ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-          ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-        ],
-        selected: {context.watch<ThemeProvider>().themeMode},
-        onSelectionChanged: (selection) {
-          AppHaptics.selection();
-          context.read<ThemeProvider>().setThemeMode(selection.first);
-        },
+    Widget tag(String text, {bool looking = false}) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: looking ? palette.blushTint : palette.softFill,
+        borderRadius: BorderRadius.circular(999),
       ),
+      child: Text(text, style: TextStyle(fontSize: 14, color: palette.text)),
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child:
+          ids.isEmpty && looking.isEmpty
+              ? Text(
+                'Choose up to 5 interests and what you are looking for, so '
+                'women who relate can find you.',
+                style: TextStyle(fontSize: 15, color: palette.textSecondary),
+              )
+              : Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final id in ids)
+                    tag(ConnectOptions.labelFor(ConnectOptions.interests, id)),
+                  for (final id in looking)
+                    tag(
+                      ConnectOptions.labelFor(ConnectOptions.lookingFor, id),
+                      looking: true,
+                    ),
+                ],
+              ),
     );
   }
 }
 
-/// Gentle mode and Reduce motion.
-class SettingsSwitches extends StatelessWidget {
-  const SettingsSwitches({super.key, required this.settings});
+/// Appearance, Gentle mode, Reduce motion and Quick exit, as grouped lists.
+class SettingsSection extends StatelessWidget {
+  const SettingsSection({super.key, required this.settings});
 
   final AppSettings settings;
 
   @override
   Widget build(BuildContext context) {
-    const padding = EdgeInsets.symmetric(
-      horizontal: AppSpacing.screenHorizontal,
-    );
+    const padding = EdgeInsets.fromLTRB(16, 12, 16, 12);
+    final theme = context.watch<ThemeProvider>();
+
     return Column(
       children: [
-        SwitchListTile.adaptive(
-          contentPadding: padding,
-          title: const Text('Gentle mode'),
-          subtitle: const Text(
-            'Hides numbers like replies and "me too" counts.',
-          ),
-          value: settings.gentleMode,
-          onChanged: (value) {
-            AppHaptics.selection();
-            settings.setGentleMode(value);
-          },
+        GroupedSection(
+          header: 'Appearance',
+          children: [
+            Padding(
+              padding: padding,
+              child: LoomaSegmented<ThemeMode>(
+                value: theme.themeMode,
+                options: const {
+                  ThemeMode.system: 'System',
+                  ThemeMode.light: 'Light',
+                  ThemeMode.dark: 'Dark',
+                },
+                onChanged: theme.setThemeMode,
+              ),
+            ),
+            GroupedSwitchRow(
+              icon: CupertinoIcons.leaf_arrow_circlepath,
+              title: 'Gentle mode',
+              subtitle: 'Hides numbers like replies and "me too" counts.',
+              value: settings.gentleMode,
+              onChanged: settings.setGentleMode,
+            ),
+            GroupedSwitchRow(
+              icon: CupertinoIcons.slowmo,
+              title: 'Reduce motion',
+              subtitle:
+                  'Turns off animations in Looma. Your phone\'s own setting '
+                  'also works.',
+              value: settings.reduceMotion,
+              onChanged: settings.setReduceMotion,
+            ),
+          ],
         ),
-        SwitchListTile.adaptive(
-          contentPadding: padding,
-          title: const Text('Reduce motion'),
-          subtitle: const Text(
-            'Turns off animations in Looma. Your phone\'s own setting also '
-            'works.',
-          ),
-          value: settings.reduceMotion,
-          onChanged: (value) {
-            AppHaptics.selection();
-            settings.setReduceMotion(value);
-          },
+        GroupedSection(
+          header: 'Quick exit',
+          children: [
+            Padding(
+              padding: padding,
+              child: LoomaSegmented<QuickExitScreen>(
+                value: settings.quickExitScreen,
+                options: {for (final s in QuickExitScreen.values) s: s.label},
+                onChanged: settings.setQuickExitScreen,
+              ),
+            ),
+            GroupedRow(
+              icon: CupertinoIcons.cloud_sun,
+              title: 'Weather city',
+              value: settings.weatherCity,
+              onTap: () => _editCity(context),
+            ),
+            GroupedRow(
+              icon: CupertinoIcons.eye_slash,
+              title: 'Practice Quick exit',
+              onTap: () => QuickExit.practice(context),
+            ),
+          ],
         ),
       ],
     );
   }
-}
 
-/// A titled group separated by a hairline.
-class _Section extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.child,
-    this.padChild = true,
-    this.divider = true,
-  });
-
-  final String title;
-  final Widget child;
-
-  /// False for children (like ListTiles) that already have side padding.
-  final bool padChild;
-  final bool divider;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    const side = EdgeInsets.symmetric(horizontal: AppSpacing.screenHorizontal);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: side,
-            child: Text(
-              title.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 0.8),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          padChild ? Padding(padding: side, child: child) : child,
-          if (divider) ...[
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(),
-          ],
-        ],
-      ),
+  Future<void> _editCity(BuildContext context) async {
+    final city = await showTextDialog(
+      context,
+      title: 'Weather city',
+      initial: settings.weatherCity,
+      placeholder: AppSettings.defaultCity,
     );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.onTap,
-    this.danger = false,
-  });
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-
-  /// Null shows the row greyed out (not available yet).
-  final VoidCallback? onTap;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final color = danger ? palette.danger : null;
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenHorizontal,
-      ),
-      enabled: onTap != null,
-      leading: Icon(icon, color: color),
-      title: Text(title, style: color == null ? null : TextStyle(color: color)),
-      subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: onTap == null ? null : const Icon(Icons.chevron_right),
-      onTap: onTap,
-    );
+    if (city != null) await settings.setWeatherCity(city);
   }
 }

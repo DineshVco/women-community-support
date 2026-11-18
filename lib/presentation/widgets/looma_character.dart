@@ -154,7 +154,7 @@ class _LoomaCharacterState extends State<LoomaCharacter>
             : Container(
               padding: EdgeInsets.all(h * 0.05),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppPalette.illustrationCard,
                 borderRadius: BorderRadius.circular(AppRadius.card + 8),
               ),
               child: sized,

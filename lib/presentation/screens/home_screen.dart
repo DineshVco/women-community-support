@@ -1,7 +1,9 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/first_post_celebration.dart';
@@ -9,12 +11,13 @@ import '../../core/utils/haptics.dart';
 import '../../data/models/category.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/post_repository.dart';
-import '../widgets/brand_mark.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/feed_greeting.dart';
 import '../widgets/floating_illustration.dart';
+import '../widgets/ios.dart';
+import '../widgets/post_actions.dart';
 import '../widgets/post_card.dart';
 import '../widgets/heart_burst.dart';
 import '../widgets/posted_confirmation.dart';
@@ -162,114 +165,101 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final fabDuration = AppMotion.of(context, AppMotion.medium);
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          AppHaptics.light();
-          _openCompose();
-        },
-        tooltip: 'Write a post',
-        extendedPadding: EdgeInsets.symmetric(
-          horizontal: _fabExtended ? 20 : 16,
-        ),
-        extendedIconLabelSpacing: _fabExtended ? 8 : 0,
-        icon: const Icon(Icons.add),
-        // The label folds away while scrolling down and returns on the way up.
-        label: AnimatedSize(
-          duration: fabDuration,
-          curve: AppMotion.spring,
-          alignment: Alignment.centerLeft,
-          child:
-              _fabExtended
-                  ? const Text('Write a post')
-                  : const SizedBox.shrink(),
-        ),
+    final palette = context.palette;
+    final fab = FloatingActionButton.extended(
+      onPressed: () {
+        AppHaptics.light();
+        _openCompose();
+      },
+      tooltip: 'Write a post',
+      extendedPadding: EdgeInsets.symmetric(horizontal: _fabExtended ? 20 : 16),
+      extendedIconLabelSpacing: _fabExtended ? 8 : 0,
+      icon: const Icon(Icons.add),
+      // The label folds away while scrolling down and returns on the way up.
+      label: AnimatedSize(
+        duration: fabDuration,
+        curve: AppMotion.spring,
+        alignment: Alignment.centerLeft,
+        child:
+            _fabExtended ? const Text('Write a post') : const SizedBox.shrink(),
       ),
-      body: SafeArea(
-        child: ContentWidth(
-          child: StreamBuilder<List<Post>>(
-            stream: _feed,
-            builder: (context, snapshot) {
-              // Native spinner on iPhone, Material one on Android.
-              return RefreshIndicator.adaptive(
-                onRefresh: _refresh,
-                child: NotificationListener<UserScrollNotification>(
-                  onNotification: _onUserScroll,
-                  child: ListView(
-                    controller: _scrollController,
-                    // Lets pull-to-refresh work even when the list is short.
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(bottom: 96),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.md,
-                          AppSpacing.md,
-                          0,
-                        ),
-                        // "Looma" (Newsreader 26) and the Quick exit pill.
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [Wordmark(), QuickExitButton()],
-                        ),
-                      ),
-                      FeedGreeting(posts: snapshot.data),
-                      QuestionOfTheDay(
-                        onAnswer:
-                            (question) => _openCompose(initialTitle: question),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.md,
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.md,
-                        ),
-                        child: TextField(
-                          onChanged: (value) => setState(() => _query = value),
-                          textInputAction: TextInputAction.search,
-                          decoration: const InputDecoration(
-                            hintText: 'Search discussions',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                        ),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.screenHorizontal,
-                        ),
-                        child: Row(
-                          children: [
-                            _CategoryChip(
-                              label: 'All',
-                              selected: _categoryId == null,
-                              onTap: () => setState(() => _categoryId = null),
-                            ),
-                            for (final category in AppCategories.all)
-                              _CategoryChip(
-                                label: category.shortName,
-                                selected: _categoryId == category.id,
-                                onTap:
-                                    () => setState(
-                                      () => _categoryId = category.id,
-                                    ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      const Divider(),
-                      ..._buildBody(context, snapshot, theme),
-                    ],
+    );
+
+    return StreamBuilder<List<Post>>(
+      stream: _feed,
+      builder: (context, snapshot) {
+        Widget wide(Widget child) => ContentWidth(child: child);
+        return LargeTitleScaffold(
+          title: 'Discuss',
+          controller: _scrollController,
+          onUserScroll: _onUserScroll,
+          onRefresh: _refresh,
+          trailing: const QuickExitButton(),
+          floatingActionButton: fab,
+          slivers: [
+            SliverList(
+              delegate: SliverChildListDelegate([
+                wide(FeedGreeting(posts: snapshot.data)),
+                wide(
+                  QuestionOfTheDay(
+                    onAnswer:
+                        (question) => _openCompose(initialTitle: question),
                   ),
                 ),
-              );
-            },
-          ),
-        ),
-      ),
+                wide(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenHorizontal,
+                      AppSpacing.md,
+                      AppSpacing.screenHorizontal,
+                      AppSpacing.md,
+                    ),
+                    child: CupertinoSearchTextField(
+                      placeholder: 'Search discussions',
+                      onChanged: (value) => setState(() => _query = value),
+                      style: TextStyle(color: palette.text),
+                      backgroundColor: palette.softFill,
+                    ),
+                  ),
+                ),
+                wide(
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                    ),
+                    child: Row(
+                      children: [
+                        for (final (id, label) in [
+                          (null, 'All'),
+                          for (final c in AppCategories.all)
+                            (c.id, c.shortName),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              right: AppSpacing.sm,
+                            ),
+                            child: Pill(
+                              label: label,
+                              selected: _categoryId == id,
+                              onTap: () => setState(() => _categoryId = id),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Divider(),
+                for (final child in _buildBody(context, snapshot, theme))
+                  wide(child),
+                // Room for the "Write a post" button.
+                const SizedBox(height: 72),
+              ]),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -346,7 +336,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              PostCard(post: post, onTap: () => _openPost(post)),
+              PostContextMenu(
+                post: post,
+                child: PostCard(post: post, onTap: () => _openPost(post)),
+              ),
               const Divider(),
             ],
           ),
@@ -354,33 +347,5 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     return rows;
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) {
-          AppHaptics.selection();
-          onTap();
-        },
-        showCheckmark: false,
-      ),
-    );
   }
 }

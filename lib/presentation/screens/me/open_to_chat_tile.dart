@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../../core/constants/connect.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/chat_profile.dart';
+import '../../widgets/ios.dart';
 
 /// The "Open to chat" switch with its plain-words explanation.
 ///
@@ -37,9 +36,6 @@ class OpenToChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = context.palette;
-
     final isOpen = profile?.open ?? false;
     final readyAt = joinedAt?.add(ConnectOptions.openCooldown);
     final current = now ?? DateTime.now();
@@ -61,36 +57,17 @@ class OpenToChatTile extends StatelessWidget {
       }
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return GroupedSection(
+      footer: note == null ? explanation : '$explanation\n\n$note',
       children: [
-        SwitchListTile.adaptive(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenHorizontal,
+        GroupedRow(
+          icon: CupertinoIcons.chat_bubble,
+          title: 'Open to chat',
+          trailing: LoomaSwitch(
+            value: isOpen,
+            onChanged: canChange ? onChanged : null,
           ),
-          title: const Text('Open to chat'),
-          subtitle: const Padding(
-            padding: EdgeInsets.only(top: AppSpacing.xs),
-            child: Text(explanation),
-          ),
-          value: isOpen,
-          onChanged: canChange ? onChanged : null,
         ),
-        if (note != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenHorizontal,
-              0,
-              AppSpacing.screenHorizontal,
-              AppSpacing.sm,
-            ),
-            child: Text(
-              note,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textSecondary,
-              ),
-            ),
-          ),
       ],
     );
   }

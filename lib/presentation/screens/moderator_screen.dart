@@ -11,6 +11,7 @@ import '../widgets/adaptive.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/press_scale.dart';
+import '../widgets/ios.dart';
 import 'post_detail_screen.dart';
 
 /// Open reports, grouped by post. A moderator reads the post, then keeps it
@@ -106,7 +107,7 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Report queue')),
+      appBar: loomaNavBar(context, title: 'Report queue'),
       body: SafeArea(
         child: ContentWidth(
           child: StreamBuilder<List<Report>>(

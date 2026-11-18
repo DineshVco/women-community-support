@@ -1,12 +1,15 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptics.dart';
+import '../widgets/ios.dart';
 import 'help_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 
-/// The signed-in app: three tabs. Every tab does something real.
+/// The signed-in app: three tabs under an iOS-style tab bar that is
+/// translucent and blurred (content scrolls under it).
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -17,41 +20,61 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
 
+  /// Tabs are built the first time they are opened (then kept), so each
+  /// one's entrance plays when she first sees it.
+  final Set<int> _opened = {0};
+
+  static const List<Widget> _tabs = [
+    HomeScreen(),
+    HelpScreen(),
+    ProfileScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+
     return Scaffold(
+      // Content runs under the translucent tab bar.
+      extendBody: true,
       body: IndexedStack(
         index: _index,
-        children: const [HomeScreen(), HelpScreen(), ProfileScreen()],
+        children: [
+          for (var i = 0; i < _tabs.length; i++)
+            _opened.contains(i) ? _tabs[i] : const SizedBox.shrink(),
+        ],
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: context.palette.border)),
-        ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (value) {
-            if (value != _index) AppHaptics.selection();
-            setState(() => _index = value);
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.forum_outlined),
-              selectedIcon: Icon(Icons.forum),
-              label: 'Discuss',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.health_and_safety_outlined),
-              selectedIcon: Icon(Icons.health_and_safety),
-              label: 'Get help',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Me',
-            ),
-          ],
-        ),
+      bottomNavigationBar: CupertinoTabBar(
+        currentIndex: _index,
+        backgroundColor: barColor(context),
+        activeColor: palette.text,
+        inactiveColor: palette.textSecondary,
+        border: hairline(context, top: true),
+        iconSize: 26,
+        onTap: (value) {
+          if (value != _index) AppHaptics.selection();
+          setState(() {
+            _index = value;
+            _opened.add(value);
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.chat_bubble_2),
+            activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
+            label: 'Discuss',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.heart),
+            activeIcon: Icon(CupertinoIcons.heart_fill),
+            label: 'Get help',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.person_crop_circle),
+            activeIcon: Icon(CupertinoIcons.person_crop_circle_fill),
+            label: 'Me',
+          ),
+        ],
       ),
     );
   }

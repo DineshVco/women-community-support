@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:women_community_support/core/theme/app_colors.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/presentation/widgets/looma_character.dart';
 
@@ -83,7 +84,8 @@ void main() {
         .where(
           (c) =>
               c.decoration is BoxDecoration &&
-              (c.decoration! as BoxDecoration).color == Colors.white,
+              (c.decoration! as BoxDecoration).color ==
+                  AppPalette.illustrationCard,
         );
     expect(whiteCards, hasLength(1));
     expect(tester.takeException(), isNull);

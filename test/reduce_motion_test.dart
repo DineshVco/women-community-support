@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/models/user_profile.dart';
 import 'package:women_community_support/presentation/screens/auth/login_screen.dart';
+import 'package:women_community_support/presentation/screens/help_screen.dart';
 import 'package:women_community_support/presentation/screens/membership/membership_flow.dart';
 import 'package:women_community_support/presentation/screens/onboarding_screen.dart';
 import 'package:women_community_support/presentation/widgets/empty_state.dart';
@@ -74,6 +75,10 @@ void main() {
         ),
       ),
     );
+  });
+
+  testWidgets('get help is still', (tester) async {
+    await expectStill(tester, const HelpScreen());
   });
 
   testWidgets('home greeting is still', (tester) async {

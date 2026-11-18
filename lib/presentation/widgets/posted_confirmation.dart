@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import 'transient_overlays.dart';
 import 'floating_illustration.dart';
 
 /// A short "Posted" pill that drops in at the top of the screen, stays for a
@@ -18,10 +19,12 @@ void showPostedConfirmation(BuildContext context, {required String alias}) {
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder:
-        (_) =>
-            _PostedConfirmation(message: message, onDone: () => entry.remove()),
+        (_) => _PostedConfirmation(
+          message: message,
+          onDone: () => TransientOverlays.remove(entry),
+        ),
   );
-  overlay.insert(entry);
+  TransientOverlays.insert(overlay, entry);
 
   // Screen readers hear it even though it is not focusable.
   SemanticsService.announce(message, Directionality.of(context));

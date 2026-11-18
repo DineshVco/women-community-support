@@ -62,6 +62,10 @@ class AppPalette {
   /// Text/icons on a blush background.
   Color get onBlush => const Color(0xFF111111);
 
+  /// Behind the line drawings in dark mode: soft off-white (the drawings
+  /// have dark lines), never a glaring pure white block.
+  static const Color illustrationCard = Color(0xFFE9E5DF);
+
   /// A faint blush wash, e.g. for a selected option card.
   Color get blushTint =>
       Color.alphaBlend(blush.withValues(alpha: 0.22), surface);
@@ -103,8 +107,9 @@ class AppPalette {
 
   static const AppPalette dark = AppPalette(
     background: Color(0xFF0E0E0E),
-    surface: Color(0xFF161615),
-    softFill: Color(0xFF1F1E1C),
+    // Raised surfaces are a little lighter than the background (as on iOS).
+    surface: Color(0xFF1C1B1A),
+    softFill: Color(0xFF2A2927),
     border: Color(0xFF3A3835),
     borderStrong: Color(0xFFF5F2EC),
     text: Color(0xFFF5F2EC),

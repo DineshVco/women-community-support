@@ -4,13 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'core/security/app_lock.dart';
+import 'core/security/secure_store.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/chat_repository.dart';
 import 'data/repositories/post_repository.dart';
+import 'data/safety_plan.dart';
 import 'firebase_options.dart';
 import 'presentation/providers/app_settings.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/auth_gate.dart';
+import 'presentation/widgets/app_lock_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +37,12 @@ Future<void> main() async {
   final theme = await ThemeProvider.load();
   final settings = await AppSettings.load();
 
+  // Kept only on this phone, in secure storage: App lock and safety plan.
+  final secureStore = DeviceSecureStore();
+  final appLock = AppLock(secureStore);
+  await appLock.load();
+  final safetyPlan = SafetyPlanStore(secureStore);
+
   runApp(
     MultiProvider(
       providers: [
@@ -41,14 +51,35 @@ Future<void> main() async {
         // Shared repositories: every screen reads and writes through them.
         Provider<PostRepository>(create: (_) => PostRepository()),
         Provider<ChatRepository>(create: (_) => ChatRepository()),
+        Provider<SafetyPlanStore>.value(value: safetyPlan),
       ],
-      child: const LoomaApp(),
+      child: LoomaApp(appLock: appLock),
     ),
   );
 }
 
 class LoomaApp extends StatelessWidget {
-  const LoomaApp({super.key});
+  const LoomaApp({super.key, required this.appLock});
+
+  final AppLock appLock;
+
+  /// Lets "Forgot PIN" (shown above every screen) go back to the start.
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
+
+  /// "Forgot PIN": sign out, delete the safety plan (only the PIN protected
+  /// it), then remove the lock. Her data on the server stays.
+  Future<void> _forgotPin(BuildContext context) async {
+    final posts = context.read<PostRepository>();
+    final plan = context.read<SafetyPlanStore>();
+    try {
+      await plan.clear();
+    } catch (_) {}
+    try {
+      await posts.signOut();
+    } catch (_) {}
+    navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    await appLock.forgetPin();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +94,7 @@ class LoomaApp extends StatelessWidget {
       scrollBehavior: const _BouncingScrollBehavior(),
       // Smoothness check: flutter run --profile --dart-define=PERF_OVERLAY=true
       showPerformanceOverlay: const bool.fromEnvironment('PERF_OVERLAY'),
+      navigatorKey: navigatorKey,
       home: const AuthGate(),
       // Reduce motion (Me tab) switches animations off everywhere, through
       // the same flag as the phone's own setting (AppMotion reads it).
@@ -75,7 +107,12 @@ class LoomaApp extends StatelessWidget {
               disableAnimations:
                   media.disableAnimations || settings.reduceMotion,
             ),
-            child: child!,
+            // App lock sits above every screen.
+            child: AppLockGate(
+              lock: appLock,
+              onForgot: () => _forgotPin(context),
+              child: child!,
+            ),
           ),
         );
       },

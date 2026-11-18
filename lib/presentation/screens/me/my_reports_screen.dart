@@ -8,6 +8,7 @@ import '../../../data/repositories/post_repository.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../post_detail_screen.dart';
+import '../../widgets/ios.dart';
 
 /// Reports she made, and what happened to each.
 class MyReportsScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My reports')),
+      appBar: loomaNavBar(context, title: 'My reports'),
       body: SafeArea(
         top: false,
         child: ContentWidth(

@@ -1,0 +1,30 @@
+{
+  "note": "Warm plain text for empty, error and success states, greetings and quiet days. Najwa can edit.",
+  "greetings": {
+    "morning": ["Good morning", "Morning, take it slow", "A fresh start today", "Good morning, you are here and that is enough", "Hello, morning light"],
+    "afternoon": ["Good afternoon", "Hope today is kind to you", "Afternoon, take a breath", "Hello again", "A little pause for you"],
+    "evening": ["Good evening", "You made it through today", "Evening, time to soften", "Hello, evening you", "Rest is allowed"],
+    "night": ["Take a breath, it is late", "Still up? You are not alone", "Night, be gentle with yourself", "Quiet hours, soft thoughts", "Sleep when you can"]
+  },
+  "home_subline": "You are not alone here.",
+  "quiet_day": "It is quiet today. A good time to write something, or just rest.",
+  "empty": {
+    "feed": "Nothing here yet. Be the first to say hello.",
+    "search": "We could not find that. Try another word.",
+    "saved": "Nothing saved yet. Tap the bookmark on a post you want to keep.",
+    "my_posts": "You have not posted yet. Whenever you are ready.",
+    "activity": "No news yet. We will tell you when someone replies.",
+    "connect": "No one here yet. Turn on Open to chat in Me so others can find you."
+  },
+  "errors": {
+    "generic": "Something went wrong on our side, not yours. Please try again.",
+    "offline": "No internet right now. You can still read the Care tab and help lines.",
+    "post_failed": "We could not post that. Your words are still here, please try again.",
+    "wait_a_minute": "You posted a moment ago. Please wait a minute, then try again."
+  },
+  "success": {
+    "posted": "Thank you for sharing. You are not alone.",
+    "reported": "Thank you. We will look at it.",
+    "copied": "Copied."
+  }
+}

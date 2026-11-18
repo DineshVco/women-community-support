@@ -1,19 +1,21 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/haptics.dart';
 
-/// True on iPhone, iPad and Mac, where Cupertino dialogs and sheets are
-/// what people expect.
-bool useCupertino(BuildContext context) {
-  final platform = Theme.of(context).platform;
-  return platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
-}
+// Dialogs and action sheets in the iOS style on every platform (Looma's
+// look is iOS-like everywhere). Destructive actions are red.
 
-/// "Are you sure?" dialog. Cupertino alert on Apple devices, Material
-/// elsewhere. Returns true only when the person confirms.
+/// Blur behind action sheets and alerts.
+final ImageFilter _blur = ImageFilter.blur(sigmaX: 8, sigmaY: 8);
+
+/// Kept for older callers: Looma now uses the iOS style everywhere.
+bool useCupertino(BuildContext context) => true;
+
+/// "Are you sure?" alert. Returns true only when the person confirms.
 Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
@@ -24,58 +26,83 @@ Future<bool> showConfirmDialog(
 }) async {
   if (destructive) AppHaptics.warning();
 
-  final bool? result;
-  if (useCupertino(context)) {
-    result = await showCupertinoDialog<bool>(
-      context: context,
-      builder:
-          (dialogContext) => CupertinoAlertDialog(
-            title: Text(title),
-            content: Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.xs),
-              child: Text(message),
+  final result = await showCupertinoDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    builder:
+        (dialogContext) => CupertinoAlertDialog(
+          title: Text(title),
+          content: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Text(message),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(cancelLabel),
             ),
-            actions: [
-              CupertinoDialogAction(
-                isDefaultAction: true,
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(cancelLabel),
-              ),
-              CupertinoDialogAction(
-                isDestructiveAction: destructive,
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(confirmLabel),
-              ),
-            ],
-          ),
-    );
-  } else {
-    result = await showDialog<bool>(
-      context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(cancelLabel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                style:
-                    destructive
-                        ? TextButton.styleFrom(
-                          foregroundColor: dialogContext.palette.danger,
-                        )
-                        : null,
-                child: Text(confirmLabel),
-              ),
-            ],
-          ),
-    );
-  }
+            CupertinoDialogAction(
+              isDestructiveAction: destructive,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+  );
   return result ?? false;
+}
+
+/// An iOS alert with one text field (e.g. a password or a city).
+/// Returns the text, or null when cancelled.
+Future<String?> showTextDialog(
+  BuildContext context, {
+  required String title,
+  String? message,
+  String initial = '',
+  String placeholder = '',
+  String confirmLabel = 'Save',
+  bool obscure = false,
+}) async {
+  final controller = TextEditingController(text: initial);
+  final result = await showCupertinoDialog<String>(
+    context: context,
+    builder:
+        (dialogContext) => CupertinoAlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (message != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Text(message),
+                ),
+              const SizedBox(height: AppSpacing.md),
+              CupertinoTextField(
+                controller: controller,
+                autofocus: true,
+                obscureText: obscure,
+                placeholder: placeholder,
+                onSubmitted: (v) => Navigator.of(dialogContext).pop(v),
+              ),
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+              child: Text(confirmLabel),
+            ),
+          ],
+        ),
+  );
+  controller.dispose();
+  return result;
 }
 
 /// One choice in [showOptionsSheet].
@@ -93,9 +120,8 @@ class SheetOption<T> {
   final bool isDestructive;
 }
 
-/// A list of choices from the bottom of the screen: a Cupertino action sheet
-/// on Apple devices, a Material bottom sheet elsewhere. Returns the chosen
-/// value, or null if dismissed.
+/// An iOS action sheet from the bottom of the screen, over a blurred
+/// backdrop. Returns the chosen value, or null if dismissed.
 Future<T?> showOptionsSheet<T>(
   BuildContext context, {
   required String title,
@@ -103,90 +129,37 @@ Future<T?> showOptionsSheet<T>(
   required List<SheetOption<T>> options,
   String cancelLabel = 'Cancel',
 }) {
-  if (useCupertino(context)) {
-    return showCupertinoModalPopup<T>(
-      context: context,
-      builder:
-          (sheetContext) => CupertinoActionSheet(
-            title: Text(title),
-            message: message == null ? null : Text(message),
-            actions: [
-              for (final option in options)
-                CupertinoActionSheetAction(
-                  isDefaultAction: option.isDefault,
-                  isDestructiveAction: option.isDestructive,
-                  onPressed: () {
-                    AppHaptics.selection();
-                    Navigator.of(sheetContext).pop(option.value);
-                  },
-                  child: Text(option.label),
-                ),
-            ],
-            cancelButton: CupertinoActionSheetAction(
-              onPressed: () => Navigator.of(sheetContext).pop(),
-              child: Text(cancelLabel),
-            ),
-          ),
-    );
-  }
-
-  return showModalBottomSheet<T>(
+  final palette = context.palette;
+  return showCupertinoModalPopup<T>(
     context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) {
-      final theme = Theme.of(sheetContext);
-      final palette = sheetContext.palette;
-      return SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            0,
-            AppSpacing.xl,
-            AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: theme.textTheme.headlineSmall),
-              if (message != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  message,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textSecondary,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              for (final option in options)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    option.label,
-                    style: TextStyle(
-                      color: option.isDestructive ? palette.danger : null,
-                      fontWeight: option.isDefault ? FontWeight.w700 : null,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    AppHaptics.selection();
-                    Navigator.of(sheetContext).pop(option.value);
-                  },
-                ),
-              const SizedBox(height: AppSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                  child: Text(cancelLabel),
+    filter: _blur,
+    builder:
+        (sheetContext) => CupertinoActionSheet(
+          title: Text(title),
+          message: message == null ? null : Text(message),
+          actions: [
+            for (final option in options)
+              CupertinoActionSheetAction(
+                isDefaultAction: option.isDefault,
+                isDestructiveAction: option.isDestructive,
+                onPressed: () {
+                  AppHaptics.selection();
+                  Navigator.of(sheetContext).pop(option.value);
+                },
+                child: Text(
+                  option.label,
+                  style:
+                      option.isDestructive
+                          ? null
+                          : TextStyle(color: palette.text),
                 ),
               ),
-            ],
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(sheetContext).pop(),
+            child: Text(cancelLabel, style: TextStyle(color: palette.text)),
           ),
         ),
-      );
-    },
   );
 }
