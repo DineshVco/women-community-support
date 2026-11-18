@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../data/local_private_data.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/post_repository.dart';
 import '../../widgets/adaptive.dart';
@@ -16,6 +17,19 @@ import '../../widgets/quick_exit_button.dart';
 /// Plain words on who can see what, and "Delete my account and data".
 class PrivacyCentreScreen extends StatefulWidget {
   const PrivacyCentreScreen({super.key});
+
+  /// The confirmation before deleting everything.
+  static const String deleteConfirmMessage =
+      'This deletes your posts, replies, saved posts, chat profile and '
+      'private profile, then your login. It also deletes your mood log, '
+      'journal and safety plan from this phone. It cannot be undone.';
+
+  /// The summary on the page, above the button.
+  static const String deleteSummary =
+      'Deletes your posts, replies, saved posts, chat profile and private '
+      'profile, then your login. Your mood log, journal and safety plan are '
+      'deleted from this phone too. "Me too" taps and reports you made stay, '
+      'with nothing that links them to you.';
 
   /// The text blocks, kept here so a test can check the honest parts.
   static const List<(String, String)> sections = [
@@ -49,8 +63,9 @@ class PrivacyCentreScreen extends StatefulWidget {
     ),
     (
       'Kept only on this phone',
-      'Dark mode, Gentle mode, Reduce motion and the first-post hearts. '
-          'These never leave your phone.',
+      'Your mood log, journal and safety plan (encrypted), and settings like '
+          'Dark mode, Gentle mode and Reduce motion. These never leave your '
+          'phone.',
     ),
   ];
 
@@ -64,6 +79,7 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
   Future<void> _deleteAccount() async {
     final posts = context.read<PostRepository>();
     final chat = context.read<ChatRepository>();
+    final local = context.read<LocalPrivateData>();
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -90,9 +106,7 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Delete your account?',
-      message:
-          'This deletes your posts, replies, saved posts, chat profile and '
-          'private profile, then your login. It cannot be undone.',
+      message: PrivacyCentreScreen.deleteConfirmMessage,
       confirmLabel: 'Delete everything',
       destructive: true,
     );
@@ -126,6 +140,8 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     try {
       await chat.deleteMine();
       await posts.deleteMyContent();
+      // Also on this phone: mood log, journal and safety plan.
+      await local.deleteAll();
       await posts.deleteLogin();
       // Signed out now: go back to the start (the sign-in screens).
       navigator.popUntil((route) => route.isFirst);
@@ -223,10 +239,7 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Deletes your posts, replies, saved posts, chat '
-                        'profile and private profile, then your login. '
-                        '"Me too" taps and reports you made stay, with '
-                        'nothing that links them to you.',
+                        PrivacyCentreScreen.deleteSummary,
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: AppSpacing.lg),

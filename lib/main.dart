@@ -9,6 +9,7 @@ import 'core/security/secure_store.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/chat_repository.dart';
 import 'data/journal.dart';
+import 'data/local_private_data.dart';
 import 'data/mood.dart';
 import 'data/repositories/post_repository.dart';
 import 'data/safety_plan.dart';
@@ -58,6 +59,13 @@ Future<void> main() async {
         Provider<SafetyPlanStore>.value(value: safetyPlan),
         Provider<MoodStore>.value(value: moodLog),
         Provider<JournalStore>.value(value: journal),
+        Provider<LocalPrivateData>.value(
+          value: LocalPrivateData(
+            moodLog: moodLog,
+            journal: journal,
+            safetyPlan: safetyPlan,
+          ),
+        ),
       ],
       child: LoomaApp(appLock: appLock),
     ),

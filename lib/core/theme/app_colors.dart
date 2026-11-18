@@ -89,7 +89,7 @@ class AppPalette {
   Color categoryColor(String categoryId) => accent;
 
   static const AppPalette light = AppPalette(
-    background: Color(0xFFFFFBF8),
+    background: Color(0xFFFBF7F3), // warm off-white
     surface: Color(0xFFFFFFFF),
     softFill: Color(0xFFF4EFEB),
     border: Color(0xFFE8E2DE),

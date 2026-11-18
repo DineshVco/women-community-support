@@ -27,7 +27,6 @@ import 'me/my_reports_screen.dart';
 import 'me/open_to_chat_tile.dart';
 import 'me/post_list_screen.dart';
 import 'me/privacy_centre_screen.dart';
-import 'me/safety_plan_screen.dart';
 import 'moderator_screen.dart';
 
 /// The "Me" tab, top to bottom:
@@ -187,12 +186,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GroupedSection(
                       header: 'My space',
                       children: [
-                        GroupedRow(
-                          icon: CupertinoIcons.shield,
-                          title: 'Safety plan',
-                          subtitle: 'Private, only on this phone',
-                          onTap: () => openSafetyPlan(context),
-                        ),
                         GroupedRow(
                           icon: CupertinoIcons.doc_text,
                           title: 'My posts',
