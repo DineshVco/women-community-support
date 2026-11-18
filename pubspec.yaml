@@ -40,6 +40,10 @@ dependencies:
   cloud_firestore: ^5.5.0
   provider: ^6.1.2
   url_launcher: ^6.3.1
+  google_fonts: ^6.3.2
+  shared_preferences: ^2.5.3
+  # sha256 for the chat profile id (already used by Flutter itself).
+  crypto: ^3.0.6
 
 
 
@@ -66,8 +70,35 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
-  
+    # Looma character (transparent background). Listed by name so old,
+    # unused pictures in assets/images/ are not shipped with the app.
+    - assets/images/looma_character.png
+    # Animation layers, same canvas size as the character.
+    - assets/images/looma_heart.png
+    - assets/images/looma_sparks.png
+    # Looma cat drawings (onboarding pages 2-4, empty states, "Posted").
+    # source_svg/ holds the same drawings as SVG for editing; not shipped.
+    - assets/images/looma_cat_share.png
+    - assets/images/looma_cat_browse.png
+    - assets/images/looma_cat_safe.png
+    - assets/images/looma_cat_heart.png
+    # Caveat (handwriting), bundled so google_fonts never downloads it at
+    # runtime. Used only for the onboarding line and the Home greeting.
+    - assets/google_fonts/Caveat-Regular.ttf
+    - assets/google_fonts/Caveat-SemiBold.ttf
+    - assets/google_fonts/Caveat-OFL.txt
+    # Newsreader's licence, shown on the app's licences page.
+    - assets/fonts/OFL.txt
+
+  # Headings only. Body text uses the phone's own font
+  # (San Francisco on iPhone, Roboto on Android).
+  fonts:
+    - family: Newsreader
+      fonts:
+        - asset: assets/fonts/Newsreader-Regular.ttf
+        - asset: assets/fonts/Newsreader-SemiBold.ttf
+          weight: 600
+
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -36,9 +36,7 @@ class Post {
 
   bool get isVisible => status == 'visible';
 
-  factory Post.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
+  factory Post.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     return Post.fromMap(snapshot.id, snapshot.data() ?? <String, dynamic>{});
   }
 
@@ -47,7 +45,8 @@ class Post {
 
     return Post(
       id: id,
-      alias: (data['alias'] as String?) ??
+      alias:
+          (data['alias'] as String?) ??
           (data['displayName'] as String?) ??
           'Anonymous',
       categoryId: data['categoryId'] as String? ?? '',

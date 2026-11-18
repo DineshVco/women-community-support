@@ -16,9 +16,9 @@ class CategoryLabel extends StatelessWidget {
     return Text(
       name.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: context.palette.categoryColor(categoryId),
-            letterSpacing: 0.8,
-          ),
+        color: context.palette.categoryColor(categoryId),
+        letterSpacing: 0.8,
+      ),
     );
   }
 }

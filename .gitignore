@@ -47,3 +47,16 @@ app.*.map.json
 # Firebase local configuration
 android/app/google-services.json
 lib/firebase_options.dart
+
+# Secrets: never commit these anywhere in the repo.
+service-account*.json
+*firebase-adminsdk*.json
+*.keystore
+*.jks
+key.properties
+local.properties
+.env
+.env.*
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+.firebase/

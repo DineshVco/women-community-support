@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// HerCircle colour palette.
+/// Looma colour palette.
 ///
-/// Warm paper neutrals + one deep-green accent. Every text/background pair
-/// below was checked against WCAG AA (4.5:1 for text).
+/// Calm and plain: black, white and warm greys, plus a soft blush touch.
+///  * blush (#E9B8B3) is decorative only: the glow behind the character,
+///    selected option cards, the active page dot, "Me too" when pressed and
+///    the star next to the wordmark. Never for text (it is too pale to read).
+///  * accent (terracotta) stays for category labels, which are text.
+/// No gradients, no shadows. Dark mode inverts the scheme.
 ///
 /// Use it from any widget with `context.palette`.
 @immutable
@@ -11,6 +15,7 @@ class AppPalette {
   const AppPalette({
     required this.background,
     required this.surface,
+    required this.softFill,
     required this.border,
     required this.borderStrong,
     required this.text,
@@ -18,111 +23,106 @@ class AppPalette {
     required this.textMuted,
     required this.primary,
     required this.onPrimary,
-    required this.primarySoft,
     required this.accent,
+    required this.blush,
     required this.danger,
     required this.dangerSoft,
-    required this.success,
-    required this.warning,
-    required this.health,
-    required this.education,
-    required this.career,
-    required this.safety,
   });
 
   final Color background;
+
+  /// Cards, fields, sheets.
   final Color surface;
 
-  /// Hairline dividers and card outlines (decorative).
+  /// Quiet grey fill: icon circles, info boxes, selected backgrounds.
+  final Color softFill;
+
+  /// 1 px lines between rows, card and field outlines.
   final Color border;
 
-  /// Borders of interactive controls such as inputs (needs 3:1 contrast).
+  /// Selected options and focused fields (black in light mode).
   final Color borderStrong;
 
   final Color text;
   final Color textSecondary;
+
+  /// Hints and placeholders.
   final Color textMuted;
 
+  /// Buttons and selected states: black in light mode.
   final Color primary;
   final Color onPrimary;
-  final Color primarySoft;
 
-  /// Warm clay, used sparingly for highlights.
+  /// Category labels only (readable text colour).
   final Color accent;
 
+  /// Soft blush. Decorative only, see the class comment.
+  final Color blush;
+
+  /// Text/icons on a blush background.
+  Color get onBlush => const Color(0xFF111111);
+
+  /// A faint blush wash, e.g. for a selected option card.
+  Color get blushTint =>
+      Color.alphaBlend(blush.withValues(alpha: 0.22), surface);
+
+  /// Get help screen, Report, destructive actions.
   final Color danger;
   final Color dangerSoft;
-  final Color success;
-  final Color warning;
 
-  // Category text colours.
-  final Color health;
-  final Color education;
-  final Color career;
-  final Color safety;
+  // ── Older names, kept so existing screens keep working. ──
 
-  Color categoryColor(String categoryId) {
-    switch (categoryId) {
-      case 'health_wellness':
-        return health;
-      case 'education':
-        return education;
-      case 'career_development':
-        return career;
-      case 'personal_safety':
-        return safety;
-      default:
-        return textSecondary;
-    }
-  }
+  /// Same as [softFill].
+  Color get primarySoft => softFill;
+
+  /// "Post removed" outcome. Plain text colour: no extra colours in Looma.
+  Color get success => text;
+
+  /// "Waiting for review". Uses the accent.
+  Color get warning => accent;
+
+  /// Every category label uses the accent.
+  Color categoryColor(String categoryId) => accent;
 
   static const AppPalette light = AppPalette(
-    background: Color(0xFFF7F3EC),
+    background: Color(0xFFFFFBF8),
     surface: Color(0xFFFFFFFF),
-    border: Color(0xFFE4DDD0),
-    borderStrong: Color(0xFF8C8374),
-    text: Color(0xFF221E1A),
-    textSecondary: Color(0xFF5C544B),
-    textMuted: Color(0xFF766D62),
-    primary: Color(0xFF1F5F54),
+    softFill: Color(0xFFF4EFEB),
+    border: Color(0xFFE8E2DE),
+    borderStrong: Color(0xFF111111),
+    text: Color(0xFF111111),
+    textSecondary: Color(0xFF6B6B6B),
+    textMuted: Color(0xFF767676),
+    primary: Color(0xFF111111),
     onPrimary: Color(0xFFFFFFFF),
-    primarySoft: Color(0xFFE1EDE9),
-    accent: Color(0xFFA8482A),
-    danger: Color(0xFFA63A2B),
-    dangerSoft: Color(0xFFF6E3DF),
-    success: Color(0xFF2F6B3A),
-    warning: Color(0xFF8A5A00),
-    health: Color(0xFF9A4A30),
-    education: Color(0xFF34577E),
-    career: Color(0xFF5A6620),
-    safety: Color(0xFF7A3E64),
+    accent: Color(0xFFC8553D),
+    blush: Color(0xFFE9B8B3),
+    danger: Color(0xFFB3261E),
+    dangerSoft: Color(0xFFFBEAE9),
   );
 
   static const AppPalette dark = AppPalette(
-    background: Color(0xFF141311),
-    surface: Color(0xFF1D1B18),
-    border: Color(0xFF34302A),
-    borderStrong: Color(0xFF756E62),
-    text: Color(0xFFEFEAE0),
-    textSecondary: Color(0xFFB8B0A3),
-    textMuted: Color(0xFF9A9286),
-    primary: Color(0xFF7CC4B3),
-    onPrimary: Color(0xFF0F2A25),
-    primarySoft: Color(0xFF1F2F2B),
-    accent: Color(0xFFE39A82),
-    danger: Color(0xFFF0907F),
-    dangerSoft: Color(0xFF3A1F1B),
-    success: Color(0xFF8CCB9B),
-    warning: Color(0xFFE0B25A),
-    health: Color(0xFFE39A82),
-    education: Color(0xFF8FB2DA),
-    career: Color(0xFFB5C46A),
-    safety: Color(0xFFD69BBF),
+    background: Color(0xFF0E0E0E),
+    surface: Color(0xFF161615),
+    softFill: Color(0xFF1F1E1C),
+    border: Color(0xFF3A3835),
+    borderStrong: Color(0xFFF5F2EC),
+    text: Color(0xFFF5F2EC),
+    textSecondary: Color(0xFF9A9690),
+    textMuted: Color(0xFF8C8882),
+    primary: Color(0xFFF5F2EC),
+    onPrimary: Color(0xFF111111),
+    // Lighter shade of the accent so small labels stay readable on black.
+    accent: Color(0xFFE07A62),
+    blush: Color(0xFFE9B8B3),
+    danger: Color(0xFFF2B8B5),
+    dangerSoft: Color(0xFF3A1D1B),
   );
 }
 
 extension AppPaletteContext on BuildContext {
-  AppPalette get palette => Theme.of(this).brightness == Brightness.dark
-      ? AppPalette.dark
-      : AppPalette.light;
+  AppPalette get palette =>
+      Theme.of(this).brightness == Brightness.dark
+          ? AppPalette.dark
+          : AppPalette.light;
 }

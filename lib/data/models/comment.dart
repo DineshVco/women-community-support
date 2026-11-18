@@ -31,17 +31,14 @@ class Comment {
     );
   }
 
-  factory Comment.fromMap(
-    String id,
-    String postId,
-    Map<String, dynamic> data,
-  ) {
+  factory Comment.fromMap(String id, String postId, Map<String, dynamic> data) {
     final timestamp = data['timestamp'];
 
     return Comment(
       id: id,
       postId: postId,
-      alias: (data['alias'] as String?) ??
+      alias:
+          (data['alias'] as String?) ??
           (data['displayName'] as String?) ??
           'Anonymous',
       content: data['content'] as String? ?? '',

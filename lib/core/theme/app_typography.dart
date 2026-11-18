@@ -1,35 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// Type scale: 12 / 14 / 16 / 18 / 20 / 24 / 28.
+/// Two families:
+///  * headings and the "Looma" wordmark: Newsreader Regular, a bundled serif
+///    (assets/fonts, see pubspec.yaml).
+///  * everything else: the phone's own font (San Francisco on iPhone,
+///    Roboto on Android), so body text and buttons feel native.
 ///
-/// Two families at most:
-///  * headings: a serif (Newsreader) — set [headingFont] once the font files
-///    are added to the project (see docs/SETUP_STEPS.md).
-///  * everything else: Atkinson Hyperlegible — set [bodyFont].
-/// While both are `null` the app uses the platform default font.
+/// Sizes follow the Looma spec: screen titles 32–34 (letter spacing -0.5),
+/// body 16 with line height 1.45, small text 12–13, buttons 16 weight 500.
 class AppTypography {
   AppTypography._();
 
-  static const String? headingFont = null; // 'Newsreader'
-  static const String? bodyFont = null; // 'AtkinsonHyperlegible'
+  static const String headingFont = 'Newsreader';
 
-  static TextStyle _heading(double size, Color color,
-      {FontWeight weight = FontWeight.w600, double height = 1.25}) {
+  /// `null` = the platform font. Keep it that way for body text.
+  static const String? bodyFont = null;
+
+  /// The wordmark sizes: onboarding and the app bar.
+  static const double wordmarkLarge = 56;
+  static const double wordmarkSmall = 26;
+
+  /// Newsreader Regular at [size].
+  static TextStyle heading(
+    double size,
+    Color color, {
+    FontWeight weight = FontWeight.w400,
+    double height = 1.2,
+    double letterSpacing = 0,
+  }) {
     return TextStyle(
       fontFamily: headingFont,
       fontSize: size,
       fontWeight: weight,
       height: height,
       color: color,
+      letterSpacing: letterSpacing,
     );
   }
 
-  static TextStyle _body(double size, Color color,
-      {FontWeight weight = FontWeight.w400,
-      double height = 1.5,
-      double letterSpacing = 0}) {
+  /// Caveat handwriting. ONLY for the onboarding line "a safer, brighter
+  /// tomorrow" and the Home greeting. The font file ships with the app
+  /// (assets/google_fonts), and downloading at runtime is switched off, so
+  /// it works offline and never contacts Google.
+  static TextStyle script(double size, Color color) {
+    GoogleFonts.config.allowRuntimeFetching = false;
+    return GoogleFonts.caveat(
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+      height: 1.1,
+      color: color,
+    );
+  }
+
+  static TextStyle _body(
+    double size,
+    Color color, {
+    FontWeight weight = FontWeight.w400,
+    double height = 1.45,
+    double letterSpacing = 0,
+  }) {
     return TextStyle(
       fontFamily: bodyFont,
       fontSize: size,
@@ -42,20 +74,36 @@ class AppTypography {
 
   static TextTheme textTheme(AppPalette p) {
     return TextTheme(
-      headlineLarge: _heading(28, p.text, height: 1.2),
-      headlineMedium: _heading(24, p.text, height: 1.2),
-      headlineSmall: _heading(20, p.text),
-      titleLarge: _body(18, p.text, weight: FontWeight.w700, height: 1.3),
-      titleMedium: _heading(18, p.text, height: 1.3),
-      titleSmall: _body(14, p.text, weight: FontWeight.w700, height: 1.3),
-      bodyLarge: _body(16, p.text, height: 1.55),
-      bodyMedium: _body(14, p.text, height: 1.5),
-      bodySmall: _body(12, p.textSecondary, height: 1.4),
-      labelLarge: _body(14, p.text, weight: FontWeight.w700, height: 1.2),
-      labelMedium: _body(12, p.textSecondary,
-          weight: FontWeight.w700, height: 1.2, letterSpacing: 0.2),
-      labelSmall: _body(11, p.textSecondary,
-          weight: FontWeight.w700, height: 1.2, letterSpacing: 0.3),
+      // Screen titles ("Welcome back", "When's your birthday?").
+      headlineLarge: heading(34, p.text, height: 1.15, letterSpacing: -0.5),
+      // Post title on the discussion page.
+      headlineMedium: heading(28, p.text, height: 1.2, letterSpacing: -0.3),
+      // Section headings, dialog titles.
+      headlineSmall: heading(22, p.text, height: 1.25),
+      // App bar titles: the platform font, like iOS navigation bars.
+      titleLarge: _body(17, p.text, weight: FontWeight.w600, height: 1.3),
+      // Post titles in the feed.
+      titleMedium: heading(22, p.text, height: 1.25, letterSpacing: -0.2),
+      titleSmall: _body(15, p.text, weight: FontWeight.w600, height: 1.3),
+      bodyLarge: _body(16, p.text),
+      bodyMedium: _body(15, p.text),
+      bodySmall: _body(13, p.textSecondary, height: 1.4),
+      // Buttons.
+      labelLarge: _body(16, p.text, weight: FontWeight.w500, height: 1.2),
+      labelMedium: _body(
+        13,
+        p.textSecondary,
+        weight: FontWeight.w500,
+        height: 1.2,
+      ),
+      // Category labels and small caps.
+      labelSmall: _body(
+        11,
+        p.textSecondary,
+        weight: FontWeight.w600,
+        height: 1.2,
+        letterSpacing: 0.8,
+      ),
     );
   }
 }

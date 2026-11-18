@@ -41,25 +41,24 @@ class CommentTile extends StatelessWidget {
             ),
             if (isAuthor) ...[
               const SizedBox(width: AppSpacing.sm),
+              // Small black tag for the person who started the discussion.
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: palette.primarySoft,
+                  color: palette.primary,
                   borderRadius: BorderRadius.circular(AppRadius.tag),
                 ),
                 child: Text(
-                  'Author',
+                  'Original poster',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: palette.primary,
+                    color: palette.onPrimary,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
             ],
             const SizedBox(width: AppSpacing.sm),
-            Text(
-              timeAgo(comment.timestamp),
-              style: theme.textTheme.bodySmall,
-            ),
+            Text(timeAgo(comment.timestamp), style: theme.textTheme.bodySmall),
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -88,17 +87,18 @@ class CommentTile extends StatelessWidget {
         AppSpacing.screenHorizontal,
         AppSpacing.xs,
       ),
-      child: isReply
-          ? Container(
-              padding: const EdgeInsets.only(left: AppSpacing.md),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: palette.border, width: 2),
+      child:
+          isReply
+              ? Container(
+                padding: const EdgeInsets.only(left: AppSpacing.md),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: palette.border, width: 2),
+                  ),
                 ),
-              ),
-              child: body,
-            )
-          : body,
+                child: body,
+              )
+              : body,
     );
   }
 }

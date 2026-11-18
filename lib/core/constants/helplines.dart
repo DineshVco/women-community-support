@@ -18,7 +18,8 @@ class Helplines {
   static const Helpline emergency = Helpline(
     name: 'Emergency',
     number: '999',
-    description: 'Police, ambulance and fire. Use this if you are in danger now.',
+    description:
+        'Police, ambulance and fire. Use this if you are in danger now.',
   );
 
   static const List<Helpline> support = [

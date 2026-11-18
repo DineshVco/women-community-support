@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../widgets/content_width.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
 
 /// Static page with real phone numbers. Works with no internet and no account.
@@ -28,9 +29,9 @@ class HelpScreen extends StatelessWidget {
       // Devices without a phone (emulator, laptop): copy the number instead.
       await Clipboard.setData(ClipboardData(text: line.number));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${line.number} copied.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${line.number} copied.')));
       }
     }
   }
@@ -72,15 +73,17 @@ class HelpScreen extends StatelessWidget {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: palette.danger,
-                          foregroundColor: palette.surface,
+                    PressScale(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: palette.danger,
+                            foregroundColor: palette.surface,
+                          ),
+                          onPressed: () => _call(context, Helplines.emergency),
+                          child: Text('Call ${Helplines.emergency.number}'),
                         ),
-                        onPressed: () => _call(context, Helplines.emergency),
-                        child: Text('Call ${Helplines.emergency.number}'),
                       ),
                     ),
                   ],

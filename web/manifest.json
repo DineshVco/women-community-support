@@ -1,11 +1,11 @@
 {
-    "name": "HerCircle",
-    "short_name": "HerCircle",
+    "name": "Looma",
+    "short_name": "Looma",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#F7F3EC",
-    "theme_color": "#1F5F54",
-    "description": "HerCircle: an anonymous, moderated community where women support each other.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#111111",
+    "description": "Looma: a calm, moderated space where women support each other.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

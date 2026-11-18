@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/haptics.dart';
 import 'help_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -21,11 +22,7 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          HomeScreen(),
-          HelpScreen(),
-          ProfileScreen(),
-        ],
+        children: const [HomeScreen(), HelpScreen(), ProfileScreen()],
       ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
@@ -33,12 +30,15 @@ class _AppShellState extends State<AppShell> {
         ),
         child: NavigationBar(
           selectedIndex: _index,
-          onDestinationSelected: (value) => setState(() => _index = value),
+          onDestinationSelected: (value) {
+            if (value != _index) AppHaptics.selection();
+            setState(() => _index = value);
+          },
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.forum_outlined),
               selectedIcon: Icon(Icons.forum),
-              label: 'Discussions',
+              label: 'Discuss',
             ),
             NavigationDestination(
               icon: Icon(Icons.health_and_safety_outlined),

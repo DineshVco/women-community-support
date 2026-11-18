@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
+import '../../core/utils/greeting.dart';
+import '../../data/models/post.dart';
+import '../providers/app_settings.dart';
+
+/// "Good evening" + how many discussions started in the last 24 hours.
+/// [posts] comes from the live feed, so the count updates by itself.
+class FeedGreeting extends StatelessWidget {
+  const FeedGreeting({super.key, required this.posts});
+
+  /// Null while the feed is still loading.
+  final List<Post>? posts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.palette;
+
+    final String subline;
+    final list = posts;
+    if (AppSettings.gentleOf(context)) {
+      // Gentle mode: no counting.
+      subline = 'Take your time. Read, share, or just rest here.';
+    } else if (list == null) {
+      subline = 'Catching up on the latest…';
+    } else {
+      final count = countRecent(list.map((p) => p.timestamp));
+      subline = switch (count) {
+        0 => 'No new discussions today yet. Yours could be the first.',
+        1 => '1 new discussion in the last 24 hours.',
+        _ => '$count new discussions in the last 24 hours.',
+      };
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenHorizontal,
+        AppSpacing.lg,
+        AppSpacing.screenHorizontal,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handwritten (Caveat): one of only two places it is used.
+          Text(
+            greetingFor(DateTime.now()),
+            style: AppTypography.script(34, palette.text),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            greetingReassurance,
+            style: theme.textTheme.bodyMedium?.copyWith(color: palette.text),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // Fades between messages when the live count changes.
+          AnimatedSwitcher(
+            duration: AppMotion.of(context, AppMotion.medium),
+            switchInCurve: AppMotion.enter,
+            switchOutCurve: AppMotion.exit,
+            layoutBuilder:
+                (current, previous) => Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [...previous, if (current != null) current],
+                ),
+            child: Semantics(
+              liveRegion: true,
+              key: ValueKey(subline),
+              child: Text(subline, style: theme.textTheme.bodySmall),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

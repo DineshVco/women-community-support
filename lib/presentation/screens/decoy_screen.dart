@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'auth_gate.dart';
 
 /// Shown by "Quick exit". It looks like an ordinary weather screen so that
-/// anyone glancing at the phone does not see HerCircle.
+/// anyone glancing at the phone does not see Looma.
 /// Long-press anywhere to go back to the app.
 ///
 /// The colours are deliberately hard-coded: this screen must NOT look like
-/// part of HerCircle.
+/// part of Looma.
 class DecoyScreen extends StatelessWidget {
   const DecoyScreen({super.key});
 

@@ -3,11 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/haptics.dart';
 import '../../core/utils/time_format.dart';
 import '../../data/models/report.dart';
 import '../../data/repositories/post_repository.dart';
+import '../widgets/adaptive.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/press_scale.dart';
 import 'post_detail_screen.dart';
 
 /// Open reports, grouped by post. A moderator reads the post, then keeps it
@@ -39,44 +42,31 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
   void _openPost(String postId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            PostDetailScreen(postId: postId, showHiddenContent: true),
+        builder:
+            (_) => PostDetailScreen(postId: postId, showHiddenContent: true),
       ),
     );
   }
 
   Future<void> _decide(_ReportedPost item, {required bool remove}) async {
     if (remove) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Remove this post?'),
-          content: Text(
-            '“${item.title}” will be removed for everyone. The people who '
-            'reported it will see that it was removed.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: dialogContext.palette.danger,
-              ),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
+      final confirmed = await showConfirmDialog(
+        context,
+        title: 'Remove this post?',
+        message:
+            '“${item.title}” will be removed for everyone. The people '
+            'who reported it will see that it was removed.',
+        confirmLabel: 'Remove',
+        destructive: true,
       );
-      if (confirmed != true || !mounted) return;
+      if (!confirmed || !mounted) return;
     }
 
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy.add(item.postId));
     try {
       await _repo.resolvePostReports(postId: item.postId, removePost: remove);
+      AppHaptics.medium();
       messenger.showSnackBar(
         SnackBar(
           content: Text(remove ? 'Post removed.' : 'Post kept and visible.'),
@@ -125,7 +115,8 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
               if (snapshot.hasError) {
                 return const EmptyState(
                   title: 'Could not load reports',
-                  message: 'Check your connection. Only moderators can see '
+                  message:
+                      'Check your connection. Only moderators can see '
                       'this list.',
                 );
               }
@@ -240,17 +231,23 @@ class _ReportedPostRow extends StatelessWidget {
                 onPressed: busy ? null : onRead,
                 child: const Text('Read post'),
               ),
-              OutlinedButton(
-                onPressed: busy ? null : onKeep,
-                child: const Text('Keep post'),
-              ),
-              FilledButton(
-                onPressed: busy ? null : onRemove,
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.danger,
-                  foregroundColor: palette.surface,
+              PressScale(
+                enabled: !busy,
+                child: OutlinedButton(
+                  onPressed: busy ? null : onKeep,
+                  child: const Text('Keep post'),
                 ),
-                child: const Text('Remove post'),
+              ),
+              PressScale(
+                enabled: !busy,
+                child: FilledButton(
+                  onPressed: busy ? null : onRemove,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: palette.danger,
+                    foregroundColor: palette.surface,
+                  ),
+                  child: const Text('Remove post'),
+                ),
               ),
               if (busy)
                 const SizedBox(

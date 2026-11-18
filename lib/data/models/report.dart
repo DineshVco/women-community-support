@@ -32,8 +32,7 @@ class Report {
       postTitle: data['postTitle'] as String? ?? '',
       reason: data['reason'] as String? ?? '',
       status: data['status'] as String? ?? 'open',
-      createdAt:
-          createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
+      createdAt: createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
     );
   }
 }
