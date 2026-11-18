@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+<g transform="translate(0,0)" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="#fff">
+  
+  <!-- tail -->
+  <path d="M262 332 C322 336 338 276 306 248" fill="none"/>
+  <path d="M262 332 C322 336 338 276 306 248" fill="none" stroke="#fff" stroke-width="0"/>
+  <!-- body -->
+  <path d="M138 344 C116 280 140 214 200 206 C260 214 284 280 262 344 Z"/>
+  <!-- tummy -->
+  <path d="M176 340 C170 300 182 276 200 272 C218 276 230 300 224 340" fill="#F2F2F2" stroke-width="2.5"/>
+  <!-- back paws -->
+  <ellipse cx="170" cy="344" rx="24" ry="11"/>
+  <ellipse cx="230" cy="344" rx="24" ry="11"/>
+  <!-- ears -->
+  <path d="M146 140 L142 84 L190 116 Z"/>
+  <path d="M254 140 L258 84 L210 116 Z"/>
+  <path d="M152 124 L151 100 L168 112" fill="none" stroke-width="2.5"/>
+  <path d="M248 124 L249 100 L232 112" fill="none" stroke-width="2.5"/>
+  <!-- head -->
+  <ellipse cx="200" cy="168" rx="64" ry="54"/>
+  <!-- forehead stripes -->
+  <path d="M200 116 L200 130 M184 119 L187 131 M216 119 L213 131" fill="none" stroke-width="3"/>
+  <!-- eyes (happy, closed) -->
+  <path d="M168 166 Q177 176 186 166" fill="none"/>
+  <path d="M214 166 Q223 176 232 166" fill="none"/>
+  <!-- cheeks -->
+  <ellipse cx="160" cy="184" rx="10" ry="6" fill="#E9E9E9" stroke="none"/>
+  <ellipse cx="240" cy="184" rx="10" ry="6" fill="#E9E9E9" stroke="none"/>
+  <!-- nose + mouth -->
+  <path d="M194 182 L206 182 L200 189 Z" fill="#111111" stroke-width="2"/>
+  <path d="M200 189 Q195 197 188 193 M200 189 Q205 197 212 193" fill="none" stroke-width="3"/>
+  <!-- whiskers -->
+  <path d="M146 186 L118 180 M146 194 L120 198 M254 186 L282 180 M254 194 L280 198" fill="none" stroke-width="2.5"/>
+  
+</g>
+<g stroke="#111111" stroke-width="4" stroke-linejoin="round" fill="#fff">
+ <path d="M262 48 H338 Q352 48 352 62 V104 Q352 118 338 118 H296 L276 138 L278 118 H262 Q248 118 248 104 V62 Q248 48 262 48 Z"/>
+ <path transform="translate(300,84) scale(1.5)" d="M0 8 C-14 -4 -6 -18 0 -9 C6 -18 14 -4 0 8 Z" fill="#fff" stroke="#111111" stroke-width="2.6666666666666665" stroke-linejoin="round"/></g><g stroke="#111111" stroke-width="3.5" stroke-linecap="round" fill="none"><path d="M96 92 L84 74"/><path d="M114 80 L112 62"/><path d="M80 112 L62 104"/></g></svg>
