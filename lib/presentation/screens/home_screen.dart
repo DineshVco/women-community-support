@@ -1,18 +1,19 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
-
+import '../../data/models/category.dart';
 import '../../data/models/post.dart';
+import '../../data/repositories/post_repository.dart';
+import '../widgets/brand_mark.dart';
+import '../widgets/content_width.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/post_card.dart';
-import 'post_detail_screen.dart';
+import '../widgets/quick_exit_button.dart';
 import 'create_post_screen.dart';
+import 'post_detail_screen.dart';
 
-
-
+/// The discussion feed: search, category filter, newest first.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,373 +22,207 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  late Stream<List<Post>> _feed;
+  String? _categoryId; // null = all categories
+  String _query = '';
 
-  Stream<List<Post>> get _postsStream {
-  return FirebaseFirestore.instance
-      .collection('posts')
-      .orderBy('timestamp', descending: true)
-      .snapshots()
-      .map(
-        (snapshot) => snapshot.docs
-            .map(Post.fromFirestore)
-            .toList(),
-      );
-}
+  @override
+  void initState() {
+    super.initState();
+    _feed = context.read<PostRepository>().watchFeed();
+  }
+
+  void _retry() {
+    setState(() => _feed = context.read<PostRepository>().watchFeed());
+  }
+
+  void _openCompose() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CreatePostScreen()),
+    );
+  }
+
+  void _openPost(Post post) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PostDetailScreen(postId: post.id),
+      ),
+    );
+  }
+
+  List<Post> _applyFilters(List<Post> posts) {
+    final query = _query.trim().toLowerCase();
+
+    return posts.where((post) {
+      if (_categoryId != null && post.categoryId != _categoryId) return false;
+      if (query.isEmpty) return true;
+      return post.title.toLowerCase().contains(query) ||
+          post.content.toLowerCase().contains(query);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCompose,
+        icon: const Icon(Icons.edit_outlined),
+        label: const Text('Write a post'),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenHorizontal,
-            AppSpacing.xxl,
-            AppSpacing.screenHorizontal,
-            100,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-  // Header
-  Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.eco_rounded,
-              size: 19,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            'HerCircle',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-        ],
-      ),
-      Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.secondaryContainer,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.person_outline_rounded,
-          size: 22,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    ],
-  ),
-
-  const SizedBox(height: AppSpacing.xxl),
-
-              // Greeting
-              Text(
-               'Good morning 👋',
-                style: Theme.of(context).textTheme.headlineLarge,
-               ),
-
-              const SizedBox(height: AppSpacing.xs),
-
-              Text(
-              'Find a safe space to share, learn, and connect.',
-               style: Theme.of(context).textTheme.bodyMedium,
-               ),
-
-              const SizedBox(height: AppSpacing.xxl),
-
-              // Search
-              TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search discussions...',
-                  prefixIcon: Icon(Icons.search_rounded),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.xxxl),
-
-              // Categories
-              Text(
-                'Explore categories',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              _CategoryGrid(),
-
-              const SizedBox(height: AppSpacing.xxxl),
-
-              // Community feed
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: ContentWidth(
+          child: StreamBuilder<List<Post>>(
+            stream: _feed,
+            builder: (context, snapshot) {
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 96),
                 children: [
-                  Text(
-                    'Community discussions',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenHorizontal,
+                      AppSpacing.sm,
+                      AppSpacing.sm,
+                      0,
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [Wordmark(), QuickExitButton()],
+                    ),
                   ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('See all'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.screenHorizontal,
+                      AppSpacing.md,
+                      AppSpacing.screenHorizontal,
+                      AppSpacing.md,
+                    ),
+                    child: TextField(
+                      onChanged: (value) => setState(() => _query = value),
+                      textInputAction: TextInputAction.search,
+                      decoration: const InputDecoration(
+                        hintText: 'Search discussions',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                    ),
                   ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenHorizontal,
+                    ),
+                    child: Row(
+                      children: [
+                        _CategoryChip(
+                          label: 'All',
+                          selected: _categoryId == null,
+                          onTap: () => setState(() => _categoryId = null),
+                        ),
+                        for (final category in AppCategories.all)
+                          _CategoryChip(
+                            label: category.shortName,
+                            selected: _categoryId == category.id,
+                            onTap: () =>
+                                setState(() => _categoryId = category.id),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Divider(),
+                  ..._buildBody(context, snapshot, theme),
                 ],
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-StreamBuilder<List<Post>>(
-  stream: _postsStream,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.xxl),
-          child: CircularProgressIndicator(),
+              );
+            },
+          ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  List<Widget> _buildBody(
+    BuildContext context,
+    AsyncSnapshot<List<Post>> snapshot,
+    ThemeData theme,
+  ) {
     if (snapshot.hasError) {
-      return Text(
-        'Unable to load discussions.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      );
+      return [
+        EmptyState(
+          title: 'Could not load discussions',
+          message: 'Check your internet connection and try again.',
+          actionLabel: 'Try again',
+          onAction: _retry,
+        ),
+      ];
     }
 
-    final posts = snapshot.data ?? [];
+    if (!snapshot.hasData) {
+      return const [
+        Padding(
+          padding: EdgeInsets.all(AppSpacing.xxl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
+
+    final allPosts = snapshot.data!;
+    final posts = _applyFilters(allPosts);
+
+    if (allPosts.isEmpty) {
+      return [
+        EmptyState(
+          title: 'No discussions yet',
+          message: 'Start the first one. You will post under a random alias.',
+          actionLabel: 'Write a post',
+          onAction: _openCompose,
+        ),
+      ];
+    }
 
     if (posts.isEmpty) {
-  return _EmptyFeed();
-}
-    return Column(
-      children: posts
-          .map(
-            (post) => Padding(
-              padding: const EdgeInsets.only(
-                bottom: AppSpacing.md,
-              ),
-              child: PostCard(
-                post: post,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PostDetailScreen(post: post),
-                    ),
-                  );
-                },
-              ),
-            ),
-          )
-          .toList(),
-    );
-  },
-),
-            ],
-          ),
+      final category =
+          _categoryId == null ? null : AppCategories.fromId(_categoryId!);
+      return [
+        EmptyState(
+          title: 'Nothing found',
+          message: _query.trim().isNotEmpty
+              ? 'No discussions match “${_query.trim()}”.'
+              : 'There are no ${category?.shortName ?? ''} discussions yet.',
         ),
-      ),
+      ];
+    }
 
-      // Bottom navigation
-      bottomNavigationBar: _BottomNavigationBar(),
-    );
-  }
-}
-
-class _CategoryGrid extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final categories = [
-  (
-    'Health & Wellness',
-    Icons.favorite_outline_rounded,
-    AppColors.health,
-    AppColors.healthSoft,
-  ),
-  (
-    'Education',
-    Icons.menu_book_outlined,
-    AppColors.education,
-    AppColors.educationSoft,
-  ),
-  (
-    'Career Development',
-    Icons.work_outline_rounded,
-    AppColors.career,
-    AppColors.careerSoft,
-  ),
-  (
-    'Personal Safety',
-    Icons.shield_outlined,
-    AppColors.safety,
-    AppColors.safetySoft,
-  ),
-];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: categories.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.md,
-        mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 1.55,
-      ),
-      itemBuilder: (context, index) {
-        final category = categories[index];
-
-        return Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          border: Border.all(
-          color: Theme.of(context).dividerColor,
-         ),
-          boxShadow: const [
-          BoxShadow(
-          color: Color(0x0D000000),
-          blurRadius: 12,
-          offset: Offset(0, 4),
-         ),
-       ],
-      ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                color: category.$4,
-                shape: BoxShape.circle,
-               ),
-                child: Icon(
-                  category.$2,
-                  color: category.$3,
-                  size: 21,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                category.$1,
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _EmptyFeed extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xxl),
-      decoration: BoxDecoration(
-  color: Theme.of(context).colorScheme.surface,
-  borderRadius: BorderRadius.circular(AppRadius.xl),
-  border: Border.all(
-    color: Theme.of(context).dividerColor,
-  ),
-  boxShadow: const [
-    BoxShadow(
-      color: Color(0x0D000000),
-      blurRadius: 12,
-      offset: Offset(0, 4),
-    ),
-  ],
-),
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-              color: AppColors.primarySoft,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.forum_outlined,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            'No discussions yet',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Be the first to start a conversation with the community.',
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BottomNavigationBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: 0,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      indicatorColor: Theme.of(context).colorScheme.secondaryContainer,
-      onDestinationSelected: (index) {
-        if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const CreatePostScreen(),
-            ),
-          );
-        }
-      },
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Home',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.add_circle_outline_rounded),
-          selectedIcon: Icon(Icons.add_circle_rounded),
-          label: 'Post',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.grid_view_outlined),
-          selectedIcon: Icon(Icons.grid_view_rounded),
-          label: 'Categories',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline_rounded),
-          selectedIcon: Icon(Icons.person_rounded),
-          label: 'Profile',
-        ),
+    return [
+      for (final post in posts) ...[
+        PostCard(post: post, onTap: () => _openPost(post)),
+        const Divider(),
       ],
+    ];
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: FilterChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        showCheckmark: false,
+      ),
     );
   }
 }

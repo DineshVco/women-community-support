@@ -1,18 +1,17 @@
+/// Corner radii. Different components use different radii on purpose,
+/// instead of rounding everything the same amount.
 class AppRadius {
   AppRadius._();
 
-  // Small elements
-  static const double sm = 8.0;
-  static const double md = 12.0;
+  /// Small tags and badges.
+  static const double tag = 4.0;
 
-  // Standard components
-  static const double lg = 16.0;
-  static const double xl = 20.0;
+  /// Buttons, inputs, chips, menus.
+  static const double control = 8.0;
 
-  // Large cards / sheets
-  static const double xxl = 24.0;
-  static const double xxxl = 32.0;
+  /// Grouped surfaces and dialogs.
+  static const double card = 12.0;
 
-  // Fully rounded controls
-  static const double pill = 999.0;
+  /// Top corners of bottom sheets.
+  static const double sheet = 16.0;
 }

@@ -1,369 +1,614 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/content_filter.dart';
+import '../../core/utils/time_format.dart';
+import '../../data/models/comment.dart';
 import '../../data/models/post.dart';
-import '../providers/comments_provider.dart';
-import '../widgets/avatar.dart';
-import '../widgets/comment_card.dart';
-import '../widgets/comment_input.dart';
+import '../../data/models/report.dart';
+import '../../data/repositories/post_repository.dart';
+import '../widgets/category_label.dart';
+import '../widgets/comment_composer.dart';
+import '../widgets/comment_tile.dart';
+import '../widgets/content_width.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/quick_exit_button.dart';
 
+/// One discussion: the post, "Me too", replies (one level deep) and the
+/// reply box. Everything updates live.
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
     super.key,
-    required this.post,
+    required this.postId,
+    this.showHiddenContent = false,
   });
 
-  final Post post;
+  final String postId;
+
+  /// Moderators open hidden posts from the queue so they can read them
+  /// before deciding. Everyone else only sees a short notice.
+  final bool showHiddenContent;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
 }
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
-  final TextEditingController _commentController =
-      TextEditingController();
+  late final PostRepository _repo;
+  late final Stream<Post?> _postStream;
+  late final Stream<List<Comment>> _commentsStream;
+  late final Stream<bool> _meTooStream;
+
+  final _replyController = TextEditingController();
+  final _replyFocus = FocusNode();
+
+  bool _isMine = false;
+  bool _sending = false;
+  bool _meTooBusy = false;
+  bool _deleting = false;
+
+  /// The comment being answered (shown as "Replying to ...").
+  Comment? _replyingTo;
+
+  /// The top-level comment the reply attaches to. Replying to a reply
+  /// attaches to its parent, so threads stay one level deep.
+  String? _replyParentId;
 
   @override
   void initState() {
     super.initState();
+    _repo = context.read<PostRepository>();
+    _postStream = _repo.watchPost(widget.postId);
+    _commentsStream = _repo.watchComments(widget.postId);
+    _meTooStream = _repo.watchMeToo(widget.postId);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CommentsProvider>().loadComments(widget.post.id);
+    _repo.isMyPost(widget.postId).then((mine) {
+      if (mounted) setState(() => _isMine = mine);
     });
   }
 
   @override
   void dispose() {
-    _commentController.dispose();
+    _replyController.dispose();
+    _replyFocus.dispose();
     super.dispose();
   }
 
+  void _showMessage(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  // ───────────────────────── Replies ─────────────────────────
+
+  void _startReply(Comment comment, String parentId) {
+    setState(() {
+      _replyingTo = comment;
+      _replyParentId = parentId;
+    });
+    _replyFocus.requestFocus();
+  }
+
+  void _cancelReply() {
+    setState(() {
+      _replyingTo = null;
+      _replyParentId = null;
+    });
+  }
+
+  Future<void> _sendReply() async {
+    final text = _replyController.text.trim();
+    if (text.isEmpty) return;
+
+    if (ContentFilter.isDisrespectful(text)) {
+      _showMessage('Please keep it respectful. Remove any abusive words '
+          'and try again.');
+      return;
+    }
+
+    setState(() => _sending = true);
+    try {
+      await _repo.addComment(
+        postId: widget.postId,
+        content: text,
+        parentCommentId: _replyParentId,
+      );
+      if (!mounted) return;
+      _replyController.clear();
+      _replyFocus.unfocus();
+      setState(() {
+        _replyingTo = null;
+        _replyParentId = null;
+      });
+    } catch (_) {
+      if (mounted) _showMessage('Could not send your reply. Please try again.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  // ───────────────────────── "Me too" ─────────────────────────
+
+  Future<void> _toggleMeToo(bool currentlyOn) async {
+    if (_meTooBusy) return;
+    setState(() => _meTooBusy = true);
+    try {
+      await _repo.setMeToo(widget.postId, on: !currentlyOn);
+    } catch (_) {
+      if (mounted) _showMessage('Could not update. Please try again.');
+    } finally {
+      if (mounted) setState(() => _meTooBusy = false);
+    }
+  }
+
+  // ───────────────────────── Report ─────────────────────────
+
+  Future<void> _report(Post post) async {
+    if (await _repo.hasReported(post.id)) {
+      if (mounted) {
+        _showMessage('You already reported this post. You can see what '
+            'happened to it under Me.');
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _ReportSheet(),
+    );
+    if (reason == null || !mounted) return;
+
+    try {
+      await _repo.reportPost(post: post, reason: reason);
+      if (mounted) {
+        _showMessage('Thank you. A moderator will review it. You can follow '
+            'the outcome under Me.');
+      }
+    } catch (_) {
+      if (mounted) _showMessage('Could not send the report. Please try again.');
+    }
+  }
+
+  // ───────────────────────── Delete ─────────────────────────
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete this post?'),
+        content: const Text(
+          'The post will disappear for everyone. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: dialogContext.palette.danger,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _deleting = true);
+    try {
+      await _repo.deletePost(widget.postId);
+      navigator.pop();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Your post was deleted.')),
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _deleting = false);
+        _showMessage('Could not delete the post. Please try again.');
+      }
+    }
+  }
+
+  // ───────────────────────── Build ─────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return StreamBuilder<Post?>(
+      stream: _postStream,
+      builder: (context, snapshot) {
+        final post = snapshot.data;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildAuthor(theme),
-            const SizedBox(height: AppSpacing.xxl),
-            _buildCategory(theme),
-            const SizedBox(height: AppSpacing.lg),
-            _buildPostContent(theme),
-            const SizedBox(height: AppSpacing.xxl),
-            _buildPostActions(theme),
-            const SizedBox(height: AppSpacing.section),
-            _buildComments(theme),
-            const SizedBox(height: AppSpacing.xxl),
-            CommentInput(
-              controller: _commentController,
-              onSubmit: _submitComment,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+        Widget body;
+        if (snapshot.hasError) {
+          body = EmptyState(
+            title: 'Could not load this discussion',
+            message: 'Check your internet connection and try again.',
+            actionLabel: 'Go back',
+            onAction: () => Navigator.of(context).pop(),
+          );
+        } else if (_deleting ||
+            snapshot.connectionState == ConnectionState.waiting) {
+          body = const Center(child: CircularProgressIndicator());
+        } else if (post == null) {
+          body = const EmptyState(
+            title: 'This discussion is gone',
+            message: 'The person who started it deleted it.',
+          );
+        } else if (!post.isVisible && !widget.showHiddenContent) {
+          body = EmptyState(
+            title: post.status == 'removed'
+                ? 'Removed by a moderator'
+                : 'Hidden for review',
+            message: post.status == 'removed'
+                ? 'This post broke the community rules, so it was removed.'
+                : 'Several members reported this post. It is hidden until a '
+                    'moderator reviews it.',
+          );
+        } else {
+          body = _buildDiscussion(post);
+        }
 
-  Widget _buildAuthor(ThemeData theme) {
-    return Row(
-      children: [
-        Avatar(
-          isAnonymous: widget.post.isAnonymous,
-          displayName: widget.post.displayName,
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.post.isAnonymous
-                    ? 'Anonymous'
-                    : widget.post.displayName,
-                style: theme.textTheme.labelLarge,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _formatDate(widget.post.timestamp),
-                style: theme.textTheme.bodySmall,
-              ),
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Discussion'),
+            actions: [
+              const QuickExitButton(),
+              if (post != null && !_deleting) _buildMenu(post),
+              const SizedBox(width: AppSpacing.xs),
             ],
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategory(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Text(
-        _categoryName(widget.post.categoryId),
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPostContent(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.post.title,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          widget.post.content,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPostActions(ThemeData theme) {
-    return Row(
-      children: [
-        _ActionButton(
-          icon: Icons.favorite_border_rounded,
-          label: 'Like',
-          onTap: () {},
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        _ActionButton(
-          icon: Icons.chat_bubble_outline_rounded,
-          label: 'Comment',
-          onTap: () {
-            FocusScope.of(context).requestFocus();
-          },
-        ),
-        const Spacer(),
-        _ActionButton(
-          icon: Icons.flag_outlined,
-          label: 'Report',
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComments(ThemeData theme) {
-    return Consumer<CommentsProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoading(widget.post.id)) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-
-        final error = provider.errorForPost(widget.post.id);
-
-        if (error != null) {
-          return Text(
-            error,
-            style: theme.textTheme.bodyMedium,
-          );
-        }
-
-        final comments = provider.commentsForPost(widget.post.id);
-
-        if (comments.isEmpty) {
-          return Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(
-                color: theme.dividerColor,
-              ),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.forum_outlined,
-                  size: 32,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'No comments yet',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Be the first to share your thoughts.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Comments',
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ...comments.map(
-              (comment) => Padding(
-                padding: const EdgeInsets.only(
-                  bottom: AppSpacing.md,
-                ),
-                child: CommentCard(
-                  comment: comment,
-                  formatDate: _formatDate,
-                ),
-              ),
-            ),
-          ],
+          body: SafeArea(top: false, child: body),
         );
       },
     );
   }
 
-  Future<void> _submitComment() async {
-    final content = _commentController.text.trim();
+  Widget _buildMenu(Post post) {
+    final canReport = !_isMine && post.isVisible;
+    if (!canReport && !_isMine) return const SizedBox.shrink();
 
-    if (content.isEmpty) return;
+    return PopupMenuButton<String>(
+      tooltip: 'More options',
+      onSelected: (value) {
+        if (value == 'report') _report(post);
+        if (value == 'delete') _confirmDelete();
+      },
+      itemBuilder: (_) => [
+        if (canReport)
+          const PopupMenuItem(
+            value: 'report',
+            child: ListTile(
+              leading: Icon(Icons.flag_outlined),
+              title: Text('Report post'),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        if (_isMine)
+          PopupMenuItem(
+            value: 'delete',
+            child: ListTile(
+              leading: Icon(Icons.delete_outline, color: context.palette.danger),
+              title: Text(
+                'Delete my post',
+                style: TextStyle(color: context.palette.danger),
+              ),
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+      ],
+    );
+  }
 
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      return;
-    }
-
-    try {
-      await context.read<CommentsProvider>().addComment(
-            postId: widget.post.id,
-            authorId: user.uid,
-            isAnonymous: true,
-            displayName: 'Anonymous',
-            content: content,
-          );
-
-      _commentController.clear();
-
-      if (!mounted) return;
-
-      FocusScope.of(context).unfocus();
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Unable to add comment. Please try again.',
+  Widget _buildDiscussion(Post post) {
+    return Column(
+      children: [
+        Expanded(
+          child: ContentWidth(
+            child: StreamBuilder<List<Comment>>(
+              stream: _commentsStream,
+              builder: (context, commentsSnapshot) {
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [
+                    ..._buildPost(post),
+                    const Divider(),
+                    ..._buildComments(post, commentsSnapshot),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      );
-    }
+        if (post.isVisible)
+          CommentComposer(
+            controller: _replyController,
+            focusNode: _replyFocus,
+            onSend: _sendReply,
+            sending: _sending,
+            replyingToAlias: _replyingTo?.alias,
+            onCancelReply: _cancelReply,
+          ),
+      ],
+    );
   }
 
-  String _categoryName(String categoryId) {
-    switch (categoryId) {
-      case 'health_wellness':
-        return 'Health & Wellness';
-      case 'education':
-        return 'Education';
-      case 'career_development':
-        return 'Career Development';
-      case 'personal_safety':
-        return 'Personal Safety';
-      default:
-        return 'Community';
-    }
+  List<Widget> _buildPost(Post post) {
+    final theme = Theme.of(context);
+    final palette = context.palette;
+
+    return [
+      if (!post.isVisible)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenHorizontal,
+            AppSpacing.lg,
+            AppSpacing.screenHorizontal,
+            0,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: palette.dangerSoft,
+              borderRadius: BorderRadius.circular(AppRadius.control),
+            ),
+            child: Text(
+              post.status == 'removed'
+                  ? 'Removed. Members cannot see this post.'
+                  : 'Hidden after reports. Members cannot see this post '
+                      'until it is reviewed.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.danger,
+              ),
+            ),
+          ),
+        ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenHorizontal,
+          AppSpacing.lg,
+          AppSpacing.screenHorizontal,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CategoryLabel(categoryId: post.categoryId),
+                const SizedBox(width: AppSpacing.sm),
+                Text(timeAgo(post.timestamp), style: theme.textTheme.bodySmall),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(post.title, style: theme.textTheme.headlineMedium),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              _isMine ? 'Started by you as ${post.alias}' : 'Started by ${post.alias}',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SelectableText(post.content, style: theme.textTheme.bodyLarge),
+            const SizedBox(height: AppSpacing.lg),
+            if (post.isVisible)
+              _buildMeTooButton(post)
+            else
+              Text(
+                '${post.meTooCount} me too',
+                style: theme.textTheme.bodySmall,
+              ),
+          ],
+        ),
+      ),
+    ];
   }
 
-  String _formatDate(DateTime date) {
-    final difference = DateTime.now().difference(date);
+  Widget _buildMeTooButton(Post post) {
+    final palette = context.palette;
 
-    if (difference.inMinutes < 1) {
-      return 'Just now';
+    return StreamBuilder<bool>(
+      stream: _meTooStream,
+      builder: (context, snapshot) {
+        final on = snapshot.data ?? false;
+        final loading = snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData;
+
+        return Semantics(
+          toggled: on,
+          child: OutlinedButton.icon(
+            onPressed:
+                (loading || _meTooBusy) ? null : () => _toggleMeToo(on),
+            style: on
+                ? OutlinedButton.styleFrom(
+                    backgroundColor: palette.primarySoft,
+                    foregroundColor: palette.primary,
+                    side: BorderSide(color: palette.primary),
+                  )
+                : null,
+            icon: Icon(on ? Icons.favorite : Icons.favorite_border, size: 20),
+            label: Text('Me too  ·  ${post.meTooCount}'),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildComments(
+    Post post,
+    AsyncSnapshot<List<Comment>> snapshot,
+  ) {
+    final theme = Theme.of(context);
+    final palette = context.palette;
+
+    final heading = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenHorizontal,
+        AppSpacing.lg,
+        AppSpacing.screenHorizontal,
+        AppSpacing.xs,
+      ),
+      child: Text(
+        snapshot.hasData ? 'Replies (${snapshot.data!.length})' : 'Replies',
+        style: theme.textTheme.headlineSmall,
+      ),
+    );
+
+    Widget note(String text) => Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenHorizontal,
+            vertical: AppSpacing.md,
+          ),
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+        );
+
+    if (snapshot.hasError) {
+      return [heading, note('Could not load replies.')];
+    }
+    if (!snapshot.hasData) {
+      return [
+        heading,
+        const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
     }
 
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+    final comments = snapshot.data!;
+    if (comments.isEmpty) {
+      return [
+        heading,
+        note(post.isVisible
+            ? 'No replies yet. Be the first to answer kindly.'
+            : 'No replies.'),
+      ];
     }
 
-    if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+    // Build one-level threads. A reply whose parent was deleted is shown
+    // as a normal top-level comment.
+    final byId = {for (final c in comments) c.id: c};
+    final topLevel = <Comment>[];
+    final repliesByParent = <String, List<Comment>>{};
+
+    for (final comment in comments) {
+      final root = _rootId(comment, byId);
+      if (root == comment.id) {
+        topLevel.add(comment);
+      } else {
+        repliesByParent.putIfAbsent(root, () => []).add(comment);
+      }
     }
 
-    if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
-    }
+    final canReply = post.isVisible;
 
-    return '${date.day}/${date.month}/${date.year}';
+    return [
+      heading,
+      for (final comment in topLevel) ...[
+        CommentTile(
+          comment: comment,
+          isAuthor: comment.alias == post.alias,
+          onReply: canReply ? () => _startReply(comment, comment.id) : null,
+        ),
+        for (final reply in repliesByParent[comment.id] ?? const <Comment>[])
+          CommentTile(
+            comment: reply,
+            isReply: true,
+            isAuthor: reply.alias == post.alias,
+            onReply: canReply ? () => _startReply(reply, comment.id) : null,
+          ),
+      ],
+    ];
+  }
+
+  /// Walks up the parent chain to the top-level comment.
+  String _rootId(Comment comment, Map<String, Comment> byId) {
+    var current = comment;
+    // The limit stops a loop if the data is ever malformed.
+    for (var i = 0; i < 10; i++) {
+      final parentId = current.parentCommentId;
+      final parent = parentId == null ? null : byId[parentId];
+      if (parent == null) return current.id;
+      current = parent;
+    }
+    return current.id;
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+/// Bottom sheet: pick a reason, then send.
+class _ReportSheet extends StatefulWidget {
+  const _ReportSheet();
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  @override
+  State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  String? _reason;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = context.palette;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          0,
+          AppSpacing.xl,
+          AppSpacing.xl,
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              size: 19,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: AppSpacing.xs),
+            Text('Report this post', style: theme.textTheme.headlineSmall),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              label,
-              style: theme.textTheme.bodySmall,
+              'Your report is private. The author is not told who reported it.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            for (final reason in ReportReasons.all)
+              Semantics(
+                selected: _reason == reason,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  onTap: () => setState(() => _reason = reason),
+                  leading: Icon(
+                    _reason == reason
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: _reason == reason ? palette.primary : null,
+                  ),
+                  title: Text(reason),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _reason == null
+                    ? null
+                    : () => Navigator.of(context).pop(_reason),
+                child: const Text('Send report'),
+              ),
             ),
           ],
         ),

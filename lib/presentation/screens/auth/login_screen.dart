@@ -1,11 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../widgets/brand_mark.dart';
+import '../../widgets/content_width.dart';
+
+/// Sign in / create account / continue as guest.
+/// After success, AuthGate swaps this screen for the app automatically.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.initialSignUp = false});
+  const LoginScreen({super.key, this.initialSignUp = false, this.onBack});
 
   final bool initialSignUp;
+  final VoidCallback? onBack;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,9 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isSignUp = false;
-  String? _statusMessage;
-  bool _isStatusError = true;
+  late bool _isSignUp;
+  String? _message;
+  bool _messageIsError = true;
 
   @override
   void initState() {
@@ -33,72 +43,100 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _continueWithEmail() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    if (email.isEmpty || password.isEmpty) {
-      _showMessage('Enter your email address and password.');
-      return;
-    }
-    if (!email.contains('@')) {
-      _showMessage('Enter a valid email address.');
-      return;
-    }
+  void _setMessage(String text, {bool isError = true}) {
+    if (!mounted) return;
+    setState(() {
+      _message = text;
+      _messageIsError = isError;
+    });
+  }
 
+  Future<void> _run(Future<void> Function() action) async {
     FocusScope.of(context).unfocus();
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
     try {
-      if (_isSignUp) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } else {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      }
-      if (!mounted) return;
-      _showMessage(
-        _isSignUp ? 'Account created successfully.' : 'Signed in successfully.',
-        isError: false,
-      );
+      await action();
     } on FirebaseAuthException catch (error) {
-      if (mounted) _showMessage(_authErrorMessage(error));
+      _setMessage(_authErrorMessage(error));
     } catch (_) {
-      if (mounted) _showMessage('Something went wrong. Please try again.');
+      _setMessage('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  Future<void> _continueWithEmail() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _setMessage('Enter your email address and password.');
+      return;
+    }
+    if (!email.contains('@')) {
+      _setMessage('Enter a valid email address.');
+      return;
+    }
+    if (_isSignUp && password.length < 8) {
+      _setMessage('Use a password with at least 8 characters.');
+      return;
+    }
+
+    await _run(() async {
+      final auth = FirebaseAuth.instance;
+      if (_isSignUp) {
+        await auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      } else {
+        await auth.signInWithEmailAndPassword(email: email, password: password);
+      }
+    });
+  }
+
   Future<void> _continueWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
+    await _run(() async {
+      final auth = FirebaseAuth.instance;
+
+      if (kIsWeb) {
+        await auth.signInWithPopup(GoogleAuthProvider());
+        return;
+      }
+
       final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) return; // person closed the Google window
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      await auth.signInWithCredential(credential);
+    });
+  }
 
-      if (!mounted) return;
-      _showMessage('Signed in with Google successfully.', isError: false);
-    } on FirebaseAuthException catch (error) {
-      if (mounted) _showMessage(_authErrorMessage(error));
-    } catch (_) {
-      if (mounted) {
-        _showMessage(
-          'Google sign-in could not be completed. Please try again.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  Future<void> _continueAsGuest() async {
+    await _run(() => FirebaseAuth.instance.signInAnonymously());
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _setMessage('Type your email address above, then tap Forgot password.');
+      return;
     }
+
+    await _run(() async {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _setMessage(
+        'If an account exists for $email, a reset link is on its way.',
+        isError: false,
+      );
+    });
   }
 
   String _authErrorMessage(FirebaseAuthException error) {
@@ -112,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'email-already-in-use':
         return 'An account already exists for this email address.';
       case 'weak-password':
-        return 'Choose a stronger password with at least 6 characters.';
+        return 'Choose a stronger password.';
       case 'user-disabled':
         return 'This account has been disabled.';
       case 'too-many-requests':
@@ -120,225 +158,198 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'network-request-failed':
         return 'Check your internet connection and try again.';
       case 'operation-not-allowed':
-        return 'This sign-in method has not been enabled in Firebase yet.';
+        return 'This sign-in method is not switched on in Firebase yet.';
+      case 'popup-closed-by-user':
+      case 'cancelled-popup-request':
+        return 'The sign-in window was closed before finishing.';
       default:
         return 'Unable to continue. Please try again.';
     }
   }
 
-  void _showMessage(String message, {bool isError = true}) {
-    setState(() {
-      _statusMessage = message;
-      _isStatusError = isError;
-    });
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor:
-              isError ? Colors.red.shade700 : Colors.green.shade700,
-        ),
-      );
-  }
-
-  InputDecoration _inputDecoration({
-    required String hintText,
-    required IconData icon,
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      hintText: hintText,
-      prefixIcon: Icon(icon),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final primaryAction = _isSignUp ? 'Create Account' : 'Sign In';
+    final theme = Theme.of(context);
+    final palette = context.palette;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFCEEF3),
+      appBar: widget.onBack == null
+          ? null
+          : AppBar(
+              leading: IconButton(
+                onPressed: _isLoading ? null : widget.onBack,
+                tooltip: 'Back',
+                icon: const Icon(Icons.arrow_back),
+              ),
+              shape: const Border(),
+            ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              Text(
-                _isSignUp ? 'Create Account' : 'Welcome Back',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _isSignUp
-                    ? 'Join a supportive community at your own pace.'
-                    : 'Continue your journey with a supportive community.',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-              const SizedBox(height: 32),
-              TextField(
-                controller: _emailController,
-                enabled: !_isLoading,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                autocorrect: false,
-                decoration: _inputDecoration(
-                  hintText: 'Email address',
-                  icon: Icons.email_outlined,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                enabled: !_isLoading,
-                obscureText: _obscurePassword,
-                autofillHints: const [AutofillHints.password],
-                decoration: _inputDecoration(
-                  hintText: 'Password',
-                  icon: Icons.lock_outline,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                    ),
-                    onPressed:
-                        _isLoading
-                            ? null
-                            : () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
+        child: ContentWidth(
+          maxWidth: 440,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.xl,
+            ),
+            child: AutofillGroup(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Wordmark(),
+                  const SizedBox(height: AppSpacing.xxl),
+                  Text(
+                    _isSignUp ? 'Create your account' : 'Welcome back',
+                    style: theme.textTheme.headlineMedium,
                   ),
-                ),
-              ),
-              if (!_isSignUp)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: _isLoading ? null : () {},
-                    child: const Text('Forgot Password?'),
-                  ),
-                ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _continueWithEmail,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9C4DCC),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    _isSignUp
+                        ? 'Your email is only used to sign in. It is never '
+                            'shown next to anything you write.'
+                        : 'Sign in to pick up where you left off.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.textSecondary,
                     ),
                   ),
-                  child:
-                      _isLoading
-                          ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          )
-                          : Text(
-                            primaryAction,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                ),
-              ),
-              if (_statusMessage != null) ...[
-                const SizedBox(height: 12),
-                Semantics(
-                  liveRegion: true,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                          _isStatusError
-                              ? Colors.red.shade50
-                              : Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: AppSpacing.xl),
+                  TextField(
+                    controller: _emailController,
+                    enabled: !_isLoading,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
+                    autocorrect: false,
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
                     ),
-                    child: Text(
-                      _statusMessage!,
-                      style: TextStyle(
-                        color:
-                            _isStatusError
-                                ? Colors.red.shade800
-                                : Colors.green.shade800,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  TextField(
+                    controller: _passwordController,
+                    enabled: !_isLoading,
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _isLoading ? null : _continueWithEmail(),
+                    autofillHints: [
+                      _isSignUp
+                          ? AutofillHints.newPassword
+                          : AutofillHints.password,
+                    ],
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      helperText: _isSignUp ? 'At least 8 characters' : null,
+                      suffixIcon: IconButton(
+                        tooltip:
+                            _obscurePassword ? 'Show password' : 'Hide password',
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-              const SizedBox(height: 18),
-              const Row(
-                children: [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('OR', style: TextStyle(color: Colors.black54)),
+                  if (!_isSignUp)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _isLoading ? null : _resetPassword,
+                        child: const Text('Forgot password?'),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: AppSpacing.lg),
+                  if (_message != null) ...[
+                    Semantics(
+                      liveRegion: true,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: _messageIsError
+                              ? palette.dangerSoft
+                              : palette.primarySoft,
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.control),
+                        ),
+                        child: Text(
+                          _message!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: _messageIsError
+                                ? palette.danger
+                                : palette.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _isLoading ? null : _continueWithEmail,
+                      child: _isLoading
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: palette.onPrimary,
+                              ),
+                            )
+                          : Text(_isSignUp ? 'Create account' : 'Sign in'),
+                    ),
                   ),
-                  Expanded(child: Divider()),
+                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _continueWithGoogle,
+                      child: const Text('Continue with Google'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Center(
+                    child: TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () => setState(() {
+                                _isSignUp = !_isSignUp;
+                                _message = null;
+                              }),
+                      child: Text(
+                        _isSignUp
+                            ? 'Already have an account? Sign in'
+                            : 'New here? Create an account',
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Just looking around?',
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Use HerCircle as a guest without an email address. '
+                    'Guest posts are tied to this device, so signing out '
+                    'means you lose access to them.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton(
+                    onPressed: _isLoading ? null : _continueAsGuest,
+                    child: const Text('Continue as guest'),
+                  ),
                 ],
               ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _continueWithGoogle,
-                  icon: const Text(
-                    'G',
-                    style: TextStyle(
-                      color: Color(0xFF4285F4),
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  label: const Text('Continue with Google'),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: const BorderSide(color: Color(0xFFE0E0E0)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Center(
-                child: TextButton(
-                  onPressed:
-                      _isLoading
-                          ? null
-                          : () => setState(() => _isSignUp = !_isSignUp),
-                  child: Text(
-                    _isSignUp
-                        ? 'Already have an account? Sign In'
-                        : "Don't have an account? Sign Up",
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
       ),

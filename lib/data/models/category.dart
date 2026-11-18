@@ -1,15 +1,17 @@
 class Category {
-  final String id;
-  final String name;
-  final String description;
-  final String icon;
-
   const Category({
     required this.id,
     required this.name,
+    required this.shortName,
     required this.description,
-    required this.icon,
   });
+
+  final String id;
+  final String name;
+
+  /// Used on chips and small labels.
+  final String shortName;
+  final String description;
 }
 
 class AppCategories {
@@ -19,36 +21,33 @@ class AppCategories {
     Category(
       id: 'health_wellness',
       name: 'Health & Wellness',
-      description: 'Discussions about health and personal wellbeing.',
-      icon: 'health',
+      shortName: 'Health',
+      description: 'Health, body and mental wellbeing.',
     ),
     Category(
       id: 'education',
       name: 'Education',
-      description: 'Learning, studies, and educational experiences.',
-      icon: 'education',
+      shortName: 'Education',
+      description: 'Studies, scholarships and learning.',
     ),
     Category(
       id: 'career_development',
       name: 'Career Development',
-      description: 'Work, careers, skills, and professional growth.',
-      icon: 'career',
+      shortName: 'Career',
+      description: 'Work, interviews, pay and growth.',
     ),
     Category(
       id: 'personal_safety',
       name: 'Personal Safety',
-      description: 'Safety, awareness, and experiences that matter.',
-      icon: 'safety',
+      shortName: 'Safety',
+      description: 'Staying safe and what to do when you are not.',
     ),
   ];
 
   static Category? fromId(String id) {
     for (final category in all) {
-      if (category.id == id) {
-        return category;
-      }
+      if (category.id == id) return category;
     }
-
     return null;
   }
 }

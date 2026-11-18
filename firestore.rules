@@ -1,0 +1,240 @@
+rules_version = '2';
+
+// HerCircle security rules.
+//
+// Privacy model
+//  * Posts and comments contain NO author id.
+//  * The author id lives in `authors/{postId}` and
+//    `posts/{postId}/commentAuthors/{commentId}`. Only that author can read
+//    them: other members AND moderators cannot see who wrote something.
+//  * The owner of the Firebase project can still read everything in the
+//    console, so the app is anonymous to other users and moderators, NOT to
+//    the project owner. The privacy notice in the app says exactly this.
+//
+// Moderators are created by hand in the console: add a document
+// `moderators/{their uid}` (any fields). The app can never write there.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────── helpers ─────────────
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isModerator() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/moderators/$(request.auth.uid));
+    }
+
+    function authorPath(postId) {
+      return /databases/$(database)/documents/authors/$(postId);
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function isAuthorOf(postId) {
+      return signedIn() &&
+        exists(authorPath(postId)) &&
+        get(authorPath(postId)).data.authorId == request.auth.uid;
+    }
+
+    // Keys that changed in an update.
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // One post per minute per person.
+    function postRateOk() {
+      return !exists(userPath(request.auth.uid)) ||
+        request.time >
+          get(userPath(request.auth.uid)).data.lastPostAt + duration.value(60, 's');
+    }
+
+    // ───────────── posts ─────────────
+
+    function validNewPost(postId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['alias', 'categoryId', 'title', 'content',
+                               'timestamp', 'flagCount', 'meTooCount',
+                               'commentCount', 'status'])
+        && d.keys().hasAll(['alias', 'categoryId', 'title', 'content',
+                            'timestamp', 'flagCount', 'meTooCount',
+                            'commentCount', 'status'])
+        && d.alias is string && d.alias.size() > 0 && d.alias.size() <= 40
+        && d.categoryId in ['health_wellness', 'education',
+                            'career_development', 'personal_safety']
+        && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
+        && d.content is string && d.content.size() >= 1 && d.content.size() <= 5000
+        && d.timestamp == request.time
+        && d.flagCount == 0 && d.meTooCount == 0 && d.commentCount == 0
+        && d.status == 'visible'
+        && existsAfter(authorPath(postId))
+        && getAfter(authorPath(postId)).data.authorId == request.auth.uid
+        && postRateOk()
+        && getAfter(userPath(request.auth.uid)).data.lastPostAt == request.time;
+    }
+
+    // A member reports a post: +1 flag, and the 3rd flag hides the post.
+    function isReportUpdate(postId) {
+      let report = /databases/$(database)/documents/reports/$(postId + '_' + request.auth.uid);
+      let oldStatus = resource.data.get('status', 'visible');
+      let newFlags = request.resource.data.get('flagCount', 0);
+      return changedKeys().hasOnly(['flagCount', 'status'])
+        && !exists(report) && existsAfter(report)
+        && newFlags == resource.data.get('flagCount', 0) + 1
+        && request.resource.data.status ==
+             ((newFlags >= 3 && oldStatus == 'visible') ? 'hidden' : oldStatus);
+    }
+
+    // A member taps "Me too" (+1) or takes it back (-1).
+    function isMeTooUpdate(postId) {
+      let reaction = /databases/$(database)/documents/posts/$(postId)/reactions/$(request.auth.uid);
+      let oldCount = resource.data.get('meTooCount', 0);
+      return changedKeys().hasOnly(['meTooCount']) && (
+        (!exists(reaction) && existsAfter(reaction) &&
+           request.resource.data.meTooCount == oldCount + 1) ||
+        (exists(reaction) && !existsAfter(reaction) &&
+           request.resource.data.meTooCount == oldCount - 1)
+      );
+    }
+
+    // A reply was added: +1 reply count.
+    function isReplyCountUpdate() {
+      return changedKeys().hasOnly(['commentCount'])
+        && request.resource.data.commentCount ==
+             resource.data.get('commentCount', 0) + 1;
+    }
+
+    function isModeratorUpdate() {
+      return isModerator() && changedKeys().hasOnly(['status', 'flagCount']);
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validNewPost(postId);
+      allow update: if signedIn() && (
+        isReportUpdate(postId) ||
+        isMeTooUpdate(postId) ||
+        isReplyCountUpdate() ||
+        isModeratorUpdate()
+      );
+      allow delete: if isAuthorOf(postId);
+
+      // ───────────── comments ─────────────
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(
+               ['alias', 'content', 'timestamp', 'parentCommentId'])
+          && request.resource.data.keys().hasAll(
+               ['alias', 'content', 'timestamp', 'parentCommentId'])
+          && request.resource.data.alias is string
+          && request.resource.data.alias.size() > 0
+          && request.resource.data.alias.size() <= 40
+          && request.resource.data.content is string
+          && request.resource.data.content.size() >= 1
+          && request.resource.data.content.size() <= 2000
+          && request.resource.data.timestamp == request.time
+          && (request.resource.data.parentCommentId == null ||
+              request.resource.data.parentCommentId is string)
+          && get(/databases/$(database)/documents/posts/$(postId))
+               .data.get('status', 'visible') == 'visible'
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
+          && getAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
+               .data.authorId == request.auth.uid;
+        allow update: if false;
+        allow delete: if signedIn() &&
+          exists(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId)) &&
+          get(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
+            .data.authorId == request.auth.uid;
+      }
+
+      match /commentAuthors/{commentId} {
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['authorId', 'createdAt'])
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow read, delete: if signedIn() &&
+          resource.data.authorId == request.auth.uid;
+        allow update: if false;
+      }
+
+      // ───────────── "Me too" reactions ─────────────
+
+      match /reactions/{uid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == uid;
+        allow update: if false;
+      }
+    }
+
+    // ───────────── who wrote what (locked) ─────────────
+
+    match /authors/{postId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['authorId', 'createdAt'])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow read, delete: if signedIn() &&
+        resource.data.authorId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // ───────────── per-user bookkeeping ─────────────
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastPostAt'])
+        && request.resource.data.lastPostAt == request.time;
+      allow delete: if false;
+    }
+
+    // ───────────── reports ─────────────
+
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && reportId == request.resource.data.postId + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(
+             ['postId', 'postTitle', 'reason', 'reporterId', 'createdAt', 'status'])
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.postTitle is string
+        && request.resource.data.postTitle.size() <= 120
+        && request.resource.data.reason in [
+             'Harassment or hate',
+             'Unsafe or harmful advice',
+             'Spam or advertising',
+             'Private information',
+             'Something else'];
+      // Reporters can read their own reports (to see the outcome).
+      // (`resource == null` lets the app check "did I already report this?"
+      // for a report that does not exist yet.)
+      allow read: if isModerator() ||
+        (signedIn() &&
+          (resource == null || resource.data.reporterId == request.auth.uid));
+      allow update: if isModerator()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'reviewedAt'])
+        && request.resource.data.status in ['dismissed', 'removed']
+        && request.resource.data.reviewedAt == request.time;
+      allow delete: if false;
+    }
+
+    // ───────────── moderators (read your own, never write) ─────────────
+
+    match /moderators/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}

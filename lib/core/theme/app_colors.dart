@@ -1,91 +1,128 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  AppColors._();
+/// HerCircle colour palette.
+///
+/// Warm paper neutrals + one deep-green accent. Every text/background pair
+/// below was checked against WCAG AA (4.5:1 for text).
+///
+/// Use it from any widget with `context.palette`.
+@immutable
+class AppPalette {
+  const AppPalette({
+    required this.background,
+    required this.surface,
+    required this.border,
+    required this.borderStrong,
+    required this.text,
+    required this.textSecondary,
+    required this.textMuted,
+    required this.primary,
+    required this.onPrimary,
+    required this.primarySoft,
+    required this.accent,
+    required this.danger,
+    required this.dangerSoft,
+    required this.success,
+    required this.warning,
+    required this.health,
+    required this.education,
+    required this.career,
+    required this.safety,
+  });
 
-  // ─────────────────────────────────────────────
-  // LIGHT THEME
-  // ─────────────────────────────────────────────
+  final Color background;
+  final Color surface;
 
-  // Primary
-  static const Color primary = Color(0xFF762A83);
-  static const Color primaryLight = Color(0xFF9A4BA8);
-  static const Color primarySoft = Color(0xFFF9E5F1);
+  /// Hairline dividers and card outlines (decorative).
+  final Color border;
 
-  // Backgrounds
-  static const Color background = Color(0xFFFDF5F9);
-  static const Color surface = Colors.white;
+  /// Borders of interactive controls such as inputs (needs 3:1 contrast).
+  final Color borderStrong;
 
-  // Text
-  static const Color textPrimary = Color(0xFF32104E);
-  static const Color textSecondary = Color(0xFF806B88);
-  static const Color textMuted = Color(0xFFA79AAA);
+  final Color text;
+  final Color textSecondary;
+  final Color textMuted;
 
-  // Borders
-  static const Color border = Color(0xFFE8D8E5);
+  final Color primary;
+  final Color onPrimary;
+  final Color primarySoft;
 
-  // Status
-  static const Color success = Color(0xFF4F8A68);
-  static const Color warning = Color(0xFFC58A3A);
-  static const Color error = Color(0xFFC65362);
+  /// Warm clay, used sparingly for highlights.
+  final Color accent;
 
-  // ─────────────────────────────────────────────
-  // DARK THEME
-  // ─────────────────────────────────────────────
+  final Color danger;
+  final Color dangerSoft;
+  final Color success;
+  final Color warning;
 
-  // Primary
-  static const Color darkPrimary = Color(0xFFB85BC5);
-  static const Color darkPrimaryLight = Color(0xFFD080D9);
-  static const Color darkPrimarySoft = Color(0xFF3A203D);
+  // Category text colours.
+  final Color health;
+  final Color education;
+  final Color career;
+  final Color safety;
 
-  // Backgrounds
-  static const Color darkBackground = Color(0xFF17131A);
-  static const Color darkSurface = Color(0xFF241C28);
-  static const Color darkSurfaceElevated = Color(0xFF2D2332);
+  Color categoryColor(String categoryId) {
+    switch (categoryId) {
+      case 'health_wellness':
+        return health;
+      case 'education':
+        return education;
+      case 'career_development':
+        return career;
+      case 'personal_safety':
+        return safety;
+      default:
+        return textSecondary;
+    }
+  }
 
-  // Text
-  static const Color darkTextPrimary = Color(0xFFF3EAF4);
-  static const Color darkTextSecondary = Color(0xFFC0B3C3);
-  static const Color darkTextMuted = Color(0xFF918493);
+  static const AppPalette light = AppPalette(
+    background: Color(0xFFF7F3EC),
+    surface: Color(0xFFFFFFFF),
+    border: Color(0xFFE4DDD0),
+    borderStrong: Color(0xFF8C8374),
+    text: Color(0xFF221E1A),
+    textSecondary: Color(0xFF5C544B),
+    textMuted: Color(0xFF766D62),
+    primary: Color(0xFF1F5F54),
+    onPrimary: Color(0xFFFFFFFF),
+    primarySoft: Color(0xFFE1EDE9),
+    accent: Color(0xFFA8482A),
+    danger: Color(0xFFA63A2B),
+    dangerSoft: Color(0xFFF6E3DF),
+    success: Color(0xFF2F6B3A),
+    warning: Color(0xFF8A5A00),
+    health: Color(0xFF9A4A30),
+    education: Color(0xFF34577E),
+    career: Color(0xFF5A6620),
+    safety: Color(0xFF7A3E64),
+  );
 
-  // Borders
-  static const Color darkBorder = Color(0xFF49394C);
+  static const AppPalette dark = AppPalette(
+    background: Color(0xFF141311),
+    surface: Color(0xFF1D1B18),
+    border: Color(0xFF34302A),
+    borderStrong: Color(0xFF756E62),
+    text: Color(0xFFEFEAE0),
+    textSecondary: Color(0xFFB8B0A3),
+    textMuted: Color(0xFF9A9286),
+    primary: Color(0xFF7CC4B3),
+    onPrimary: Color(0xFF0F2A25),
+    primarySoft: Color(0xFF1F2F2B),
+    accent: Color(0xFFE39A82),
+    danger: Color(0xFFF0907F),
+    dangerSoft: Color(0xFF3A1F1B),
+    success: Color(0xFF8CCB9B),
+    warning: Color(0xFFE0B25A),
+    health: Color(0xFFE39A82),
+    education: Color(0xFF8FB2DA),
+    career: Color(0xFFB5C46A),
+    safety: Color(0xFFD69BBF),
+  );
+}
 
-  // Status
-  static const Color darkSuccess = Color(0xFF78B58F);
-  static const Color darkWarning = Color(0xFFD9A45E);
-  static const Color darkError = Color(0xFFE47784);
-
-  // ─────────────────────────────────────────────
-  // CATEGORY ACCENTS
-  // ─────────────────────────────────────────────
-
-  // Health & Wellness
-  static const Color health = Color(0xFFD66A82);
-  static const Color healthSoft = Color(0xFFFBE8ED);
-
-  // Education
-  static const Color education = Color(0xFF5B8CC9);
-  static const Color educationSoft = Color(0xFFE8F1FB);
-
-  // Career Development
-  static const Color career = Color(0xFF5B9B78);
-  static const Color careerSoft = Color(0xFFE8F4ED);
-
-  // Personal Safety
-  static const Color safety = Color(0xFF8667B7);
-  static const Color safetySoft = Color(0xFFF0EAF8);
-
-  // Dark category accents
-  static const Color darkHealth = Color(0xFFE8879D);
-  static const Color darkHealthSoft = Color(0xFF40242C);
-
-  static const Color darkEducation = Color(0xFF7DA9E0);
-  static const Color darkEducationSoft = Color(0xFF243447);
-
-  static const Color darkCareer = Color(0xFF7FBD9A);
-  static const Color darkCareerSoft = Color(0xFF24382D);
-
-  static const Color darkSafety = Color(0xFFA78BD0);
-  static const Color darkSafetySoft = Color(0xFF332A40);
+extension AppPaletteContext on BuildContext {
+  AppPalette get palette => Theme.of(this).brightness == Brightness.dark
+      ? AppPalette.dark
+      : AppPalette.light;
 }

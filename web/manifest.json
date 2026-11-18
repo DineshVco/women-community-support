@@ -1,11 +1,11 @@
 {
-    "name": "women_community_support",
-    "short_name": "women_community_support",
+    "name": "HerCircle",
+    "short_name": "HerCircle",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F3EC",
+    "theme_color": "#1F5F54",
+    "description": "HerCircle: an anonymous, moderated community where women support each other.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

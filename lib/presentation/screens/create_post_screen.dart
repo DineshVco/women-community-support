@@ -1,8 +1,14 @@
-import 'package:flutter/material.dart';
-import '../../data/models/category.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/utils/content_filter.dart';
+import '../../data/models/category.dart';
+import '../../data/repositories/post_repository.dart';
+import '../widgets/content_width.dart';
+import 'help_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -12,11 +18,14 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-  String? _selectedCategoryId;
-  bool _isAnonymous = true;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const int _maxTitle = 120;
+  static const int _maxContent = 5000;
+
+  final _titleController = TextEditingController();
+  final _contentController = TextEditingController();
+  String? _categoryId;
+  String? _error;
+  bool _isPosting = false;
 
   @override
   void dispose() {
@@ -24,220 +33,228 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _contentController.dispose();
     super.dispose();
   }
-  Future<void> _publishPost() async {  
-  final title = _titleController.text.trim();
-  final content = _contentController.text.trim();
 
-  if (_selectedCategoryId == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please choose a category.'),
-      ),
-    );
-    return;
+  String? _validate(String title, String content) {
+    if (_categoryId == null) return 'Choose a category.';
+    if (title.length < 3) return 'Give your post a title (at least 3 letters).';
+    if (content.isEmpty) return 'Write something to share.';
+    if (ContentFilter.isDisrespectful('$title $content')) {
+      return 'Please keep it respectful. Remove any abusive words and try again.';
+    }
+    return null;
   }
 
-  if (title.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please enter a title.'),
-      ),
-    );
-    return;
+  Future<void> _publish() async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    final problem = _validate(title, content);
+    if (problem != null) {
+      setState(() => _error = problem);
+      return;
+    }
+
+    if (ContentFilter.suggestsDistress('$title $content')) {
+      final proceed = await _showSupportSheet();
+      if (proceed != true || !mounted) return;
+    }
+
+    setState(() {
+      _isPosting = true;
+      _error = null;
+    });
+
+    try {
+      final alias = await context.read<PostRepository>().createPost(
+            categoryId: _categoryId!,
+            title: title,
+            content: content,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Posted as $alias.')),
+      );
+    } on FirebaseException {
+      _fail('Could not post. If you posted a moment ago, wait a minute and '
+          'try again.');
+    } catch (_) {
+      _fail('Could not post. Please try again.');
+    }
   }
 
-  if (content.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please write something to share.'),
-      ),
-    );
-    return;
+  void _fail(String message) {
+    if (!mounted) return;
+    setState(() {
+      _isPosting = false;
+      _error = message;
+    });
   }
 
-try {
-  await _firestore.collection('posts').add({
-    'authorId': 'current_user',
-    'isAnonymous': _isAnonymous,
-    'displayName': _isAnonymous ? 'Anonymous' : 'Community Member',
-    'categoryId': _selectedCategoryId,
-    'title': title,
-    'content': content,
-    'timestamp': FieldValue.serverTimestamp(),
-    'flagCount': 0,
-  });
+  /// Shown before posting when the text sounds like the writer is struggling.
+  Future<bool?> _showSupportSheet() {
+    final theme = Theme.of(context);
 
-  if (!mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Post published successfully.'),
-    ),
-  );
-
-  Navigator.pop(context);
-} catch (error) {
-  if (!mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Unable to publish post. Please try again.'),
-    ),
-  );
-}}
+    return showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            0,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you okay?',
+                style: theme.textTheme.headlineSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'What you wrote sounds heavy. You can still post it, but '
+                'talking to someone right now may help. The people on these '
+                'lines are there to listen.',
+                style: theme.textTheme.bodyLarge,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop(false);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const HelpScreen(showBackButton: true),
+                      ),
+                    );
+                  },
+                  child: const Text('See who I can call'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  child: const Text('Post anyway'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create a Post'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Share with the community',
-              style: theme.textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Share your thoughts, experiences, or questions with other women.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-Text(
-  'Category',
-  style: theme.textTheme.labelLarge,
-),
-const SizedBox(height: AppSpacing.sm),
-
-DropdownButtonFormField<String>(
-  value: _selectedCategoryId,
-  decoration: const InputDecoration(
-    hintText: 'Choose a category',
-  ),
-  items: AppCategories.all.map((category) {
-    return DropdownMenuItem<String>(
-      value: category.id,
-      child: Text(category.name),
-    );
-  }).toList(),
-  onChanged: (value) {
-    setState(() {
-      _selectedCategoryId = value;
-    });
-  },
-),
-            const SizedBox(height: AppSpacing.xl),
-
-            Text(
-              'Title',
-              style: theme.textTheme.labelLarge,
-            ),
-            Container(
-  padding: const EdgeInsets.symmetric(
-    horizontal: AppSpacing.lg,
-    vertical: AppSpacing.md,
-  ),
-  decoration: BoxDecoration(
-    color: theme.colorScheme.surface,
-    borderRadius: BorderRadius.circular(AppRadius.lg),
-    border: Border.all(
-      color: theme.dividerColor,
-    ),
-  ),
-  child: Row(
-    children: [
-      Icon(
-        Icons.visibility_off_outlined,
-        color: theme.colorScheme.primary,
-      ),
-      const SizedBox(width: AppSpacing.md),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Post anonymously',
-              style: theme.textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Your name will not be shown with this post.',
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ),
-      ),
-      Switch(
-        value: _isAnonymous,
-        onChanged: (value) {
-          setState(() {
-            _isAnonymous = value;
-          });
-        },
-      ),
-    ],
-  ),
-),
-
-const SizedBox(height: AppSpacing.xl),
-
-Text(
-  'Title',
-  style: theme.textTheme.labelLarge,
-),
-            const SizedBox(height: AppSpacing.sm),
-
-            TextField(
-              controller: _titleController,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Give your post a title',
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.xl),
-
-            Text(
-              'Your thoughts',
-              style: theme.textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            TextField(
-              controller: _contentController,
-              minLines: 6,
-              maxLines: 10,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: 'What would you like to share?',
-                alignLabelWithHint: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
+      appBar: AppBar(title: const Text('New post')),
+      body: SafeArea(
+        child: ContentWidth(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: palette.primarySoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Your name is never shown. You get a random alias for '
+                    'this discussion only.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.primary,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: AppSpacing.xl),
+                Text('Category', style: theme.textTheme.labelLarge),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final category in AppCategories.all)
+                      ChoiceChip(
+                        label: Text(category.name),
+                        selected: _categoryId == category.id,
+                        showCheckmark: false,
+                        onSelected: _isPosting
+                            ? null
+                            : (_) => setState(() => _categoryId = category.id),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                TextField(
+                  controller: _titleController,
+                  enabled: !_isPosting,
+                  maxLength: _maxTitle,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'What do you want to talk about?',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _contentController,
+                  enabled: !_isPosting,
+                  maxLength: _maxContent,
+                  minLines: 6,
+                  maxLines: 12,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Your story or question',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _error!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: palette.danger,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _isPosting ? null : _publish,
+                    child: _isPosting
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: palette.textMuted,
+                            ),
+                          )
+                        : const Text('Post'),
+                  ),
+                ),
+              ],
             ),
-
-            SizedBox(
-  width: double.infinity,
-  height: AppSpacing.buttonHeight,
-  child: FilledButton(
-    onPressed: () {
-      debugPrint('PUBLISH BUTTON PRESSED');
-      _publishPost();
-    },
-    child: const Text('Publish Post'),
-  ),
-),
-
-const SizedBox(height: AppSpacing.lg),
-          ],
+          ),
         ),
       ),
     );
