@@ -554,3 +554,147 @@ describe('finding my own replies (for account deletion)', () => {
     );
   });
 });
+
+// ───────────────────────── Phase A.5: secret alias key ─────────────────────────
+
+describe('secret alias key', () => {
+  const key = 'ab'.repeat(32); // 64 hex characters
+
+  test('she can set it once, as 64 hex characters', async () => {
+    await makeMember('amira');
+    const mine = doc(as('amira'), 'users', 'amira');
+    await assertFails(setDoc(mine, { aliasKey: 'short' }, { merge: true }));
+    await assertFails(setDoc(mine, { aliasKey: 'Z'.repeat(64) }, { merge: true }));
+    await assertSucceeds(setDoc(mine, { aliasKey: key }, { merge: true }));
+    // Never changed afterwards.
+    await assertFails(setDoc(mine, { aliasKey: 'cd'.repeat(32) }, { merge: true }));
+  });
+
+  test('nobody else can read or set it', async () => {
+    await makeMember('amira');
+    await seed((db) => updateDoc(doc(db, 'users', 'amira'), { aliasKey: key }));
+    await assertFails(getDoc(doc(as('siti'), 'users', 'amira')));
+    await assertFails(
+      setDoc(doc(as('siti'), 'users', 'amira'), { aliasKey: key }, { merge: true }),
+    );
+  });
+
+  test('posting still works with the key in her profile', async () => {
+    await makeMember('amira');
+    await seed((db) => updateDoc(doc(db, 'users', 'amira'), { aliasKey: key }));
+    await assertSucceeds(createPostBatch(as('amira'), 'amira', 'p1'));
+  });
+});
+
+// ───────────────────────── Phase A.5: account deletion guard ─────────────────────────
+
+describe('deleting users/{uid}', () => {
+  test('allowed if she never posted', async () => {
+    await makeMember('amira');
+    await assertSucceeds(deleteDoc(doc(as('amira'), 'users', 'amira')));
+  });
+
+  test('refused within 60 seconds of her last post', async () => {
+    await makeMember('amira');
+    await seed((db) =>
+      updateDoc(doc(db, 'users', 'amira'), { lastPostAt: new Date(Date.now() - 10 * 1000) }),
+    );
+    await assertFails(deleteDoc(doc(as('amira'), 'users', 'amira')));
+  });
+
+  test('allowed once a minute has passed', async () => {
+    await makeMember('amira');
+    await seed((db) =>
+      updateDoc(doc(db, 'users', 'amira'), { lastPostAt: new Date(Date.now() - 2 * 60 * 1000) }),
+    );
+    await assertSucceeds(deleteDoc(doc(as('amira'), 'users', 'amira')));
+  });
+});
+
+// ───────────────────────── Phase A.5: reports with a hashed reporter ─────────────────────────
+
+/** Same as PostRepository.reporterIdFor in the app. */
+const reporterIdOf = (uid) =>
+  createHash('sha256').update('looma-report:' + uid).digest('hex');
+
+/** What PostRepository.reportPost writes, in one batch. */
+function reportBatch(db, { postId, reportId, reporterId, flagCount = 1 }) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'reports', reportId), {
+    postId,
+    postTitle: 'Scholarship tips?',
+    reason: 'Spam or advertising',
+    reporterId,
+    createdAt: serverTimestamp(),
+    status: 'open',
+  });
+  batch.update(doc(db, 'posts', postId), { flagCount, status: 'visible' });
+  return batch.commit();
+}
+
+describe('reports', () => {
+  beforeEach(async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'posts', 'p1'), {
+        alias: 'Quiet Fox',
+        categoryId: 'education',
+        title: 'Scholarship tips?',
+        content: 'Any advice?',
+        timestamp: new Date(),
+        flagCount: 0,
+        meTooCount: 0,
+        commentCount: 0,
+        status: 'visible',
+      }),
+    );
+  });
+
+  test('a report uses the hashed reporter id, never the uid', async () => {
+    const hashed = reporterIdOf('siti');
+    await assertSucceeds(
+      reportBatch(as('siti'), { postId: 'p1', reportId: `p1_${hashed}`, reporterId: hashed }),
+    );
+  });
+
+  test('a report with the plain uid is refused', async () => {
+    await assertFails(
+      reportBatch(as('siti'), { postId: 'p1', reportId: 'p1_siti', reporterId: 'siti' }),
+    );
+    // Hashed document id but plain uid inside: also refused.
+    await assertFails(
+      reportBatch(as('siti'), {
+        postId: 'p1',
+        reportId: `p1_${reporterIdOf('siti')}`,
+        reporterId: 'siti',
+      }),
+    );
+  });
+
+  test('nobody can file a report as someone else', async () => {
+    const amira = reporterIdOf('amira');
+    await assertFails(
+      reportBatch(as('siti'), { postId: 'p1', reportId: `p1_${amira}`, reporterId: amira }),
+    );
+  });
+
+  test('she can read her own report; others cannot; moderators can', async () => {
+    const hashed = reporterIdOf('siti');
+    await seed(async (db) => {
+      await setDoc(doc(db, 'reports', `p1_${hashed}`), {
+        postId: 'p1',
+        postTitle: 'Scholarship tips?',
+        reason: 'Spam or advertising',
+        reporterId: hashed,
+        createdAt: new Date(),
+        status: 'open',
+      });
+      await setDoc(doc(db, 'moderators', 'mod'), {});
+    });
+    await assertSucceeds(getDoc(doc(as('siti'), 'reports', `p1_${hashed}`)));
+    await assertSucceeds(
+      getDocs(query(collection(as('siti'), 'reports'), where('reporterId', '==', hashed))),
+    );
+    await assertFails(getDoc(doc(as('amira'), 'reports', `p1_${hashed}`)));
+    await assertSucceeds(getDoc(doc(as('mod'), 'reports', `p1_${hashed}`)));
+  });
+});

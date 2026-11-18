@@ -37,6 +37,13 @@ service cloud.firestore {
         && get(userPath(request.auth.uid)).data.get('birthYear', 0) > 0;
     }
 
+    // Reports store sha256('looma-report:' + uid), never the uid, so
+    // moderators cannot tell who reported (or find the reporter's posts).
+    // PostRepository.reporterIdFor in the app computes the same value.
+    function reporterIdOf() {
+      return hashing.sha256('looma-report:' + request.auth.uid).toHexString().lower();
+    }
+
     function isModerator() {
       return signedIn() &&
         exists(/databases/$(database)/documents/moderators/$(request.auth.uid));
@@ -96,7 +103,7 @@ service cloud.firestore {
 
     // A member reports a post: +1 flag, and the 3rd flag hides the post.
     function isReportUpdate(postId) {
-      let report = /databases/$(database)/documents/reports/$(postId + '_' + request.auth.uid);
+      let report = /databases/$(database)/documents/reports/$(postId + '_' + reporterIdOf());
       let oldStatus = resource.data.get('status', 'visible');
       let newFlags = request.resource.data.get('flagCount', 0);
       return changedKeys().hasOnly(['flagCount', 'status'])
@@ -207,10 +214,13 @@ service cloud.firestore {
     // ───────────── private profile + bookkeeping ─────────────
     //
     // users/{uid} holds: lastPostAt (rate limit), isWoman (women-only
-    // self-confirmation), birthYear (the YEAR only, after the age check) and
-    // createdAt. Only the owner can read, create or update it; nobody else
-    // can, and nobody can delete it from the app. isWoman can only ever be set to true, and
-    // birthYear is set once and never changed.
+    // self-confirmation), birthYear (the YEAR only, after the age check),
+    // createdAt, and aliasKey (her secret key for post and reply aliases).
+    // Only the owner can read, create or update it; nobody else can.
+    // isWoman can only ever be set to true; birthYear, createdAt and aliasKey
+    // are set once and never changed. She can delete it (account deletion),
+    // but not within 60 seconds of posting, so deleting and re-creating it
+    // cannot be used to dodge the 1-post-per-minute limit.
     // NOTE: the app checks the exact age; the rules can only check the year.
     // Keep 18 here in step with Membership.minimumAge in the app.
 
@@ -223,7 +233,13 @@ service cloud.firestore {
     function validUserDoc() {
       let d = request.resource.data;
       let changed = userKeysChanged();
-      return d.keys().hasOnly(['lastPostAt', 'isWoman', 'birthYear', 'createdAt'])
+      return d.keys().hasOnly(['lastPostAt', 'isWoman', 'birthYear', 'createdAt',
+                               'aliasKey'])
+        // aliasKey: 64 hex characters (256 random bits), set once.
+        && (!changed.hasAny(['aliasKey']) || (
+             (resource == null || !('aliasKey' in resource.data))
+             && d.aliasKey is string
+             && d.aliasKey.matches('[0-9a-f]{64}')))
         && (!changed.hasAny(['lastPostAt']) || d.lastPostAt == request.time)
         // createdAt: server time, set once, never changed.
         && (!changed.hasAny(['createdAt']) || (
@@ -242,8 +258,11 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid;
       allow create, update: if signedIn() && request.auth.uid == uid
         && validUserDoc();
-      // Only as part of "Delete my account and data".
-      allow delete: if signedIn() && request.auth.uid == uid;
+      // Only as part of "Delete my account and data", and not within a
+      // minute of her last post.
+      allow delete: if signedIn() && request.auth.uid == uid
+        && (!('lastPostAt' in resource.data)
+            || request.time > resource.data.lastPostAt + duration.value(60, 's'));
 
       // Saved posts: a private bookmark list. Only she can see it.
       match /saved/{postId} {
@@ -259,10 +278,10 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if signedIn()
-        && reportId == request.resource.data.postId + '_' + request.auth.uid
+        && reportId == request.resource.data.postId + '_' + reporterIdOf()
         && request.resource.data.keys().hasOnly(
              ['postId', 'postTitle', 'reason', 'reporterId', 'createdAt', 'status'])
-        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.reporterId == reporterIdOf()
         && request.resource.data.status == 'open'
         && request.resource.data.createdAt == request.time
         && request.resource.data.postTitle is string
@@ -278,7 +297,7 @@ service cloud.firestore {
       // for a report that does not exist yet.)
       allow read: if isModerator() ||
         (signedIn() &&
-          (resource == null || resource.data.reporterId == request.auth.uid));
+          (resource == null || resource.data.reporterId == reporterIdOf()));
       allow update: if isModerator()
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status', 'reviewedAt'])
