@@ -1,0 +1,130 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../data/models/post.dart';
+import '../../widgets/content_width.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/floating_illustration.dart';
+import '../../widgets/post_card.dart';
+import '../post_detail_screen.dart';
+
+/// A simple list of posts for "My posts" and "Saved posts" (Me tab).
+/// Only she can see these lists.
+class PostListScreen extends StatefulWidget {
+  const PostListScreen({
+    super.key,
+    required this.title,
+    required this.load,
+    required this.emptyTitle,
+    required this.emptyMessage,
+    this.note,
+  });
+
+  final String title;
+  final Future<List<Post>> Function() load;
+  final String emptyTitle;
+  final String emptyMessage;
+
+  /// One line above the list, e.g. "Only you can see this list."
+  final String? note;
+
+  @override
+  State<PostListScreen> createState() => _PostListScreenState();
+}
+
+class _PostListScreenState extends State<PostListScreen> {
+  late Future<List<Post>> _posts = widget.load();
+
+  Future<void> _reload() async {
+    final next = widget.load();
+    setState(() => _posts = next);
+    try {
+      await next;
+    } catch (_) {
+      // The FutureBuilder shows the error.
+    }
+  }
+
+  Future<void> _open(Post post) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PostDetailScreen(postId: post.id, initialPost: post),
+      ),
+    );
+    // She may have unsaved or deleted it.
+    if (mounted) _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.palette;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          child: RefreshIndicator(
+            onRefresh: _reload,
+            child: FutureBuilder<List<Post>>(
+              future: _posts,
+              builder: (context, snapshot) {
+                final List<Widget> children;
+                if (snapshot.hasError) {
+                  children = [
+                    EmptyState(
+                      title: 'Could not load this list',
+                      message: 'Check your internet connection and try again.',
+                      actionLabel: 'Try again',
+                      onAction: _reload,
+                    ),
+                  ];
+                } else if (!snapshot.hasData) {
+                  children = const [
+                    Padding(
+                      padding: EdgeInsets.all(AppSpacing.xxl),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ];
+                } else if (snapshot.data!.isEmpty) {
+                  children = [
+                    EmptyState(
+                      illustration: LoomaCats.heart,
+                      title: widget.emptyTitle,
+                      message: widget.emptyMessage,
+                    ),
+                  ];
+                } else {
+                  children = [
+                    if (widget.note != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.screenHorizontal,
+                          AppSpacing.md,
+                          AppSpacing.screenHorizontal,
+                          0,
+                        ),
+                        child: Text(
+                          widget.note!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ),
+                    for (final post in snapshot.data!) ...[
+                      PostCard(post: post, onTap: () => _open(post)),
+                      const Divider(height: 1),
+                    ],
+                  ];
+                }
+                return ListView(children: children);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
