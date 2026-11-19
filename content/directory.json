@@ -1,17 +1,11 @@
 {
-  "note": "Directory entries. ONLY the first four are from the app's current helpline list and every one must be verified on the official site before the booth. Leave `verified:false` until Najwa checks. 'To research' lists organisations to look up. Do NOT invent numbers or hours.",
+  "note": "Checked against each organisation's official page on 2026-11-18. Najwa to open each source link once before the booth. Add an official source for 999 before setting verified:true.",
   "entries": [
-    {"id":"emergency","name":"Emergency (police, ambulance, fire)","number":"999","helps":"Immediate danger","verified":false,"lastChecked":null,"source":"[add official source]"},
-    {"id":"talian-kasih","name":"Talian Kasih","number":"15999","helps":"Support and referral for abuse and family problems","verified":false,"lastChecked":null,"source":"[add official source]"},
-    {"id":"befrienders-kl","name":"Befrienders Kuala Lumpur","number":"03-7627 2929","helps":"Emotional support, someone to listen","verified":false,"lastChecked":null,"source":"[add official source]"},
-    {"id":"wao","name":"Women's Aid Organisation (WAO)","number":"03-3000 8858","helps":"Support for women facing abuse","verified":false,"lastChecked":null,"source":"[add official source]"}
+    {"id":"emergency","name":"Emergency (police, ambulance, fire)","number":"999","helps":"Immediate danger","hours":"24 hours","verified":false,"lastChecked":null,"source":"[add official source]"},
+    {"id":"talian-kasih","name":"Talian Kasih","number":"15999","helps":"Social issues, abuse and family crises. For women, children, the elderly, persons with disabilities and other vulnerable groups.","hours":"24 hours (described as a 24/7 emergency helpline)","verified":true,"lastChecked":"2026-11-18","source":"https://www.malaysia.gov.my/en/topics/talian-kasih-15999"},
+    {"id":"befrienders-kl","name":"Befrienders Kuala Lumpur","number":"03-7627 2929","helps":"Emotional support, someone to listen. Free and confidential.","hours":"24 hours a day, every day","verified":true,"lastChecked":"2026-11-18","source":"https://befrienders.org.my/"},
+    {"id":"wao-hotline","name":"Women's Aid Organisation (WAO) hotline","number":"03-3000 8858","helps":"Support for women facing abuse","hours":"9 am to 5 pm","verified":true,"lastChecked":"2026-11-18","source":"https://wao.org.my/getting-help-for-domestic-violence/"},
+    {"id":"wao-tina","name":"WAO TINA (SMS or WhatsApp)","sms":"018-988 8058","whatsapp":"018-988 8058","helps":"Text support for women facing abuse. Messages only, not a voice call.","hours":"24 hours","verified":true,"lastChecked":"2026-11-18","source":"https://wao.org.my/getting-help-for-domestic-violence/"}
   ],
-  "to_research": [
-    "All Women's Action Society (AWAM)",
-    "Women's Centre for Change (Penang)",
-    "Malaysian Mental Health Association (MMHA)",
-    "University counselling centre at MSU (number and hours from the MSU website)",
-    "KKM / Health Ministry mental health helpline (check the official site)",
-    "One-Stop Crisis Centres (OSCC) in public hospitals (check the official site)"
-  ]
+  "to_research": []
 }

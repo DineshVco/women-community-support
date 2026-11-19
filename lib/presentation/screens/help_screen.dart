@@ -1,14 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/helplines.dart';
+import '../../data/content_library.dart';
+import '../../data/help_lines.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/utils/haptics.dart';
+import '../widgets/contact_actions.dart';
 import '../widgets/content_width.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/floating_illustration.dart';
@@ -52,28 +52,11 @@ class HelpScreen extends StatelessWidget {
     ),
   ];
 
-  static Future<void> call(BuildContext context, Helpline line) async {
-    AppHaptics.medium();
-    final uri = Uri(scheme: 'tel', path: line.number.replaceAll(' ', ''));
-    var opened = false;
-    try {
-      opened = await launchUrl(uri);
-    } catch (_) {
-      opened = false;
-    }
+  static Future<void> call(BuildContext context, Helpline line) =>
+      ContactActions.call(context, line.number);
 
-    // Devices without a phone (emulator, laptop): copy the number instead.
-    if (!opened && context.mounted) await copy(context, line);
-  }
-
-  static Future<void> copy(BuildContext context, Helpline line) async {
-    AppHaptics.light();
-    await Clipboard.setData(ClipboardData(text: line.number));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('Copied ${line.number}')));
-  }
+  static Future<void> copy(BuildContext context, Helpline line) =>
+      ContactActions.copy(context, line.number);
 
   @override
   Widget build(BuildContext context) {
@@ -101,10 +84,7 @@ class HelpScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xl),
                   const EmergencyCard(),
                   const SizedBox(height: AppSpacing.xl),
-                  for (final group in Helplines.groups) ...[
-                    HelplineGroupSection(group: group),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                  const HelpLineGroupsView(),
                   const SafeWaysCard(),
                   const SizedBox(height: AppSpacing.lg),
                   const QuickExitCard(),
@@ -229,15 +209,39 @@ class EmergencyCard extends StatelessWidget {
   }
 }
 
+/// All help line groups from content/directory.json, each followed by a
+/// gap. Used by Get help and the Care tab, so both always match the file.
+class HelpLineGroupsView extends StatelessWidget {
+  const HelpLineGroupsView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return WithContent(
+      builder: (context, library) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final group in HelpLines.groupsFrom(library)) ...[
+              HelplineGroupSection(group: group),
+              const SizedBox(height: AppSpacing.xl),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
 class HelplineGroupSection extends StatelessWidget {
   const HelplineGroupSection({super.key, required this.group});
 
-  final HelplineGroup group;
+  final HelpLineGroup group;
 
   static const Map<String, IconData> _icons = {
-    '03-7627 2929': Icons.chat_bubble_outline,
-    '15999': Icons.support_agent_outlined,
-    '03-3000 8858': Icons.shield_outlined,
+    'befrienders-kl': Icons.chat_bubble_outline,
+    'talian-kasih': Icons.support_agent_outlined,
+    'wao-hotline': Icons.shield_outlined,
+    'wao-tina': Icons.sms_outlined,
   };
 
   @override
@@ -251,12 +255,16 @@ class HelplineGroupSection extends StatelessWidget {
       children: [
         Text(group.title, style: AppTypography.heading(22, palette.text)),
         const SizedBox(height: AppSpacing.sm),
-        for (final line in group.lines) ...[
+        for (final entry in group.entries) ...[
           _HelplineRow(
-            line: line,
-            icon: _icons[line.number] ?? Icons.call_outlined,
+            entry: entry,
+            icon:
+                _icons[entry.id] ??
+                (entry.number == null
+                    ? Icons.sms_outlined
+                    : Icons.call_outlined),
           ),
-          if (line != group.lines.last) const Divider(height: 1),
+          if (entry != group.entries.last) const Divider(height: 1),
         ],
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -272,9 +280,9 @@ class HelplineGroupSection extends StatelessWidget {
 }
 
 class _HelplineRow extends StatelessWidget {
-  const _HelplineRow({required this.line, required this.icon});
+  const _HelplineRow({required this.entry, required this.icon});
 
-  final Helpline line;
+  final DirectoryEntry entry;
   final IconData icon;
 
   @override
@@ -282,6 +290,9 @@ class _HelplineRow extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.palette;
     final dark = theme.brightness == Brightness.dark;
+    final number = entry.number;
+    final messageNumber = entry.whatsapp ?? entry.sms;
+    final copyNumber = entry.copyNumber;
 
     final small = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, 36)),
@@ -290,6 +301,14 @@ class _HelplineRow extends StatelessWidget {
       ),
       foregroundColor: WidgetStatePropertyAll(palette.text),
       visualDensity: VisualDensity.compact,
+    );
+    final outlined = small.copyWith(
+      side: WidgetStatePropertyAll(BorderSide(color: palette.text)),
+    );
+    final numberStyle = theme.textTheme.bodyLarge?.copyWith(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
 
     return Padding(
@@ -311,46 +330,60 @@ class _HelplineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(line.name, style: theme.textTheme.titleSmall),
+                Text(entry.name, style: theme.textTheme.titleSmall),
                 const SizedBox(height: 2),
                 Text(
-                  line.description,
+                  entry.helps,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: palette.textSecondary,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  line.number,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                if (number != null) Text(number, style: numberStyle),
+                if (number == null && messageNumber != null)
+                  Text(messageNumber, style: numberStyle),
+                if (entry.shownHours != null)
+                  Text(
+                    'Hours: ${entry.shownHours}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: palette.textSecondary,
+                    ),
                   ),
-                ),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.sm,
                   children: [
-                    OutlinedButton.icon(
-                      style: small.copyWith(
-                        side: WidgetStatePropertyAll(
-                          BorderSide(color: palette.text),
+                    if (number != null)
+                      OutlinedButton.icon(
+                        style: outlined,
+                        onPressed: () => ContactActions.call(context, number),
+                        icon: const Icon(Icons.call_outlined, size: 18),
+                        label: Text(
+                          'Call',
+                          semanticsLabel: 'Call ${entry.name}',
                         ),
                       ),
-                      onPressed: () => HelpScreen.call(context, line),
-                      icon: const Icon(Icons.call_outlined, size: 18),
-                      label: Text('Call', semanticsLabel: 'Call ${line.name}'),
-                    ),
-                    TextButton.icon(
-                      style: small,
-                      onPressed: () => HelpScreen.copy(context, line),
-                      icon: const Icon(Icons.content_copy_outlined, size: 18),
-                      label: Text(
-                        'Copy',
-                        semanticsLabel: 'Copy ${line.name} number',
+                    if (entry.canMessage)
+                      OutlinedButton.icon(
+                        style: outlined,
+                        onPressed: () => ContactActions.message(context, entry),
+                        icon: const Icon(Icons.sms_outlined, size: 18),
+                        label: Text(
+                          'Message',
+                          semanticsLabel: 'Message ${entry.name}',
+                        ),
                       ),
-                    ),
+                    if (copyNumber != null)
+                      TextButton.icon(
+                        style: small,
+                        onPressed:
+                            () => ContactActions.copy(context, copyNumber),
+                        icon: const Icon(Icons.content_copy_outlined, size: 18),
+                        label: Text(
+                          'Copy',
+                          semanticsLabel: 'Copy ${entry.name} number',
+                        ),
+                      ),
                   ],
                 ),
               ],

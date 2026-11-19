@@ -1,10 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:women_community_support/core/constants/helplines.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
+import 'package:women_community_support/data/content_library.dart';
+import 'package:women_community_support/data/help_lines.dart';
 import 'package:women_community_support/presentation/screens/decoy_screen.dart';
 import 'package:women_community_support/presentation/screens/help_screen.dart';
 import 'package:women_community_support/presentation/widgets/quick_exit_button.dart';
@@ -45,8 +48,21 @@ List<String> _captureClipboard(WidgetTester tester) {
   return copied;
 }
 
-Widget _helpApp({ThemeData? theme}) =>
-    MaterialApp(theme: theme ?? AppTheme.light, home: const HelpScreen());
+/// The real content/directory.json, as the app loads it at start-up.
+final ContentLibrary _library = ContentLibrary.parse(
+  guidesJson: File('content/guides.json').readAsStringSync(),
+  directoryJson: File('content/directory.json').readAsStringSync(),
+);
+
+/// Every help line on the page (all but 999, which is the danger card).
+List<DirectoryEntry> get _lines => [
+  for (final g in HelpLines.groupsFrom(_library)) ...g.entries,
+];
+
+Widget _helpApp({ThemeData? theme}) => ContentScope(
+  library: _library,
+  child: MaterialApp(theme: theme ?? AppTheme.light, home: const HelpScreen()),
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -76,24 +92,48 @@ void main() {
       expect(top < danger && danger < talk && talk < safe, isTrue);
     });
 
-    testWidgets('lists every helpline with its number, Call and Copy', (
+    testWidgets('lists every help line from the directory file', (
       tester,
     ) async {
       _tallScreen(tester);
       await tester.pumpWidget(_helpApp());
       await _wait(tester);
 
-      for (final line in Helplines.support) {
-        expect(find.text(line.name), findsOneWidget);
-        expect(find.text(line.number), findsOneWidget);
+      for (final line in _lines) {
+        expect(find.text(line.name), findsOneWidget, reason: line.id);
+        expect(
+          find.bySemanticsLabel('Copy ${line.name} number'),
+          findsOneWidget,
+        );
       }
-      expect(find.text('Call'), findsNWidgets(Helplines.support.length));
-      expect(find.text('Copy'), findsNWidgets(Helplines.support.length));
-      // No date has been confirmed yet, and the page says so honestly.
-      expect(
-        find.text('Last checked: not yet confirmed'),
-        findsNWidgets(Helplines.groups.length),
-      );
+      final callable = _lines.where((l) => l.number != null).length;
+      final messaging = _lines.where((l) => l.canMessage).length;
+      expect(find.text('Call'), findsNWidgets(callable));
+      expect(find.text('Message'), findsNWidgets(messaging));
+      // Checked on 18 Nov 2026 for both groups.
+      expect(find.textContaining('Last checked: '), findsNWidgets(2));
+      expect(find.text('Last checked: not yet confirmed'), findsNothing);
+    });
+
+    testWidgets('TINA: Message (SMS or WhatsApp, her choice), no Call', (
+      tester,
+    ) async {
+      _tallScreen(tester);
+      await tester.pumpWidget(_helpApp());
+      await _wait(tester);
+
+      const tina = 'WAO TINA (SMS or WhatsApp)';
+      expect(find.text(tina), findsOneWidget);
+      expect(find.text('018-988 8058'), findsOneWidget);
+      expect(find.text('Hours: 24 hours'), findsOneWidget);
+      expect(find.bySemanticsLabel('Call $tina'), findsNothing);
+
+      await tester.tap(find.bySemanticsLabel('Message $tina'));
+      await _wait(tester);
+      expect(find.text('Text message (SMS)'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await _wait(tester);
     });
 
     testWidgets('Copy puts the number on the clipboard and says "Copied"', (
@@ -104,13 +144,12 @@ void main() {
       await tester.pumpWidget(_helpApp());
       await _wait(tester);
 
-      await tester.tap(
-        find.bySemanticsLabel('Copy ${Helplines.wao.name} number'),
-      );
+      const wao = "Women's Aid Organisation (WAO) hotline";
+      await tester.tap(find.bySemanticsLabel('Copy $wao number'));
       await tester.pump();
 
-      expect(copied, [Helplines.wao.number]);
-      expect(find.text('Copied ${Helplines.wao.number}'), findsOneWidget);
+      expect(copied, ['03-3000 8858']);
+      expect(find.text('Copied 03-3000 8858'), findsOneWidget);
     });
 
     testWidgets('Call copies the number on a device that cannot call', (
@@ -140,17 +179,19 @@ void main() {
     });
   });
 
-  test('helpline numbers are the ones in the data, unchanged', () {
-    // Guards against numbers being edited by accident. Change only after
-    // checking the organisation's official website.
-    expect(Helplines.emergency.number, '999');
-    expect(Helplines.befriendersKL.number, '03-7627 2929');
-    expect(Helplines.talianKasih.number, '15999');
-    expect(Helplines.wao.number, '03-3000 8858');
-    expect(Helplines.groups.map((g) => g.title), [
+  test('help line groups come from the directory file', () {
+    final groups = HelpLines.groupsFrom(_library);
+    expect(groups.map((g) => g.title), [
       'Talk to someone now',
       'Women and family support',
     ]);
+    expect(groups[0].entries.map((e) => e.id), [
+      'befrienders-kl',
+      'talian-kasih',
+    ]);
+    expect(groups[1].entries.map((e) => e.id), ['wao-hotline', 'wao-tina']);
+    // 999 is the danger card, not a list row.
+    expect(_lines.any((e) => e.id == 'emergency'), isFalse);
   });
 
   // ───────────────────────── Quick exit ─────────────────────────

@@ -2,18 +2,18 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/helplines.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/haptics.dart';
 import '../../../data/content_library.dart';
+import '../../../data/help_lines.dart';
+import '../../widgets/contact_actions.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/quick_exit_button.dart';
-import '../help_screen.dart';
 
 /// Directory: organisations and help lines from content/directory.json
 /// ONLY. Call, open the website, or copy. Hours only when checked, and a
@@ -33,10 +33,14 @@ class DirectoryScreen extends StatefulWidget {
 }
 
 class _DirectoryScreenState extends State<DirectoryScreen> {
-  late final Future<ContentLibrary> _load =
-      widget.library != null
-          ? Future.value(widget.library!)
-          : ContentLibrary.load();
+  Future<ContentLibrary>? _load;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ready = widget.library ?? ContentScope.maybeOf(context);
+    _load ??= ready != null ? Future.value(ready) : ContentLibrary.load();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,12 +103,6 @@ class _EntryCard extends StatelessWidget {
 
   final DirectoryEntry entry;
 
-  Helpline get _asHelpline => Helpline(
-    name: entry.name,
-    number: entry.number ?? '',
-    description: entry.helps,
-  );
-
   Future<void> _openWebsite(BuildContext context) async {
     AppHaptics.light();
     final site = entry.website!;
@@ -127,8 +125,11 @@ class _EntryCard extends StatelessWidget {
     final palette = context.palette;
     final checked = entry.lastChecked;
     final details = [
+      if (entry.sms != null) 'SMS: ${entry.sms}',
+      if (entry.whatsapp != null) 'WhatsApp: ${entry.whatsapp}',
       if (entry.language != null) 'Language: ${entry.language}',
       if (entry.shownHours != null) 'Hours: ${entry.shownHours}',
+      if (entry.shownSource != null) 'Source: ${entry.shownSource}',
     ];
     final small = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
@@ -190,9 +191,23 @@ class _EntryCard extends StatelessWidget {
                       BorderSide(color: palette.text),
                     ),
                   ),
-                  onPressed: () => HelpScreen.call(context, _asHelpline),
+                  onPressed: () => ContactActions.call(context, entry.number!),
                   icon: const Icon(CupertinoIcons.phone, size: 18),
                   label: Text('Call', semanticsLabel: 'Call ${entry.name}'),
+                ),
+              if (entry.canMessage)
+                OutlinedButton.icon(
+                  style: small.copyWith(
+                    side: WidgetStatePropertyAll(
+                      BorderSide(color: palette.text),
+                    ),
+                  ),
+                  onPressed: () => ContactActions.message(context, entry),
+                  icon: const Icon(CupertinoIcons.chat_bubble, size: 18),
+                  label: Text(
+                    'Message',
+                    semanticsLabel: 'Message ${entry.name}',
+                  ),
                 ),
               if (entry.website != null)
                 OutlinedButton.icon(
@@ -205,10 +220,11 @@ class _EntryCard extends StatelessWidget {
                   icon: const Icon(CupertinoIcons.globe, size: 18),
                   label: const Text('Website'),
                 ),
-              if (entry.number != null)
+              if (entry.copyNumber != null)
                 TextButton.icon(
                   style: small,
-                  onPressed: () => HelpScreen.copy(context, _asHelpline),
+                  onPressed:
+                      () => ContactActions.copy(context, entry.copyNumber!),
                   icon: const Icon(CupertinoIcons.doc_on_doc, size: 18),
                   label: Text(
                     'Copy',

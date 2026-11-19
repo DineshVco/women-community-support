@@ -9,6 +9,7 @@ import 'core/security/secure_store.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/chat_repository.dart';
 import 'data/content_library.dart';
+import 'data/help_lines.dart';
 import 'data/journal.dart';
 import 'data/local_private_data.dart';
 import 'data/mood.dart';
@@ -50,6 +51,9 @@ Future<void> main() async {
   final journal = JournalStore(secureStore);
   final guideBookmarks = GuideBookmarks(secureStore);
 
+  // Help lines, guides and directory: bundled with the app (offline).
+  final content = await ContentLibrary.load();
+
   runApp(
     MultiProvider(
       providers: [
@@ -71,7 +75,7 @@ Future<void> main() async {
         ),
         Provider<GuideBookmarks>.value(value: guideBookmarks),
       ],
-      child: LoomaApp(appLock: appLock),
+      child: ContentScope(library: content, child: LoomaApp(appLock: appLock)),
     ),
   );
 }

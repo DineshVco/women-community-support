@@ -118,9 +118,12 @@ class DirectoryEntry {
     required this.helps,
     required this.verified,
     this.number,
+    this.sms,
+    this.whatsapp,
     this.website,
     this.language,
     this.hours,
+    this.source,
     this.lastChecked,
   });
 
@@ -129,7 +132,14 @@ class DirectoryEntry {
 
   /// What they help with.
   final String helps;
+
+  /// Phone number to call.
   final String? number;
+
+  /// Numbers for text messages (e.g. WAO TINA). These get a Message
+  /// button instead of (or as well as) Call.
+  final String? sms;
+  final String? whatsapp;
   final String? website;
   final String? language;
 
@@ -138,7 +148,27 @@ class DirectoryEntry {
   final DateTime? lastChecked;
   final bool verified;
 
+  /// Where the details were checked (e.g. the official website).
+  final String? source;
+
   String? get shownHours => verified ? hours : null;
+
+  /// The source, unless it is still a "[add official source]" placeholder.
+  String? get shownSource =>
+      source == null || source!.startsWith('[') ? null : source;
+
+  bool get canMessage => sms != null || whatsapp != null;
+
+  /// The number to copy: the call number, else the message number.
+  String? get copyNumber => number ?? whatsapp ?? sms;
+
+  /// wa.me needs the international number with no "+" or spaces
+  /// (Malaysia: 012-345 6789 becomes 60123456789).
+  static String whatsappDigits(String number) {
+    var digits = number.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('0')) digits = '60${digits.substring(1)}';
+    return digits;
+  }
 
   factory DirectoryEntry.fromJson(Map<String, dynamic> json) {
     String? text(String key) {
@@ -152,6 +182,9 @@ class DirectoryEntry {
       helps: json['helps'] as String? ?? '',
       verified: json['verified'] == true,
       number: text('number'),
+      sms: text('sms'),
+      whatsapp: text('whatsapp'),
+      source: text('source'),
       website: text('website'),
       language: text('language'),
       hours: text('hours'),

@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/helplines.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../data/encrypted_box.dart';
@@ -145,13 +144,8 @@ class CareScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
 
                 // ───────── 3. Help lines ─────────
-                for (final group in Helplines.groups) ...[
-                  Padding(
-                    padding: side,
-                    child: HelplineGroupSection(group: group),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                ],
+                // From content/directory.json (same as Get help).
+                const Padding(padding: side, child: HelpLineGroupsView()),
                 const Padding(padding: side, child: SafeWaysCard()),
                 const SizedBox(height: AppSpacing.lg),
                 const Padding(padding: side, child: QuickExitCard()),
