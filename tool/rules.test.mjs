@@ -53,10 +53,10 @@ async function makeMember(uid) {
 }
 
 /** What PostRepository.createPost writes, in one batch. */
-function createPostBatch(db, uid, postId) {
+function createPostBatch(db, uid, postId, alias = 'Quiet Fox') {
   const batch = writeBatch(db);
   batch.set(doc(db, 'posts', postId), {
-    alias: 'Quiet Fox',
+    alias,
     categoryId: 'education',
     title: 'Scholarship tips?',
     content: 'Any advice for first-year applications?',
@@ -79,10 +79,10 @@ function createPostBatch(db, uid, postId) {
 }
 
 /** What PostRepository.addComment writes, in one batch. */
-function addCommentBatch(db, uid, postId, commentId) {
+function addCommentBatch(db, uid, postId, commentId, alias = 'Gentle Heron') {
   const batch = writeBatch(db);
   batch.set(doc(db, 'posts', postId, 'comments', commentId), {
-    alias: 'Gentle Heron',
+    alias,
     content: 'Same here. Try the faculty office first.',
     timestamp: serverTimestamp(),
     parentCommentId: null,
@@ -278,6 +278,24 @@ describe('posts', () => {
     await assertSucceeds(createPostBatch(as('amira'), 'amira', 'p1'));
     await assertFails(createPostBatch(as('amira'), 'amira', 'p2'));
   });
+
+  test('members cannot post as "Looma Team" (any spelling)', async () => {
+    for (const [i, alias] of [
+      'Looma Team', 'looma team', 'LOOMA TEAM', 'LoomaTeam', 'Looma-Team',
+      ' Looma  Team ', 'Looma.Team',
+    ].entries()) {
+      const uid = `m${i}`;
+      await makeMember(uid);
+      await assertFails(createPostBatch(as(uid), uid, `p${i}`, alias));
+    }
+  });
+
+  test('aliases that only contain the words are fine', async () => {
+    await makeMember('amira');
+    await assertSucceeds(
+      createPostBatch(as('amira'), 'amira', 'p1', 'Looma Teammate Fox'),
+    );
+  });
 });
 
 // ───────────────────────── Replies ─────────────────────────
@@ -306,6 +324,35 @@ describe('replies', () => {
 
   test('a non-member cannot reply', async () => {
     await assertFails(addCommentBatch(as('newbie'), 'newbie', 'p1', 'c1'));
+  });
+
+  test('members cannot reply as "Looma Team" (any spelling)', async () => {
+    await makeMember('siti');
+    for (const [i, alias] of ['Looma Team', 'looma team', 'LoomaTeam'].entries()) {
+      await assertFails(
+        addCommentBatch(as('siti'), 'siti', 'p1', `c${i}`, alias),
+      );
+    }
+  });
+
+  test('members can reply to a Looma Team starter post', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'posts', 'starter_01'), {
+        alias: 'Looma Team',
+        categoryId: 'health_wellness',
+        title: 'Welcome to Looma',
+        content: 'Say hello.',
+        timestamp: new Date(),
+        flagCount: 0,
+        meTooCount: 0,
+        commentCount: 0,
+        status: 'visible',
+      }),
+    );
+    await makeMember('siti');
+    await assertSucceeds(
+      addCommentBatch(as('siti'), 'siti', 'starter_01', 'c1'),
+    );
   });
 });
 

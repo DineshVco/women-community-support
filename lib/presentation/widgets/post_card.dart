@@ -7,6 +7,7 @@ import '../../data/models/post.dart';
 import '../providers/app_settings.dart';
 import 'category_label.dart';
 import 'post_title_hero.dart';
+import 'team_badge.dart';
 
 /// One row in the feed. Plain: no card, no shadow, separated by 1 px lines.
 ///  CATEGORY
@@ -26,6 +27,13 @@ class PostCard extends StatelessWidget {
     final palette = context.palette;
     final small = theme.textTheme.bodySmall?.copyWith(fontSize: 12.5);
     final gentle = AppSettings.gentleOf(context);
+    final team = LoomaTeam.isTeam(post.alias);
+    final aliasLine = AliasLine(
+      alias: post.alias,
+      text: post.alias,
+      trailing: ' · ${timeAgo(post.timestamp)}',
+      style: small,
+    );
     final replies =
         '${post.commentCount} ${post.commentCount == 1 ? 'reply' : 'replies'}';
 
@@ -57,15 +65,13 @@ class PostCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
+            // Team posts: the alias and badge get their own line, so the
+            // badge has room next to the counts on a small phone.
+            if (team && !gentle) ...[aliasLine, const SizedBox(height: 4)],
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '${post.alias} · ${timeAgo(post.timestamp)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: small,
-                  ),
+                  child: team && !gentle ? const SizedBox.shrink() : aliasLine,
                 ),
                 if (!gentle) ...[
                   const SizedBox(width: AppSpacing.sm),

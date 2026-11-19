@@ -51,6 +51,7 @@ lib/firebase_options.dart
 # Secrets: never commit these anywhere in the repo.
 service-account*.json
 *firebase-adminsdk*.json
+*adminsdk*.json
 *.keystore
 *.jks
 key.properties

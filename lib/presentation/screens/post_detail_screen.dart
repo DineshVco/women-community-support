@@ -23,6 +23,7 @@ import '../widgets/post_actions.dart';
 import '../widgets/post_title_hero.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
+import '../widgets/team_badge.dart';
 import '../widgets/ios.dart';
 
 /// One discussion: the post, "Me too", replies (one level deep) and the
@@ -389,9 +390,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              '${_isMine ? 'You, as ${post.alias}' : post.alias}'
-              ' · ${timeAgo(post.timestamp)}',
+            AliasLine(
+              alias: post.alias,
+              text: _isMine ? 'You, as ${post.alias}' : post.alias,
+              trailing: ' · ${timeAgo(post.timestamp)}',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.lg),

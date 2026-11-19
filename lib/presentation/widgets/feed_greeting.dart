@@ -7,8 +7,10 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
 import '../../data/models/post.dart';
 import '../providers/app_settings.dart';
+import 'team_badge.dart';
 
 /// "Good evening" + how many discussions started in the last 24 hours.
+/// Under it, a note while the Looma Team starter posts are in the feed.
 /// [posts] comes from the live feed, so the count updates by itself.
 class FeedGreeting extends StatelessWidget {
   const FeedGreeting({super.key, required this.posts});
@@ -74,6 +76,16 @@ class FeedGreeting extends StatelessWidget {
               child: Text(subline, style: theme.textTheme.bodySmall),
             ),
           ),
+          // Only while the Looma Team starter posts are in the feed.
+          if (list != null && list.any((p) => LoomaTeam.isTeam(p.alias))) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LoomaTeam.starterLine,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );

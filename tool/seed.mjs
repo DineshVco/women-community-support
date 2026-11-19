@@ -9,13 +9,14 @@
 //
 // How to run (from the tool/ folder):
 //   1. Firebase console → Project settings → Service accounts →
-//      "Generate new private key". Save the file in tool/ as
-//      service-account.json. (It is in .gitignore. Never share or commit it.)
+//      "Generate new private key". Save it OUTSIDE the project folder, e.g.
+//      C:\Users\<you>\firebase-keys\looma-admin.json, and pass that path to
+//      --key. Never share or commit it.
 //   2. npm install                         (first time only)
-//   3. node seed.mjs --key service-account.json          (dry run: shows what it would do)
-//   4. node seed.mjs --key service-account.json --yes    (writes the demo content)
+//   3. node seed.mjs --key <key path>          (dry run: shows what it would do)
+//   4. node seed.mjs --key <key path> --yes    (writes the demo content)
 //   To remove it again:
-//      node seed.mjs --key service-account.json --delete --yes
+//      node seed.mjs --key <key path> --delete --yes
 //
 // Fixed ids (demo-01 … demo-12), so running it twice does not duplicate.
 // Also works against the local emulator: add --emulator instead of --key.
@@ -237,7 +238,7 @@ const remove = flag('--delete');
 const useEmulator = flag('--emulator');
 
 if (!useEmulator && (!args.includes('--key') || !keyPath)) {
-  console.error('Usage: node seed.mjs --key service-account.json [--yes] [--delete]');
+  console.error('Usage: node seed.mjs --key <key path> [--yes] [--delete]');
   process.exit(1);
 }
 

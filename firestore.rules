@@ -79,6 +79,13 @@ service cloud.firestore {
 
     // ───────────── posts ─────────────
 
+    // "Looma Team" is kept for the starter posts, which are written with the
+    // Admin SDK (it skips these rules). Members cannot post or reply under it,
+    // in any spelling ("looma team", "LoomaTeam", "Looma-Team", ...).
+    function isReservedAlias(alias) {
+      return alias.lower().replace('[^a-z]', '') == 'loomateam';
+    }
+
     function validNewPost(postId) {
       let d = request.resource.data;
       return d.keys().hasOnly(['alias', 'categoryId', 'title', 'content',
@@ -88,6 +95,7 @@ service cloud.firestore {
                             'timestamp', 'flagCount', 'meTooCount',
                             'commentCount', 'status'])
         && d.alias is string && d.alias.size() > 0 && d.alias.size() <= 40
+        && !isReservedAlias(d.alias)
         && d.categoryId in ['health_wellness', 'education',
                             'career_development', 'personal_safety']
         && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
@@ -159,6 +167,7 @@ service cloud.firestore {
           && request.resource.data.alias is string
           && request.resource.data.alias.size() > 0
           && request.resource.data.alias.size() <= 40
+          && !isReservedAlias(request.resource.data.alias)
           && request.resource.data.content is string
           && request.resource.data.content.size() >= 1
           && request.resource.data.content.size() <= 2000

@@ -5,6 +5,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/time_format.dart';
 import '../../data/models/comment.dart';
+import 'team_badge.dart';
 
 class CommentTile extends StatelessWidget {
   const CommentTile({
@@ -39,6 +40,10 @@ class CommentTile extends StatelessWidget {
                 style: theme.textTheme.labelLarge,
               ),
             ),
+            if (LoomaTeam.isTeam(comment.alias)) ...[
+              const SizedBox(width: AppSpacing.sm),
+              const TeamBadge(),
+            ],
             if (isAuthor) ...[
               const SizedBox(width: AppSpacing.sm),
               // Small black tag for the person who started the discussion.
