@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
@@ -9,8 +11,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/first_post_celebration.dart';
 import '../../core/utils/haptics.dart';
 import '../../data/models/category.dart';
+import '../../data/models/community.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/post_repository.dart';
+import '../widgets/community_cards.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
@@ -47,16 +51,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
+  /// This week's Small wins thread (pinned) and themed week, if running.
+  SmallWinsThread? _smallWins;
+  ThemedWeek? _themedWeek;
+  final List<StreamSubscription<Object?>> _subscriptions = [];
+
   @override
   void initState() {
     super.initState();
-    _feed = context.read<PostRepository>().watchFeed();
+    final repo = context.read<PostRepository>();
+    _feed = repo.watchFeed();
+    // Extras: if they fail to load, Home simply shows without them.
+    _subscriptions
+      ..add(
+        repo.watchSmallWins().listen(
+          (t) => setState(() => _smallWins = t),
+          onError: (Object _) {},
+        ),
+      )
+      ..add(
+        repo.watchThemedWeek().listen(
+          (w) => setState(() => _themedWeek = w),
+          onError: (Object _) {},
+        ),
+      );
   }
 
   @override
   void dispose() {
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _openSmallWins(SmallWinsThread thread) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PostDetailScreen(postId: thread.id, smallWins: true),
+      ),
+    );
   }
 
   void _retry() {
@@ -152,6 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _query.trim().toLowerCase();
 
     return posts.where((post) {
+      // The Small wins thread is pinned above, not repeated in the list.
+      if (post.id == _smallWins?.id) return false;
       if (_categoryId != null && post.categoryId != _categoryId) return false;
       if (query.isEmpty) return true;
       return post.title.toLowerCase().contains(query) ||
@@ -200,6 +237,15 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverList(
               delegate: SliverChildListDelegate([
                 wide(FeedGreeting(posts: snapshot.data)),
+                if (_themedWeek != null)
+                  wide(ThemedWeekBanner(week: _themedWeek!)),
+                if (_smallWins != null)
+                  wide(
+                    SmallWinsCard(
+                      thread: _smallWins!,
+                      onOpen: () => _openSmallWins(_smallWins!),
+                    ),
+                  ),
                 wide(
                   QuestionOfTheDay(
                     onAnswer:

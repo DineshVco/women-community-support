@@ -12,6 +12,7 @@
 //   node seed_starter_posts.js --key "C:\path\outside\project\key.json" --delete --yes
 //   Options: --posts <file>  (default: content/looma_starter_posts.json,
 //                             else looma_starter_posts.json in the project root)
+//            --polls <file>  (default: content/polls.json; --no-polls to skip)
 //            --emulator      (local emulator instead of --key)
 //
 // WHAT IT WRITES (exactly what the app and firestore.rules expect)
@@ -21,6 +22,9 @@
 //   replies (optional)  posts/starter_NN/comments/starter_NN_rM
 //                       {alias, content, timestamp, parentCommentId: null}
 //                       + posts/starter_NN/commentAuthors/starter_NN_rM
+//   polls               posts/starter_poll_NN, the same fields plus
+//                       {type: 'poll', options: [...], voteCounts: [0, ...]}
+//                       and content '' (from content/polls.json)
 //   Fixed ids, and posts that already exist are SKIPPED (their Me too and
 //   reply counts are left alone), so running it twice adds nothing.
 //   starter_01 is the newest; the rest are spread over the last 5 days.
@@ -140,7 +144,43 @@ function loadPosts(path) {
   return posts;
 }
 
+/** content/polls.json: { "polls": [ { categoryId, title, options[] } ] } */
+function loadPolls(path) {
+  const raw = JSON.parse(readFileSync(path, 'utf8'));
+  const list = raw.polls;
+  if (!Array.isArray(list)) throw new Error(`${path}: no "polls" list`);
+  if (list.length > 99) throw new Error('At most 99 starter polls.');
+  return list.map((p, i) => {
+    const id = `starter_poll_${String(i + 1).padStart(2, '0')}`;
+    const poll = {
+      id,
+      categoryId: p.categoryId,
+      title: String(p.title ?? '').trim(),
+      content: '',
+      options: (p.options ?? []).map((o) => String(o).trim()),
+      replies: [],
+    };
+    const problems = [];
+    if (!CATEGORIES.includes(poll.categoryId)) {
+      problems.push(`category "${poll.categoryId}" is not one of ${CATEGORIES.join(', ')}`);
+    }
+    if (poll.title.length < 3 || poll.title.length > 120) problems.push('title must be 3–120 characters');
+    if (poll.options.length < 2 || poll.options.length > 4) problems.push('needs 2 to 4 options');
+    poll.options.forEach((o, k) => {
+      if (o.length < 1 || o.length > 60) problems.push(`option ${k + 1} must be 1–60 characters`);
+    });
+    if (new Set(poll.options).size !== poll.options.length) problems.push('options must differ');
+    if (problems.length) throw new Error(`${id} ("${poll.title}"): ${problems.join('; ')}`);
+    return poll;
+  });
+}
+
 const posts = loadPosts(postsPath);
+
+const pollsPath = option('--polls')
+  ? resolve(option('--polls'))
+  : resolve(here, '../content/polls.json');
+const polls = flag('--no-polls') || !existsSync(pollsPath) ? [] : loadPolls(pollsPath);
 
 // ───────────────────────── Firebase ─────────────────────────
 
@@ -158,6 +198,7 @@ const db = getFirestore();
 
 console.log(`Project: ${projectId}${useEmulator ? ' (local emulator)' : ''}`);
 console.log(`Posts file: ${postsPath}`);
+console.log(`Polls file: ${polls.length ? pollsPath : '(none)'}`);
 console.log(remove ? 'Action: DELETE the starter posts' : 'Action: ADD the starter posts');
 
 // starter_01 is the newest; the others go back evenly over 5 days, with a
@@ -166,14 +207,25 @@ const now = Date.now();
 const step = SPREAD_MS / posts.length;
 const postedAt = (i) =>
   now - Math.round(step * i + step * 0.25 + ((i * 37) % 55) * 60 * 1000);
+// Polls sit between the posts over the same 5 days.
+const pollStep = SPREAD_MS / Math.max(polls.length, 1);
+const pollAt = (k) =>
+  now - Math.round(pollStep * k + pollStep * 0.6 + ((k * 23) % 41) * 60 * 1000);
+
+/** Everything to write, each with its time. */
+const items = [
+  ...posts.map((p, i) => ({ ...p, at: postedAt(i) })),
+  ...polls.map((p, k) => ({ ...p, at: pollAt(k) })),
+];
 
 if (!confirmed) {
   console.log('\nDry run. Nothing was changed. It would:');
-  for (const [i, p] of posts.entries()) {
-    const when = remove ? '' : `  ${new Date(postedAt(i)).toISOString().slice(0, 16)}`;
+  for (const p of items) {
+    const when = remove ? '' : `  ${new Date(p.at).toISOString().slice(0, 16)}`;
     console.log(
       `  ${remove ? '-' : '+'} ${p.id}${when}  [${p.categoryId}]  ${p.title}` +
-        (p.replies.length ? `  (${p.replies.length} replies)` : ''),
+        (p.replies.length ? `  (${p.replies.length} replies)` : '') +
+        (p.options ? `  (poll: ${p.options.join(' / ')})` : ''),
     );
   }
   console.log('\nAdd --yes to really do it.');
@@ -184,7 +236,7 @@ if (!confirmed) {
 
 if (remove) {
   let deleted = 0;
-  for (const p of posts) {
+  for (const p of items) {
     const postRef = db.collection('posts').doc(p.id);
     const snap = await postRef.get();
     if (snap.exists && snap.get('alias') !== ALIAS) {
@@ -200,20 +252,20 @@ if (remove) {
     }
     if (snap.exists) deleted++;
   }
-  console.log(`Deleted ${deleted} starter posts (and everything under them).`);
+  console.log(`Deleted ${deleted} starter posts and polls (and everything under them, votes too).`);
   process.exit(0);
 }
 
 // ───────────────────────── Write ─────────────────────────
 
 let added = 0;
-for (const [i, p] of posts.entries()) {
+for (const p of items) {
   const postRef = db.collection('posts').doc(p.id);
   if ((await postRef.get()).exists) {
     console.log(`  = ${p.id} already there, skipped.`);
     continue;
   }
-  const at = postedAt(i);
+  const at = p.at;
   const batch = db.batch();
   batch.set(postRef, {
     alias: ALIAS,
@@ -225,6 +277,9 @@ for (const [i, p] of posts.entries()) {
     meTooCount: 0,
     commentCount: p.replies.length,
     status: 'visible',
+    ...(p.options
+      ? { type: 'poll', options: p.options, voteCounts: p.options.map(() => 0) }
+      : {}),
   });
   batch.set(db.collection('authors').doc(p.id), {
     authorId: TEAM_AUTHOR_ID,
@@ -249,4 +304,4 @@ for (const [i, p] of posts.entries()) {
   added++;
   console.log(`  + ${p.id}  ${p.title}`);
 }
-console.log(`Added ${added} starter posts (${posts.length - added} were already there).`);
+console.log(`Added ${added} starter posts and polls (${items.length - added} were already there).`);

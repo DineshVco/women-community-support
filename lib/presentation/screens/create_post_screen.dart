@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,10 +16,27 @@ import '../widgets/ios.dart';
 import 'help_screen.dart';
 
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key, this.initialTitle});
+  const CreatePostScreen({
+    super.key,
+    this.initialTitle,
+    this.initialCategoryId,
+    this.startAsPoll = false,
+  });
 
   /// Pre-filled title, e.g. the question of the day.
   final String? initialTitle;
+
+  /// Pre-chosen category, e.g. "Ask Looma Team".
+  final String? initialCategoryId;
+  final bool startAsPoll;
+
+  static const String pollNote =
+      'Polls are anonymous too. Nobody can see who voted or what anyone '
+      'chose. Everyone can vote once, and sees the results after voting.';
+
+  static const String askNote =
+      'Your question is posted in Discuss under a random alias. The Looma '
+      'team will answer as "Looma Team".';
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -27,12 +45,20 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   static const int _maxTitle = 120;
   static const int _maxContent = 5000;
+  static const int _maxOption = 60;
 
   late final TextEditingController _titleController;
   final _contentController = TextEditingController();
-  String? _categoryId;
+  late String? _categoryId = widget.initialCategoryId;
   String? _error;
   bool _isPosting = false;
+
+  /// A poll instead of a normal post.
+  late bool _isPoll = widget.startAsPoll;
+  final List<TextEditingController> _options = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
 
   @override
   void initState() {
@@ -44,14 +70,35 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    for (final c in _options) {
+      c.dispose();
+    }
     super.dispose();
   }
 
+  List<String> get _optionTexts => [
+    for (final c in _options)
+      if (c.text.trim().isNotEmpty) c.text.trim(),
+  ];
+
   String? _validate(String title, String content) {
     if (_categoryId == null) return 'Choose a category.';
-    if (title.length < 3) return 'Give your post a title (at least 3 letters).';
-    if (content.isEmpty) return 'Write something to share.';
-    if (ContentFilter.isDisrespectful('$title $content')) {
+    if (title.length < 3) {
+      return _isPoll
+          ? 'Write your question (at least 3 letters).'
+          : 'Give your post a title (at least 3 letters).';
+    }
+    if (_isPoll) {
+      final options = _optionTexts;
+      if (options.length < 2) return 'Add at least 2 answers.';
+      if (options.toSet().length != options.length) {
+        return 'Each answer must be different.';
+      }
+    } else if (content.isEmpty) {
+      return 'Write something to share.';
+    }
+    final all = [title, content, if (_isPoll) ..._optionTexts].join(' ');
+    if (ContentFilter.isDisrespectful(all)) {
       return 'Please keep it respectful. Remove any abusive words and try again.';
     }
     return null;
@@ -91,6 +138,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         categoryId: _categoryId!,
         title: title,
         content: content,
+        pollOptions: _isPoll ? _optionTexts : null,
       );
       if (!mounted) return;
       AppHaptics.medium();
@@ -136,13 +184,66 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     );
   }
 
+  /// 2 to 4 answer fields, with Add and remove.
+  List<Widget> _buildOptions(ThemeData theme) {
+    return [
+      Text('Answers (2 to 4)', style: theme.textTheme.labelLarge),
+      const SizedBox(height: AppSpacing.sm),
+      for (var i = 0; i < _options.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: ValueKey('poll-option-$i'),
+                  controller: _options[i],
+                  enabled: !_isPosting,
+                  maxLength: _maxOption,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    labelText: 'Answer ${i + 1}',
+                    counterText: '',
+                  ),
+                ),
+              ),
+              if (_options.length > 2)
+                IconButton(
+                  tooltip: 'Remove answer ${i + 1}',
+                  onPressed:
+                      _isPosting
+                          ? null
+                          : () =>
+                              setState(() => _options.removeAt(i).dispose()),
+                  icon: const Icon(CupertinoIcons.minus_circle),
+                ),
+            ],
+          ),
+        ),
+      if (_options.length < 4)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed:
+                _isPosting
+                    ? null
+                    : () =>
+                        setState(() => _options.add(TextEditingController())),
+            icon: const Icon(CupertinoIcons.add_circled, size: 18),
+            label: const Text('Add an answer'),
+          ),
+        ),
+      const SizedBox(height: AppSpacing.md),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.palette;
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'New post'),
+      appBar: loomaNavBar(context, title: _isPoll ? 'New poll' : 'New post'),
       body: SafeArea(
         child: ContentWidth(
           child: SingleChildScrollView(
@@ -159,12 +260,26 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Your name is never shown. You get a random alias for '
-                    'this discussion only.',
+                    _categoryId == AppCategories.askLoomaId
+                        ? CreatePostScreen.askNote
+                        : _isPoll
+                        ? CreatePostScreen.pollNote
+                        : 'Your name is never shown. You get a random alias '
+                            'for this discussion only.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: palette.primary,
                     ),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                LoomaSegmented<bool>(
+                  value: _isPoll,
+                  options: const {false: 'Post', true: 'Poll'},
+                  onChanged:
+                      (poll) => setState(() {
+                        _isPoll = poll;
+                        _error = null;
+                      }),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text('Category', style: theme.textTheme.labelLarge),
@@ -195,21 +310,28 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   maxLength: _maxTitle,
                   textCapitalization: TextCapitalization.sentences,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    hintText: 'What do you want to talk about?',
+                  decoration: InputDecoration(
+                    labelText: _isPoll ? 'Question' : 'Title',
+                    hintText:
+                        _isPoll
+                            ? 'What would you like to ask everyone?'
+                            : 'What do you want to talk about?',
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
+                if (_isPoll) ..._buildOptions(theme),
                 TextField(
                   controller: _contentController,
                   enabled: !_isPosting,
                   maxLength: _maxContent,
-                  minLines: 6,
+                  minLines: _isPoll ? 2 : 6,
                   maxLines: 12,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Your story or question',
+                  decoration: InputDecoration(
+                    labelText:
+                        _isPoll
+                            ? 'A few words (optional)'
+                            : 'Your story or question',
                     alignLabelWithHint: true,
                   ),
                 ),

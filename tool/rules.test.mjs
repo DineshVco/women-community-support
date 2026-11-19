@@ -745,3 +745,462 @@ describe('reports', () => {
     await assertSucceeds(getDoc(doc(as('mod'), 'reports', `p1_${hashed}`)));
   });
 });
+
+// ───────────────────────── Phase 3: polls ─────────────────────────
+
+const voteKey = (uid, postId) =>
+  createHash('sha256').update(`looma-vote:${postId}:${uid}`).digest('hex');
+
+async function makeModerator(uid) {
+  await makeMember(uid);
+  await seed((db) => setDoc(doc(db, 'moderators', uid), {}));
+}
+
+/** What PostRepository.createPoll writes, in one batch. */
+function createPollBatch(db, uid, postId, extra = {}) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'posts', postId), {
+    alias: 'Quiet Fox',
+    categoryId: 'health_wellness',
+    title: 'Do you feel guilty when you rest?',
+    content: '',
+    timestamp: serverTimestamp(),
+    flagCount: 0,
+    meTooCount: 0,
+    commentCount: 0,
+    status: 'visible',
+    type: 'poll',
+    options: ['Yes', 'Sometimes', 'No'],
+    voteCounts: [0, 0, 0],
+    ...extra,
+  });
+  batch.set(doc(db, 'authors', postId), {
+    authorId: uid,
+    createdAt: serverTimestamp(),
+  });
+  batch.set(
+    doc(db, 'users', uid),
+    { lastPostAt: serverTimestamp() },
+    { merge: true },
+  );
+  return batch.commit();
+}
+
+/** What PostRepository.vote writes: her vote key + the new counts. */
+function voteBatch(db, uid, postId, newCounts, key = voteKey(uid, postId)) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'posts', postId, 'votes', key), {
+    createdAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'posts', postId), { voteCounts: newCounts });
+  return batch.commit();
+}
+
+async function seedPoll(id = 'poll1', counts = [0, 0, 0], status = 'visible') {
+  await seed((db) =>
+    setDoc(doc(db, 'posts', id), {
+      alias: 'Looma Team',
+      categoryId: 'health_wellness',
+      title: 'Do you feel guilty when you rest?',
+      content: '',
+      timestamp: new Date(),
+      flagCount: 0,
+      meTooCount: 0,
+      commentCount: 0,
+      status,
+      type: 'poll',
+      options: ['Yes', 'Sometimes', 'No'],
+      voteCounts: counts,
+    }),
+  );
+}
+
+/** A plain post (not a poll), straight into the database. */
+async function seedPlainPost(id, categoryId = 'education') {
+  await seed((db) =>
+    setDoc(doc(db, 'posts', id), {
+      alias: 'Quiet Fox',
+      categoryId,
+      title: 'Scholarship tips?',
+      content: 'Any advice?',
+      timestamp: new Date(),
+      flagCount: 0,
+      meTooCount: 0,
+      commentCount: 0,
+      status: 'visible',
+    }),
+  );
+}
+
+describe('polls', () => {
+  test('a member can create a poll with 2 to 4 options', async () => {
+    await makeMember('a2');
+    await assertSucceeds(
+      createPollBatch(as('a2'), 'a2', 'p2', {
+        options: ['Yes', 'No'],
+        voteCounts: [0, 0],
+      }),
+    );
+    await makeMember('a3');
+    await assertSucceeds(createPollBatch(as('a3'), 'a3', 'p3'));
+    await makeMember('a4');
+    await assertSucceeds(
+      createPollBatch(as('a4'), 'a4', 'p4', {
+        options: ['A', 'B', 'C', 'D'],
+        voteCounts: [0, 0, 0, 0],
+      }),
+    );
+  });
+
+  test('wrong shapes are refused', async () => {
+    const bad = [
+      { options: ['Only one'], voteCounts: [0] },
+      { options: ['a', 'b', 'c', 'd', 'e'], voteCounts: [0, 0, 0, 0, 0] },
+      { options: ['Yes', 'x'.repeat(61), 'No'] },
+      { options: ['Yes', '', 'No'] },
+      { voteCounts: [5, 0, 0] }, // cannot start with votes
+      { voteCounts: [0, 0] }, // count list does not match the options
+      { type: 'survey' },
+    ];
+    for (const [i, extra] of bad.entries()) {
+      const uid = `m${i}`;
+      await makeMember(uid);
+      await assertFails(createPollBatch(as(uid), uid, `p${i}`, extra));
+    }
+  });
+
+  test('a normal post cannot carry poll fields', async () => {
+    await makeMember('amira');
+    const db = as('amira');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'p1'), {
+      alias: 'Quiet Fox',
+      categoryId: 'education',
+      title: 'Scholarship tips?',
+      content: 'Any advice?',
+      timestamp: serverTimestamp(),
+      flagCount: 0,
+      meTooCount: 0,
+      commentCount: 0,
+      status: 'visible',
+      voteCounts: [0, 0],
+    });
+    batch.set(doc(db, 'authors', 'p1'), {
+      authorId: 'amira',
+      createdAt: serverTimestamp(),
+    });
+    batch.set(
+      doc(db, 'users', 'amira'),
+      { lastPostAt: serverTimestamp() },
+      { merge: true },
+    );
+    await assertFails(batch.commit());
+  });
+
+  test('polls follow the post rules: members only, one per minute', async () => {
+    await assertFails(createPollBatch(as('newbie'), 'newbie', 'p1'));
+    await makeMember('amira');
+    await assertSucceeds(createPollBatch(as('amira'), 'amira', 'p1'));
+    await assertFails(createPollBatch(as('amira'), 'amira', 'p2'));
+  });
+
+  test('members cannot create a poll as "Looma Team"', async () => {
+    await makeMember('amira');
+    await assertFails(
+      createPollBatch(as('amira'), 'amira', 'p1', { alias: 'Looma Team' }),
+    );
+  });
+});
+
+describe('poll votes', () => {
+  beforeEach(async () => {
+    await seedPoll();
+    await makeMember('siti');
+  });
+
+  test('a member votes once: +1 on one option', async () => {
+    await assertSucceeds(voteBatch(as('siti'), 'siti', 'poll1', [0, 1, 0]));
+  });
+
+  test('a second vote by the same person is refused', async () => {
+    await assertSucceeds(voteBatch(as('siti'), 'siti', 'poll1', [0, 1, 0]));
+    await assertFails(voteBatch(as('siti'), 'siti', 'poll1', [1, 1, 0]));
+  });
+
+  test('two people can each vote once', async () => {
+    await makeMember('amira');
+    await assertSucceeds(voteBatch(as('siti'), 'siti', 'poll1', [0, 1, 0]));
+    await assertSucceeds(voteBatch(as('amira'), 'amira', 'poll1', [0, 2, 0]));
+  });
+
+  test('wrong counts are refused', async () => {
+    for (const counts of [
+      [1, 1, 0], // two at once
+      [0, 2, 0], // +2
+      [0, 0, 0], // nothing
+      [1, 0, 0, 0], // wrong option count
+      [1, 0], // wrong option count
+      [-1, 2, 0], // one down, one up
+      [0.5, 0.5, 0], // not whole numbers
+    ]) {
+      await assertFails(voteBatch(as('siti'), 'siti', 'poll1', counts));
+    }
+  });
+
+  test('the vote id must be her own vote key', async () => {
+    await assertFails(
+      voteBatch(as('siti'), 'siti', 'poll1', [1, 0, 0], 'siti'),
+    );
+    await assertFails(
+      voteBatch(as('siti'), 'siti', 'poll1', [1, 0, 0], voteKey('amira', 'poll1')),
+    );
+  });
+
+  test('the vote holds only the time (no option, no uid)', async () => {
+    const db = as('siti');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'poll1', 'votes', voteKey('siti', 'poll1')), {
+      createdAt: serverTimestamp(),
+      option: 1,
+    });
+    batch.update(doc(db, 'posts', 'poll1'), { voteCounts: [0, 1, 0] });
+    await assertFails(batch.commit());
+  });
+
+  test('counts never change without a vote, and a vote needs the count', async () => {
+    await assertFails(
+      updateDoc(doc(as('siti'), 'posts', 'poll1'), { voteCounts: [0, 1, 0] }),
+    );
+    await assertFails(
+      setDoc(
+        doc(as('siti'), 'posts', 'poll1', 'votes', voteKey('siti', 'poll1')),
+        { createdAt: serverTimestamp() },
+      ),
+    );
+  });
+
+  test('votes cannot be changed, deleted or listed; she can see her own', async () => {
+    await voteBatch(as('siti'), 'siti', 'poll1', [0, 1, 0]);
+    const mine = doc(
+      as('siti'),
+      'posts',
+      'poll1',
+      'votes',
+      voteKey('siti', 'poll1'),
+    );
+    await assertSucceeds(getDoc(mine));
+    await assertFails(updateDoc(mine, { createdAt: serverTimestamp() }));
+    await assertFails(deleteDoc(mine));
+
+    await makeMember('amira');
+    const theirs = doc(
+      as('amira'),
+      'posts',
+      'poll1',
+      'votes',
+      voteKey('siti', 'poll1'),
+    );
+    await assertFails(getDoc(theirs));
+    await assertFails(getDocs(collection(as('amira'), 'posts', 'poll1', 'votes')));
+  });
+
+  test('non-members and hidden polls cannot get votes', async () => {
+    await assertFails(voteBatch(as('newbie'), 'newbie', 'poll1', [1, 0, 0]));
+    await seedPoll('poll2', [0, 0, 0], 'hidden');
+    await assertFails(voteBatch(as('siti'), 'siti', 'poll2', [1, 0, 0]));
+  });
+
+  test('normal posts cannot be voted on', async () => {
+    await seedPlainPost('p1');
+    await assertFails(voteBatch(as('siti'), 'siti', 'p1', [1]));
+  });
+});
+
+// ───────────────────────── Phase 3: Ask Looma ─────────────────────────
+
+describe('Ask Looma Team', () => {
+  test('a member can ask in the Ask Looma category', async () => {
+    await makeMember('amira');
+    const db = as('amira');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'q1'), {
+      alias: 'Quiet Fox',
+      categoryId: 'ask_looma',
+      title: 'How do I change my alias?',
+      content: 'Is it possible?',
+      timestamp: serverTimestamp(),
+      flagCount: 0,
+      meTooCount: 0,
+      commentCount: 0,
+      status: 'visible',
+    });
+    batch.set(doc(db, 'authors', 'q1'), {
+      authorId: 'amira',
+      createdAt: serverTimestamp(),
+    });
+    batch.set(
+      doc(db, 'users', 'amira'),
+      { lastPostAt: serverTimestamp() },
+      { merge: true },
+    );
+    await assertSucceeds(batch.commit());
+  });
+
+  test('a moderator can reply as "Looma Team"; a member cannot', async () => {
+    await seedPlainPost('q1', 'ask_looma');
+    await makeModerator('mod');
+    await makeMember('siti');
+    await assertSucceeds(
+      addCommentBatch(as('mod'), 'mod', 'q1', 'c1', 'Looma Team'),
+    );
+    await assertFails(
+      addCommentBatch(as('siti'), 'siti', 'q1', 'c2', 'Looma Team'),
+    );
+    // Members still reply under their own alias (on another question: the
+    // test helper always sets commentCount to 1).
+    await seedPlainPost('q2', 'ask_looma');
+    await assertSucceeds(addCommentBatch(as('siti'), 'siti', 'q2', 'c3'));
+  });
+
+  test('a moderator can post as "Looma Team"', async () => {
+    await makeModerator('mod');
+    await assertSucceeds(createPostBatch(as('mod'), 'mod', 'w1', 'Looma Team'));
+  });
+});
+
+// ───────────────────────── Phase 3: Small wins threads ─────────────────────────
+
+describe('Small wins threads', () => {
+  const day = 24 * 3600 * 1000;
+
+  /** What PostRepository.startSmallWins writes: the post and its thread. */
+  function startThreadBatch(db, uid, id, thread = {}) {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', id), {
+      alias: 'Looma Team',
+      categoryId: 'health_wellness',
+      title: 'Small wins this week: what went well, even a little?',
+      content: 'Share one small good thing.',
+      timestamp: serverTimestamp(),
+      flagCount: 0,
+      meTooCount: 0,
+      commentCount: 0,
+      status: 'visible',
+    });
+    batch.set(doc(db, 'authors', id), {
+      authorId: uid,
+      createdAt: serverTimestamp(),
+    });
+    batch.set(
+      doc(db, 'users', uid),
+      { lastPostAt: serverTimestamp() },
+      { merge: true },
+    );
+    batch.set(doc(db, 'threads', id), {
+      title: 'Small wins this week: what went well, even a little?',
+      kind: 'smallWins',
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 7 * day),
+      pinned: true,
+      ...thread,
+    });
+    return batch.commit();
+  }
+
+  test('a moderator starts a thread; members can read it', async () => {
+    await makeModerator('mod');
+    await assertSucceeds(startThreadBatch(as('mod'), 'mod', 'w1'));
+    await makeMember('siti');
+    await assertSucceeds(getDoc(doc(as('siti'), 'threads', 'w1')));
+  });
+
+  test('a non-moderator cannot create a thread', async () => {
+    await makeMember('siti');
+    await assertFails(startThreadBatch(as('siti'), 'siti', 'w1', {}));
+    await assertFails(
+      setDoc(doc(as('siti'), 'threads', 'w2'), {
+        title: 'Small wins',
+        kind: 'smallWins',
+        startsAt: new Date(),
+        endsAt: new Date(Date.now() + day),
+        pinned: true,
+      }),
+    );
+  });
+
+  test('wrong shapes are refused, even for moderators', async () => {
+    for (const [i, extra] of [
+      { kind: 'announcement' },
+      { endsAt: new Date(Date.now() - day) },
+      { pinned: 'yes' },
+      { title: 'Hi' },
+      { extra: 1 },
+    ].entries()) {
+      // A fresh moderator each time (one post per minute).
+      const mod = `mod${i}`;
+      await makeModerator(mod);
+      await assertFails(startThreadBatch(as(mod), mod, `w${i}`, extra));
+    }
+  });
+
+  test('a thread needs its post', async () => {
+    await makeModerator('mod');
+    await assertFails(
+      setDoc(doc(as('mod'), 'threads', 'w1'), {
+        title: 'Small wins this week',
+        kind: 'smallWins',
+        startsAt: new Date(),
+        endsAt: new Date(Date.now() + day),
+        pinned: true,
+      }),
+    );
+  });
+
+  test('members reply to the thread normally', async () => {
+    await makeModerator('mod');
+    await startThreadBatch(as('mod'), 'mod', 'w1');
+    await makeMember('siti');
+    await assertSucceeds(addCommentBatch(as('siti'), 'siti', 'w1', 'c1'));
+  });
+});
+
+// ───────────────────────── Phase 3: themed weeks ─────────────────────────
+
+describe('themed week banner', () => {
+  const theme = () => ({
+    title: 'Rest week',
+    subtitle: 'Small ways to recharge.',
+    colorKey: 'sage',
+    guideIds: ['sleep-basics'],
+    startsAt: new Date(),
+    endsAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+  });
+
+  test('members can read it; only moderators can write it', async () => {
+    await seed((db) => setDoc(doc(db, 'themes', 'current'), theme()));
+    await makeMember('siti');
+    await assertSucceeds(getDoc(doc(as('siti'), 'themes', 'current')));
+    await assertFails(setDoc(doc(as('siti'), 'themes', 'current'), theme()));
+    await assertFails(deleteDoc(doc(as('siti'), 'themes', 'current')));
+    await makeModerator('mod');
+    await assertSucceeds(setDoc(doc(as('mod'), 'themes', 'current'), theme()));
+  });
+
+  test('only themes/current, with a valid shape', async () => {
+    await makeModerator('mod');
+    const db = as('mod');
+    await assertFails(setDoc(doc(db, 'themes', 'other'), theme()));
+    await assertFails(
+      setDoc(doc(db, 'themes', 'current'), { ...theme(), colorKey: 'red' }),
+    );
+    await assertFails(
+      setDoc(doc(db, 'themes', 'current'), { ...theme(), extra: true }),
+    );
+  });
+
+  test('signed-out visitors cannot read it', async () => {
+    await seed((db) => setDoc(doc(db, 'themes', 'current'), theme()));
+    const visitor = env.unauthenticatedContext().firestore();
+    await assertFails(getDoc(doc(visitor, 'themes', 'current')));
+  });
+});

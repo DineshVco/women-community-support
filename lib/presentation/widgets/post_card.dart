@@ -6,6 +6,7 @@ import '../../core/utils/time_format.dart';
 import '../../data/models/post.dart';
 import '../providers/app_settings.dart';
 import 'category_label.dart';
+import 'poll_view.dart';
 import 'post_title_hero.dart';
 import 'team_badge.dart';
 
@@ -55,15 +56,22 @@ class PostCard extends StatelessWidget {
               maxLines: 2,
               style: theme.textTheme.titleMedium,
             ),
-            const SizedBox(height: AppSpacing.xs + 2),
-            Text(
-              post.content,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.textSecondary,
+            if (post.content.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xs + 2),
+              Text(
+                post.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textSecondary,
+                ),
               ),
-            ),
+            ],
+            // Polls can be answered right here in the feed.
+            if (post.isPoll && post.isVisible) ...[
+              const SizedBox(height: AppSpacing.md),
+              LivePoll(post: post),
+            ],
             const SizedBox(height: AppSpacing.md),
             // Team posts: the alias and badge get their own line, so the
             // badge has room next to the counts on a small phone.

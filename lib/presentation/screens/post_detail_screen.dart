@@ -19,6 +19,7 @@ import '../widgets/comment_composer.dart';
 import '../widgets/comment_tile.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/poll_view.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/post_title_hero.dart';
 import '../widgets/press_scale.dart';
@@ -34,6 +35,7 @@ class PostDetailScreen extends StatefulWidget {
     required this.postId,
     this.initialPost,
     this.showHiddenContent = false,
+    this.smallWins = false,
   });
 
   final String postId;
@@ -45,6 +47,10 @@ class PostDetailScreen extends StatefulWidget {
   /// Moderators open hidden posts from the queue so they can read them
   /// before deciding. Everyone else only sees a short notice.
   final bool showHiddenContent;
+
+  /// The weekly Small wins thread: no "Me too" and no counts, so sharing
+  /// feels gentle, not like a contest.
+  final bool smallWins;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -61,6 +67,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final _replyFocus = FocusNode();
 
   bool _isMine = false;
+
+  /// Moderators can answer as "Looma Team" (e.g. in Ask Looma).
+  bool _isModerator = false;
+  bool _asTeam = false;
 
   /// Her alias in this discussion, for "Reply as …" (null while loading).
   String? _myAlias;
@@ -93,6 +103,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     _repo.isMyPost(widget.postId).then((mine) {
       if (mounted) setState(() => _isMine = mine);
+    });
+    _repo.isModerator().then((mod) {
+      if (mounted) setState(() => _isModerator = mod);
     });
   }
 
@@ -143,6 +156,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         postId: widget.postId,
         content: text,
         parentCommentId: _replyParentId,
+        asTeam: _isModerator && _asTeam,
       );
       if (!mounted) return;
       _replyController.clear();
@@ -328,6 +342,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ),
           ),
         ),
+        if (post.isVisible && _isModerator)
+          _TeamReplySwitch(
+            value: _asTeam,
+            onChanged: (v) => setState(() => _asTeam = v),
+          ),
         if (post.isVisible)
           CommentComposer(
             controller: _replyController,
@@ -336,7 +355,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             sending: _sending,
             replyingToAlias: _replyingTo?.alias,
             onCancelReply: _cancelReply,
-            hintText: _myAlias == null ? 'Write a reply' : 'Reply as $_myAlias',
+            hintText:
+                _isModerator && _asTeam
+                    ? 'Reply as ${PostRepository.teamAlias}'
+                    : _myAlias == null
+                    ? 'Write a reply'
+                    : 'Reply as $_myAlias',
           ),
       ],
     );
@@ -397,14 +421,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.lg),
-            SelectableText(post.content, style: theme.textTheme.bodyLarge),
+            if (post.content.isNotEmpty)
+              SelectableText(post.content, style: theme.textTheme.bodyLarge),
+            if (post.isPoll && post.isVisible) ...[
+              const SizedBox(height: AppSpacing.lg),
+              LivePoll(post: post),
+            ],
             const SizedBox(height: AppSpacing.xl),
             if (post.isVisible)
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  _buildMeTooButton(post),
+                  if (!widget.smallWins) _buildMeTooButton(post),
                   if (!_isMine)
                     PressScale(
                       child: OutlinedButton.icon(
@@ -421,7 +450,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                 ],
               )
-            else if (!AppSettings.gentleOf(context))
+            else if (!AppSettings.gentleOf(context) && !widget.smallWins)
               Text(
                 '${post.meTooCount} me too',
                 style: theme.textTheme.bodySmall,
@@ -675,5 +704,39 @@ class _PopOnSelectState extends State<_PopOnSelect>
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(scale: _scale, child: widget.child);
+  }
+}
+
+/// Above the reply box, for moderators only: answer as "Looma Team".
+class _TeamReplySwitch extends StatelessWidget {
+  const _TeamReplySwitch({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return ContentWidth(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenHorizontal,
+          AppSpacing.xs,
+          AppSpacing.screenHorizontal,
+          0,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Reply as Looma Team (moderators only)',
+                style: TextStyle(fontSize: 14, color: palette.textSecondary),
+              ),
+            ),
+            LoomaSwitch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
   }
 }

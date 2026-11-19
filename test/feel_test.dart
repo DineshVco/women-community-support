@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:women_community_support/core/constants/daily_questions.dart';
+import 'package:women_community_support/data/content_library.dart';
 import 'package:women_community_support/core/theme/app_motion.dart';
 import 'package:women_community_support/core/utils/greeting.dart';
 
@@ -32,33 +35,38 @@ void main() {
     });
   });
 
-  group('DailyQuestions', () {
+  group('DailyQuestions (content/daily_questions.json)', () {
+    final all =
+        ContentLibrary.parse(
+          guidesJson: File('content/guides.json').readAsStringSync(),
+          directoryJson: File('content/directory.json').readAsStringSync(),
+          dailyQuestionsJson:
+              File('content/daily_questions.json').readAsStringSync(),
+        ).dailyQuestions;
+
     test('has 30 questions that are all valid post titles', () {
-      expect(DailyQuestions.all, hasLength(30));
-      expect(DailyQuestions.all.toSet(), hasLength(30));
-      for (final q in DailyQuestions.all) {
+      expect(all, hasLength(30));
+      expect(all.toSet(), hasLength(30));
+      for (final q in all) {
         expect(q.length, inInclusiveRange(3, 120), reason: q);
       }
     });
 
     test('changes daily and repeats every 30 days', () {
-      final jan1 = DateTime(2026, 1, 1);
-      expect(DailyQuestions.forDate(jan1), DailyQuestions.all[0]);
-      expect(
-        DailyQuestions.forDate(DateTime(2026, 1, 2)),
-        DailyQuestions.all[1],
-      );
-      expect(
-        DailyQuestions.forDate(DateTime(2026, 1, 31)),
-        DailyQuestions.all[0],
-      );
+      expect(DailyQuestions.forDate(all, DateTime(2026, 1, 1)), all[0]);
+      expect(DailyQuestions.forDate(all, DateTime(2026, 1, 2)), all[1]);
+      expect(DailyQuestions.forDate(all, DateTime(2026, 1, 31)), all[0]);
     });
 
     test('is the same all day long', () {
       expect(
-        DailyQuestions.forDate(DateTime(2026, 5, 4, 0, 1)),
-        DailyQuestions.forDate(DateTime(2026, 5, 4, 23, 59)),
+        DailyQuestions.forDate(all, DateTime(2026, 5, 4, 0, 1)),
+        DailyQuestions.forDate(all, DateTime(2026, 5, 4, 23, 59)),
       );
+    });
+
+    test('no questions: no card', () {
+      expect(DailyQuestions.forDate(const [], DateTime(2026, 5, 4)), isNull);
     });
   });
 

@@ -44,6 +44,16 @@ service cloud.firestore {
       return hashing.sha256('looma-report:' + request.auth.uid).toHexString().lower();
     }
 
+    // Poll votes are stored under sha256('looma-vote:' + postId + ':' + uid).
+    // The vote document holds only the time, never the chosen option, so
+    // nobody (not even with her uid) can see what she voted for. The fixed
+    // id per person and poll means one vote each.
+    // PostRepository.voteKeyFor in the app computes the same value.
+    function voteKeyOf(postId) {
+      return hashing.sha256('looma-vote:' + postId + ':' + request.auth.uid)
+        .toHexString().lower();
+    }
+
     function isModerator() {
       return signedIn() &&
         exists(/databases/$(database)/documents/moderators/$(request.auth.uid));
@@ -86,20 +96,73 @@ service cloud.firestore {
       return alias.lower().replace('[^a-z]', '') == 'loomateam';
     }
 
+    // Only moderators may write as "Looma Team" from the app (Small wins
+    // threads, answers in Ask Looma).
+    function aliasAllowed(alias) {
+      return !isReservedAlias(alias) || isModerator();
+    }
+
+    // ── polls ──
+    // A poll is a post with type 'poll', 2 to 4 options (1 to 60 characters)
+    // and voteCounts starting at 0 for each option.
+    function validOption(o) {
+      return o is string && o.size() >= 1 && o.size() <= 60;
+    }
+
+    function validPollShape(d) {
+      return d.type == 'poll'
+        && d.options is list && d.options.size() >= 2 && d.options.size() <= 4
+        && validOption(d.options[0]) && validOption(d.options[1])
+        && (d.options.size() < 3 || validOption(d.options[2]))
+        && (d.options.size() < 4 || validOption(d.options[3]))
+        && d.voteCounts is list
+        && d.voteCounts == (d.options.size() == 2 ? [0, 0]
+             : (d.options.size() == 3 ? [0, 0, 0] : [0, 0, 0, 0]));
+    }
+
+    // Sum of a 2 to 4 item count list.
+    function total(l) {
+      return l[0] + l[1] + (l.size() > 2 ? l[2] : 0) + (l.size() > 3 ? l[3] : 0);
+    }
+
+    // Each count is a whole number that did not go down.
+    function countOk(o, n, i) {
+      return i >= n.size() || (n[i] is int && n[i] >= o[i]);
+    }
+
+    // Exactly one option went up by exactly 1.
+    function oneVoteMore(o, n) {
+      return n is list && n.size() == o.size()
+        && countOk(o, n, 0) && countOk(o, n, 1)
+        && countOk(o, n, 2) && countOk(o, n, 3)
+        && total(n) == total(o) + 1;
+    }
+
+    function votePath(postId) {
+      return /databases/$(database)/documents/posts/$(postId)/votes/$(voteKeyOf(postId));
+    }
+
     function validNewPost(postId) {
       let d = request.resource.data;
+      let isPoll = 'type' in d;
       return d.keys().hasOnly(['alias', 'categoryId', 'title', 'content',
                                'timestamp', 'flagCount', 'meTooCount',
-                               'commentCount', 'status'])
+                               'commentCount', 'status',
+                               'type', 'options', 'voteCounts'])
         && d.keys().hasAll(['alias', 'categoryId', 'title', 'content',
                             'timestamp', 'flagCount', 'meTooCount',
                             'commentCount', 'status'])
         && d.alias is string && d.alias.size() > 0 && d.alias.size() <= 40
-        && !isReservedAlias(d.alias)
+        && aliasAllowed(d.alias)
         && d.categoryId in ['health_wellness', 'education',
-                            'career_development', 'personal_safety']
+                            'career_development', 'personal_safety',
+                            'ask_looma']
         && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
-        && d.content is string && d.content.size() >= 1 && d.content.size() <= 5000
+        // A poll may have no extra text; a normal post needs some.
+        && d.content is string && d.content.size() >= (isPoll ? 0 : 1)
+        && d.content.size() <= 5000
+        && (isPoll ? validPollShape(d)
+                   : !d.keys().hasAny(['options', 'voteCounts']))
         && d.timestamp == request.time
         && d.flagCount == 0 && d.meTooCount == 0 && d.commentCount == 0
         && d.status == 'visible'
@@ -133,6 +196,17 @@ service cloud.firestore {
       );
     }
 
+    // A member votes in a poll: her vote document appears (it did not exist
+    // before) and exactly one option goes up by 1. Votes cannot be changed
+    // or taken back.
+    function isVoteUpdate(postId) {
+      return resource.data.get('type', '') == 'poll'
+        && resource.data.get('status', 'visible') == 'visible'
+        && changedKeys().hasOnly(['voteCounts'])
+        && !exists(votePath(postId)) && existsAfter(votePath(postId))
+        && oneVoteMore(resource.data.voteCounts, request.resource.data.voteCounts);
+    }
+
     // A reply was added: +1 reply count.
     function isReplyCountUpdate() {
       return changedKeys().hasOnly(['commentCount'])
@@ -150,6 +224,7 @@ service cloud.firestore {
       allow update: if signedIn() && (
         isReportUpdate(postId) ||
         isMeTooUpdate(postId) ||
+        isVoteUpdate(postId) ||
         isReplyCountUpdate() ||
         isModeratorUpdate()
       );
@@ -167,7 +242,7 @@ service cloud.firestore {
           && request.resource.data.alias is string
           && request.resource.data.alias.size() > 0
           && request.resource.data.alias.size() <= 40
-          && !isReservedAlias(request.resource.data.alias)
+          && aliasAllowed(request.resource.data.alias)
           && request.resource.data.content is string
           && request.resource.data.content.size() >= 1
           && request.resource.data.content.size() <= 2000
@@ -206,6 +281,67 @@ service cloud.firestore {
         allow delete: if signedIn() && request.auth.uid == uid;
         allow update: if false;
       }
+
+      // ───────────── poll votes ─────────────
+      // Id = her one-way vote key; the document holds only the time. She can
+      // check her own vote (to show the results); nobody can list votes.
+
+      match /votes/{voteKey} {
+        allow get: if signedIn() && voteKey == voteKeyOf(postId);
+        allow list: if false;
+        allow create: if isWomanMember()
+          && voteKey == voteKeyOf(postId)
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time
+          && get(/databases/$(database)/documents/posts/$(postId)).data.get('type', '') == 'poll'
+          && total(getAfter(/databases/$(database)/documents/posts/$(postId)).data.voteCounts) ==
+               total(get(/databases/$(database)/documents/posts/$(postId)).data.voteCounts) + 1;
+        allow update, delete: if false;
+      }
+    }
+
+    // ───────────── Small wins threads (moderators only) ─────────────
+    // threads/{id} pins the post posts/{id} (written in the same batch) at
+    // the top of Discuss from startsAt to endsAt. Replies are normal replies.
+
+    function validThread(threadId) {
+      let d = request.resource.data;
+      let fields = ['title', 'kind', 'startsAt', 'endsAt', 'pinned'];
+      return d.keys().hasOnly(fields) && d.keys().hasAll(fields)
+        && d.title is string && d.title.size() >= 3 && d.title.size() <= 120
+        && d.kind == 'smallWins'
+        && d.startsAt is timestamp && d.endsAt is timestamp
+        && d.endsAt > d.startsAt
+        && d.pinned is bool
+        && existsAfter(/databases/$(database)/documents/posts/$(threadId));
+    }
+
+    match /threads/{threadId} {
+      allow read: if signedIn();
+      allow create, update: if isModerator() && validThread(threadId);
+      allow delete: if isModerator();
+    }
+
+    // ───────────── themed week banner (moderators only) ─────────────
+    // One document, themes/current. guideIds point to guides in
+    // content/guides.json.
+
+    function validTheme() {
+      let d = request.resource.data;
+      let fields = ['title', 'subtitle', 'colorKey', 'guideIds', 'startsAt', 'endsAt'];
+      return d.keys().hasOnly(fields) && d.keys().hasAll(fields)
+        && d.title is string && d.title.size() >= 1 && d.title.size() <= 60
+        && d.subtitle is string && d.subtitle.size() <= 140
+        && d.colorKey in ['blush', 'sage', 'sand', 'lavender']
+        && d.guideIds is list && d.guideIds.size() <= 6
+        && d.startsAt is timestamp && d.endsAt is timestamp
+        && d.endsAt > d.startsAt;
+    }
+
+    match /themes/{themeId} {
+      allow read: if signedIn();
+      allow create, update: if isModerator() && themeId == 'current' && validTheme();
+      allow delete: if isModerator();
     }
 
     // ───────────── who wrote what (locked) ─────────────

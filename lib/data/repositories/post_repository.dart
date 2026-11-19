@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/utils/alias.dart';
 import '../models/comment.dart';
+import '../models/community.dart';
 import '../models/post.dart';
 import '../models/report.dart';
 import '../models/user_profile.dart';
@@ -22,6 +23,8 @@ import '../models/user_profile.dart';
 ///  * Aliases come from a secret key only she can read (users/{uid}.aliasKey),
 ///    never from the uid alone.
 ///  * Reports store a one-way hash of the reporter's uid, not the uid.
+///  * Poll votes are stored under a one-way vote key and hold only the time,
+///    so nobody can see who voted, or what anyone chose.
 class PostRepository {
   PostRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
     : _db = firestore ?? FirebaseFirestore.instance,
@@ -50,6 +53,15 @@ class PostRepository {
   /// salt from chat profiles, so the two ids cannot be matched up.
   static String reporterIdFor(String uid) =>
       sha256.convert(utf8.encode('looma-report:$uid')).toString();
+
+  /// sha256('looma-vote:' + postId + ':' + uid): her vote in one poll.
+  /// firestore.rules (`voteKeyOf`) computes the same value. One id per
+  /// person and poll, so she can vote only once.
+  static String voteKeyFor(String uid, String postId) =>
+      sha256.convert(utf8.encode('looma-vote:$postId:$uid')).toString();
+
+  /// The alias only moderators may use (firestore.rules checks it).
+  static const String teamAlias = 'Looma Team';
 
   DocumentReference<Map<String, dynamic>> _me() =>
       _db.collection('users').doc(_requireUid());
@@ -151,8 +163,8 @@ class PostRepository {
   /// Deletes everything she wrote or saved, then her private profile.
   /// Call [reauthenticate] first and [deleteLogin] after.
   ///
-  /// Not deleted (they hold no name, email or text of hers): "Me too" taps
-  /// and reports she made. Once the login is gone, nothing links them to her.
+  /// Not deleted (they hold no name, email or text of hers): "Me too" taps,
+  /// poll votes (only a one-way key and a time) and reports she made. Once the login is gone, nothing links them to her.
   Future<void> deleteMyContent() async {
     final uid = _requireUid();
     final refs = <DocumentReference<Map<String, dynamic>>>[];
@@ -160,10 +172,14 @@ class PostRepository {
     // Her discussions (and the private "who wrote this" records).
     final authored =
         await _db.collection('authors').where('authorId', isEqualTo: uid).get();
+    final moderator = await isModerator();
     for (final doc in authored.docs) {
       refs
         ..add(_post(doc.id))
         ..add(doc.reference);
+      // A moderator's Small wins pin goes with its post (only moderators
+      // may delete threads, so others skip this).
+      if (moderator) refs.add(_db.collection('threads').doc(doc.id));
     }
 
     // Her replies, in any discussion.
@@ -327,11 +343,13 @@ class PostRepository {
   /// The signed-in person's id, or null when signed out.
   String? get myUid => _auth.currentUser?.uid;
 
-  /// Creates a post and returns the alias the author will use in that thread.
+  /// Creates a post (or a poll, with 2 to 4 [pollOptions]) and returns the
+  /// alias the author will use in that thread.
   Future<String> createPost({
     required String categoryId,
     required String title,
     required String content,
+    List<String>? pollOptions,
   }) async {
     final uid = _requireUid();
     final postRef = _db.collection('posts').doc();
@@ -351,6 +369,11 @@ class PostRepository {
       'meTooCount': 0,
       'commentCount': 0,
       'status': 'visible',
+      if (pollOptions != null) ...{
+        'type': 'poll',
+        'options': pollOptions,
+        'voteCounts': List.filled(pollOptions.length, 0),
+      },
     });
     batch.set(_db.collection('authors').doc(postRef.id), {
       'authorId': uid,
@@ -445,13 +468,16 @@ class PostRepository {
         );
   }
 
+  /// [asTeam]: a moderator answering as "Looma Team" (the rules refuse it
+  /// for everyone else).
   Future<void> addComment({
     required String postId,
     required String content,
     String? parentCommentId,
+    bool asTeam = false,
   }) async {
     final uid = _requireUid();
-    final alias = await myAliasFor(postId);
+    final alias = asTeam ? teamAlias : await myAliasFor(postId);
     final commentRef = _post(postId).collection('comments').doc();
 
     final batch = _db.batch();
@@ -494,6 +520,97 @@ class PostRepository {
       'meTooCount': FieldValue.increment(on ? 1 : -1),
     });
     await batch.commit();
+  }
+
+  // ───────────────────────── Polls ─────────────────────────
+
+  DocumentReference<Map<String, dynamic>> _myVote(String postId) =>
+      _post(postId).collection('votes').doc(voteKeyFor(_requireUid(), postId));
+
+  /// True once she has voted in this poll (results are shown only then).
+  Stream<bool> watchVoted(String postId) {
+    return _myVote(postId).snapshots().map((s) => s.exists);
+  }
+
+  /// One vote, never changed. A transaction, so two people voting at the
+  /// same moment both count (the rules check +1 on the latest counts).
+  Future<void> vote(String postId, int option) async {
+    final postRef = _post(postId);
+    final voteRef = _myVote(postId);
+    await _db.runTransaction((tx) async {
+      final post = await tx.get(postRef);
+      final counts = Post.fromMap(postId, post.data() ?? {}).voteCounts;
+      if (option < 0 || option >= counts.length) {
+        throw StateError('No such option.');
+      }
+      final updated = [...counts]..[option] += 1;
+      tx.set(voteRef, {'createdAt': FieldValue.serverTimestamp()});
+      tx.update(postRef, {'voteCounts': updated});
+    });
+  }
+
+  // ───────────────────────── Small wins & themed weeks ─────────────────────────
+
+  /// The Small wins thread that is running now, or null.
+  Stream<SmallWinsThread?> watchSmallWins() {
+    return _db
+        .collection('threads')
+        .orderBy('startsAt', descending: true)
+        .limit(5)
+        .snapshots()
+        .map((snapshot) {
+          final now = DateTime.now();
+          for (final doc in snapshot.docs) {
+            final thread = SmallWinsThread.fromMap(doc.id, doc.data());
+            if (thread != null && thread.isActive(now)) return thread;
+          }
+          return null;
+        });
+  }
+
+  /// Moderators: starts this week's Small wins thread (a "Looma Team" post
+  /// pinned at the top of Discuss for 7 days).
+  Future<void> startSmallWins(String title) async {
+    final uid = _requireUid();
+    final postRef = _db.collection('posts').doc();
+    final now = DateTime.now();
+    final batch = _db.batch();
+    batch.set(postRef, {
+      'alias': teamAlias,
+      'categoryId': 'health_wellness',
+      'title': title,
+      'content':
+          'Share one small good thing from your week. No likes and no '
+          'counts here: just kind words.',
+      'timestamp': FieldValue.serverTimestamp(),
+      'flagCount': 0,
+      'meTooCount': 0,
+      'commentCount': 0,
+      'status': 'visible',
+    });
+    batch.set(_db.collection('authors').doc(postRef.id), {
+      'authorId': uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(_db.collection('users').doc(uid), {
+      'lastPostAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    batch.set(_db.collection('threads').doc(postRef.id), {
+      'title': title,
+      'kind': 'smallWins',
+      'startsAt': Timestamp.fromDate(now),
+      'endsAt': Timestamp.fromDate(now.add(const Duration(days: 7))),
+      'pinned': true,
+    });
+    await batch.commit();
+  }
+
+  /// The themed week banner while it is running, or null.
+  Stream<ThemedWeek?> watchThemedWeek() {
+    return _db.collection('themes').doc('current').snapshots().map((s) {
+      final week = ThemedWeek.fromMap(s.data());
+      return week != null && week.isActive(DateTime.now()) ? week : null;
+    });
   }
 
   // ───────────────────────── Reports ─────────────────────────

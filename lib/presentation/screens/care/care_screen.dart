@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../data/encrypted_box.dart';
+import '../../../data/models/category.dart';
 import '../../widgets/app_lock_gate.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/quick_exit_button.dart';
+import '../create_post_screen.dart';
 import '../help_screen.dart';
 import '../me/app_lock_settings_screen.dart';
 import '../me/safety_plan_screen.dart';
@@ -39,6 +41,27 @@ class CareScreen extends StatelessWidget {
 
   static const String intro =
       'Small tools for hard moments. What you write here stays on your phone.';
+
+  /// Opens compose in the "Ask Looma Team" category.
+  Future<void> _askLooma(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final alias = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder:
+            (_) => const CreatePostScreen(
+              initialCategoryId: AppCategories.askLoomaId,
+            ),
+      ),
+    );
+    if (alias == null) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Your question is in Discuss. The team will answer as Looma Team.',
+        ),
+      ),
+    );
+  }
 
   void _push(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
@@ -166,6 +189,13 @@ class CareScreen extends StatelessWidget {
                       title: 'Directory',
                       subtitle: 'Organisations and help lines',
                       onTap: () => _push(context, const DirectoryScreen()),
+                    ),
+                    GroupedRow(
+                      icon: CupertinoIcons.question_circle,
+                      title: 'Ask Looma Team',
+                      subtitle:
+                          'A question for the team, answered as Looma Team',
+                      onTap: () => _askLooma(context),
                     ),
                   ],
                 ),

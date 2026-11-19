@@ -42,7 +42,16 @@ class AppCategories {
       shortName: 'Safety',
       description: 'Staying safe and what to do when you are not.',
     ),
+    Category(
+      id: askLoomaId,
+      name: 'Ask Looma Team',
+      shortName: 'Ask Looma',
+      description: 'Questions for the team. Answers appear as Looma Team.',
+    ),
   ];
+
+  /// Questions for the team; moderators answer as "Looma Team".
+  static const String askLoomaId = 'ask_looma';
 
   static Category? fromId(String id) {
     for (final category in all) {

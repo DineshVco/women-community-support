@@ -5,6 +5,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/haptics.dart';
 import '../../core/utils/time_format.dart';
+import '../../data/content_library.dart';
+import '../../data/help_lines.dart';
 import '../../data/models/report.dart';
 import '../../data/repositories/post_repository.dart';
 import '../widgets/adaptive.dart';
@@ -21,6 +23,19 @@ import 'post_detail_screen.dart';
 /// (firestore.rules), so opening it as anyone else just shows an error.
 class ModeratorScreen extends StatefulWidget {
   const ModeratorScreen({super.key});
+
+  /// This week's prompt from content/small_wins.json (changes weekly).
+  static String smallWinsPromptFor(List<String> prompts, DateTime date) {
+    if (prompts.isEmpty) return 'Small wins this week: what went well?';
+    final week =
+        DateTime.utc(
+          date.year,
+          date.month,
+          date.day,
+        ).difference(DateTime.utc(2024, 1, 1)).inDays ~/
+        7;
+    return prompts[week % prompts.length];
+  }
 
   @override
   State<ModeratorScreen> createState() => _ModeratorScreenState();
@@ -104,10 +119,52 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
       ..sort((a, b) => a.firstReportedAt.compareTo(b.firstReportedAt));
   }
 
+  Future<void> _startSmallWins() async {
+    final ready = ContentScope.maybeOf(context);
+    final library = ready ?? await ContentLibrary.load();
+    if (!mounted) return;
+    final title = ModeratorScreen.smallWinsPromptFor(
+      library.smallWinsPrompts,
+      DateTime.now(),
+    );
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Start this week\'s Small wins?',
+      message:
+          '"$title" will be pinned at the top of Discuss for 7 days, posted '
+          'as Looma Team.',
+      confirmLabel: 'Start',
+    );
+    if (!confirmed || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _repo.startSmallWins(title);
+      AppHaptics.medium();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Small wins is pinned for 7 days.')),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not start it. If you posted a moment ago, wait a minute.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'Report queue'),
+      appBar: loomaNavBar(
+        context,
+        title: 'Report queue',
+        trailing: TextButton(
+          onPressed: _startSmallWins,
+          child: const Text('Small wins'),
+        ),
+      ),
       body: SafeArea(
         child: ContentWidth(
           child: StreamBuilder<List<Report>>(

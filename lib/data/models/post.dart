@@ -17,6 +17,9 @@ class Post {
     this.meTooCount = 0,
     this.commentCount = 0,
     this.status = 'visible',
+    this.type,
+    this.options = const [],
+    this.voteCounts = const [],
   });
 
   final String id;
@@ -35,6 +38,17 @@ class Post {
   final String status;
 
   bool get isVisible => status == 'visible';
+
+  /// 'poll' for a poll, null for a normal post.
+  final String? type;
+
+  /// Poll answers (2 to 4) and how many votes each has, in the same order.
+  final List<String> options;
+  final List<int> voteCounts;
+
+  bool get isPoll => type == 'poll' && options.length >= 2;
+
+  int get totalVotes => voteCounts.fold(0, (a, b) => a + b);
 
   factory Post.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     return Post.fromMap(snapshot.id, snapshot.data() ?? <String, dynamic>{});
@@ -58,6 +72,13 @@ class Post {
       meTooCount: (data['meTooCount'] as num?)?.toInt() ?? 0,
       commentCount: (data['commentCount'] as num?)?.toInt() ?? 0,
       status: data['status'] as String? ?? 'visible',
+      type: data['type'] as String?,
+      options:
+          (data['options'] as List? ?? const []).whereType<String>().toList(),
+      voteCounts: [
+        for (final n in data['voteCounts'] as List? ?? const [])
+          (n as num?)?.toInt() ?? 0,
+      ],
     );
   }
 }

@@ -198,6 +198,8 @@ class ContentLibrary {
     required this.guides,
     required this.directory,
     required this.journalPrompts,
+    this.dailyQuestions = const [],
+    this.smallWinsPrompts = const [],
   });
 
   /// Every guide in the file, checked or not.
@@ -205,24 +207,48 @@ class ContentLibrary {
   final List<DirectoryEntry> directory;
   final List<String> journalPrompts;
 
+  /// One per day on Home (content/daily_questions.json).
+  final List<String> dailyQuestions;
+
+  /// Titles for the weekly Small wins thread (content/small_wins.json).
+  final List<String> smallWinsPrompts;
+
   static const String guidesAsset = 'content/guides.json';
   static const String directoryAsset = 'content/directory.json';
+  static const String dailyQuestionsAsset = 'content/daily_questions.json';
+  static const String smallWinsAsset = 'content/small_wins.json';
 
   static Future<ContentLibrary> load([AssetBundle? bundle]) async {
     final b = bundle ?? rootBundle;
     return parse(
       guidesJson: await b.loadString(guidesAsset),
       directoryJson: await b.loadString(directoryAsset),
+      dailyQuestionsJson: await b.loadString(dailyQuestionsAsset),
+      smallWinsJson: await b.loadString(smallWinsAsset),
     );
   }
 
   static ContentLibrary parse({
     required String guidesJson,
     required String directoryJson,
+    String? dailyQuestionsJson,
+    String? smallWinsJson,
   }) {
     final g = jsonDecode(guidesJson) as Map<String, dynamic>;
     final d = jsonDecode(directoryJson) as Map<String, dynamic>;
+    List<String> strings(String? json, String key) {
+      if (json == null) return const [];
+      final map = jsonDecode(json) as Map<String, dynamic>;
+      return (map[key] as List? ?? const [])
+          .whereType<String>()
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+
     return ContentLibrary(
+      dailyQuestions: strings(dailyQuestionsJson, 'questions'),
+      smallWinsPrompts: strings(smallWinsJson, 'prompts'),
       guides: [
         for (final item in g['guides'] as List? ?? const [])
           if (item is Map<String, dynamic>) Guide.fromJson(item),

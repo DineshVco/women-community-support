@@ -4,9 +4,11 @@ import '../../core/constants/daily_questions.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../data/help_lines.dart';
 
-/// A soft green card with today's conversation starter.
-/// "Share your answer" opens the compose screen with the question as title.
+/// A soft card with today's gentle question (content/daily_questions.json,
+/// one per day). "Share your answer" opens the compose screen with the
+/// question as the title, so answers are anonymous like any post.
 class QuestionOfTheDay extends StatelessWidget {
   const QuestionOfTheDay({super.key, required this.onAnswer});
 
@@ -14,9 +16,21 @@ class QuestionOfTheDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return WithContent(
+      builder: (context, library) {
+        final question = DailyQuestions.forDate(
+          library.dailyQuestions,
+          DateTime.now(),
+        );
+        if (question == null) return const SizedBox.shrink();
+        return _card(context, question);
+      },
+    );
+  }
+
+  Widget _card(BuildContext context, String question) {
     final theme = Theme.of(context);
     final palette = context.palette;
-    final question = DailyQuestions.forDate(DateTime.now());
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
