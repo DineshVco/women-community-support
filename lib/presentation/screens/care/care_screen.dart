@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/encrypted_box.dart';
+import '../../../data/content_library.dart';
+import '../../../data/help_lines.dart';
 import '../../../data/models/category.dart';
+import '../../../data/today_for_you.dart';
 import '../../widgets/app_lock_gate.dart';
 import '../../widgets/check_in_row.dart';
 import '../../widgets/content_width.dart';
+import '../../widgets/today_for_you_card.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/hero_card.dart';
 import '../../widgets/ios.dart';
@@ -65,6 +70,42 @@ class CareScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Opens what "Today for you" suggests. A guide that is not ready yet
+  /// (or the journal on the web) falls back to Breathe.
+  Future<void> _openToday(
+    BuildContext context,
+    TodaySuggestion suggestion,
+  ) async {
+    switch (suggestion.kind) {
+      case TodayTargetKind.ground:
+        _push(context, const GroundScreen());
+      case TodayTargetKind.journal when EncryptedBox.supported:
+        await openJournal(context);
+      case TodayTargetKind.guide:
+        final ready = ContentScope.maybeOf(context);
+        final library = ready ?? await ContentLibrary.load();
+        if (!context.mounted) return;
+        final guide =
+            library
+                .visibleGuides()
+                .where((g) => g.id == suggestion.guideId)
+                .firstOrNull;
+        if (guide == null) {
+          _push(context, const BreatheScreen());
+        } else {
+          _push(
+            context,
+            GuideDetailScreen(
+              guide: guide,
+              bookmarks: context.read<GuideBookmarks>(),
+            ),
+          );
+        }
+      default:
+        _push(context, const BreatheScreen());
+    }
   }
 
   /// The next step offered after a check-in.
@@ -142,6 +183,13 @@ class CareScreen extends StatelessWidget {
                       onStep: (step) => _openStep(context, step),
                     ),
                   ),
+                // ───────── 3. Today for you (by time of day) ─────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: TodayForYouCard(
+                    onOpen: (suggestion) => _openToday(context, suggestion),
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.sm),
 
                 // ───────── 2. Tools ─────────

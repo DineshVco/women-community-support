@@ -85,6 +85,12 @@ class AppIcons {
   static const weather = PhosphorIconsRegular.cloudSun;
   static const heart = PhosphorIconsRegular.heart;
 
+  // Today for you, by time of day
+  static const morning = PhosphorIconsRegular.sunHorizon;
+  static const afternoon = PhosphorIconsRegular.sunDim;
+  static const evening = PhosphorIconsRegular.moon;
+  static const night = PhosphorIconsRegular.moonStars;
+
   // Check-in faces, hardest to best
   static const faceRough = PhosphorIconsRegular.smileyNervous;
   static const faceLow = PhosphorIconsRegular.smileySad;

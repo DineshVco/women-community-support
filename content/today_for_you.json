@@ -1,0 +1,125 @@
+{
+  "note": "Today for you, on Care. One suggestion per time slot, picked by date so it stays the same all day. Short, warm, plain English, no medical claims. target: breathe, ground, journal, or guide:<guide id>. Set verified to true only after Najwa has checked the wording. Unverified suggestions show only in debug builds.",
+  "slots": {
+    "morning": [
+      {
+        "id": "morning-intention",
+        "title": "One small intention",
+        "text": "Choose one small, kind thing to do for yourself today. Write it down so it stays with you.",
+        "target": "journal",
+        "verified": false
+      },
+      {
+        "id": "morning-breath",
+        "title": "A one-minute breath",
+        "text": "Before the day gets busy, take one slow minute with the cat.",
+        "target": "breathe",
+        "verified": false
+      },
+      {
+        "id": "morning-notice",
+        "title": "Start softly",
+        "text": "Notice three things you can see from where you are. Then begin your day.",
+        "target": "ground",
+        "verified": false
+      },
+      {
+        "id": "morning-hope",
+        "title": "Name one hope",
+        "text": "What would make today feel a little lighter? Note it in your journal.",
+        "target": "journal",
+        "verified": false
+      }
+    ],
+    "afternoon": [
+      {
+        "id": "afternoon-stretch",
+        "title": "A stretch break",
+        "text": "Stand up, roll your shoulders, and take three slow breaths with the cat.",
+        "target": "breathe",
+        "verified": false
+      },
+      {
+        "id": "afternoon-now",
+        "title": "Come back to now",
+        "text": "Feeling scattered? Try 5-4-3-2-1 to settle into this moment.",
+        "target": "ground",
+        "verified": false
+      },
+      {
+        "id": "afternoon-pause",
+        "title": "A pause between tasks",
+        "text": "Look away from your screen for a minute and let your breath out slowly.",
+        "target": "breathe",
+        "verified": false
+      },
+      {
+        "id": "afternoon-sounds",
+        "title": "Listen for a moment",
+        "text": "Name the sounds you can hear right now, near and far. Then carry on gently.",
+        "target": "ground",
+        "verified": false
+      }
+    ],
+    "evening": [
+      {
+        "id": "evening-went-well",
+        "title": "What went well?",
+        "text": "Write down one thing that went okay today, however small.",
+        "target": "journal",
+        "verified": false
+      },
+      {
+        "id": "evening-let-go",
+        "title": "Leave it for tomorrow",
+        "text": "Note one thing you can put down for tonight. It can wait until morning.",
+        "target": "journal",
+        "verified": false
+      },
+      {
+        "id": "evening-kind-word",
+        "title": "A kind word for you",
+        "text": "What would you say to a friend who had your day? Write it to yourself.",
+        "target": "journal",
+        "verified": false
+      },
+      {
+        "id": "evening-heavy-day",
+        "title": "If today felt heavy",
+        "text": "This short guide has a few gentle ideas for low days.",
+        "target": "guide:low-mood",
+        "verified": false
+      }
+    ],
+    "night": [
+      {
+        "id": "night-slow-breath",
+        "title": "Slow breathing with the cat",
+        "text": "Breathe slowly with the cat for a few minutes. Let your shoulders drop.",
+        "target": "breathe",
+        "verified": false
+      },
+      {
+        "id": "night-long-out",
+        "title": "A longer breath out",
+        "text": "Breathe in gently, then let the breath out a little longer. The cat will keep the pace.",
+        "target": "breathe",
+        "verified": false
+      },
+      {
+        "id": "night-feel",
+        "title": "Settle into your bed",
+        "text": "If your thoughts keep turning, notice five things you can feel, like the pillow or the blanket.",
+        "target": "ground",
+        "verified": false
+      },
+      {
+        "id": "night-paper",
+        "title": "Put it on paper",
+        "text": "Write down what is on your mind, so it can wait until the morning.",
+        "target": "journal",
+        "verified": false
+      }
+    ]
+  }
+}
