@@ -15,7 +15,6 @@ import 'care/care_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import '../../core/theme/app_icons.dart';
-import '../widgets/fade_slide_in.dart';
 
 /// The signed-in app: Discuss, Care and Me under an iOS-style tab bar that
 /// is translucent and blurred (content scrolls under it). Connect joins
@@ -142,8 +141,9 @@ class TabSpec {
 }
 
 /// Looma's tab bar: see-through and blurred, a hairline on top, one row of
-/// tabs. Each tab is a full-height tap area (56 px). Screen readers hear
-/// every tab's name, selected or not.
+/// tabs, each an icon with its name under it; the active one sits in a soft
+/// blush pill. Each tab is a full-height tap area (at least 56 px). Screen
+/// readers hear every tab's name, selected or not.
 class LoomaTabBar extends StatelessWidget {
   const LoomaTabBar({
     super.key,
@@ -156,7 +156,11 @@ class LoomaTabBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   final List<TabSpec> tabs;
 
-  static const double height = 56;
+  /// At least 56; taller with large text so icon and name both fit.
+  static double heightFor(TextScaler scaler) {
+    final content = 24 + 2 + scaler.scale(13) * 1.2 + 8 + 8;
+    return content < 56 ? 56 : content;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +176,7 @@ class LoomaTabBar extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(bottom: bottom),
             child: SizedBox(
-              height: height,
+              height: heightFor(MediaQuery.textScalerOf(context)),
               child: Row(
                 children: [
                   for (var i = 0; i < tabs.length; i++)
@@ -233,44 +237,37 @@ class _TabItem extends StatelessWidget {
               key: ValueKey('tab-pill-${spec.label}'),
               duration: duration,
               curve: AppMotion.enter,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color:
                     active
                         ? palette.tabPill
                         : palette.tabPill.withValues(alpha: 0),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(18),
               ),
-              // The pill grows smoothly as the name appears (instantly
-              // with Reduce motion).
-              child: GentleSize(
-                duration: duration,
-                alignment: Alignment.centerLeft,
-                child: IconTheme.merge(
-                  data: IconThemeData(size: 24, color: color),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      active ? spec.activeIcon : spec.icon,
-                      if (active) ...[
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              spec.label,
-                              maxLines: 1,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: palette.text,
-                              ),
-                            ),
-                          ),
+              // Icon over its name; the active pill wraps both.
+              child: IconTheme.merge(
+                data: IconThemeData(size: 24, color: color),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    active ? spec.activeIcon : spec.icon,
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        spec.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight:
+                              active ? FontWeight.w600 : FontWeight.w500,
+                          height: 1.2,
+                          color: color,
                         ),
-                      ],
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -290,7 +287,8 @@ class MeTabIcon extends StatelessWidget {
   final String? avatarId;
   final bool active;
 
-  static const double size = 26;
+  /// The avatar; with its 2 px ring it is 24 px, like the other icons.
+  static const double size = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +302,6 @@ class MeTabIcon extends StatelessWidget {
         key: const ValueKey('me-tab-ring'),
         duration: AppMotion.of(context, AppMotion.medium),
         curve: AppMotion.enter,
-        padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(

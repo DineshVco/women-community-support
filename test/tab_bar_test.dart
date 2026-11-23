@@ -46,23 +46,25 @@ Color _pillColour(WidgetTester tester, String tab) {
 }
 
 void main() {
-  testWidgets('only the active tab shows its name, in the blush pill', (
+  testWidgets('every tab shows its name under the icon; active in the pill', (
     tester,
   ) async {
     await tester.pumpWidget(_bar(index: 1));
     await tester.pumpAndSettle();
-    expect(find.text('Care'), findsOneWidget);
-    expect(find.text('Discuss'), findsNothing);
-    expect(find.text('Me'), findsNothing); // the avatar only
+    for (final tab in ['Discuss', 'Care', 'Me']) {
+      expect(find.text(tab), findsOneWidget, reason: tab);
+    }
     expect(find.byIcon(AppIcons.careActive), findsOneWidget); // filled
     expect(find.byIcon(AppIcons.discuss), findsOneWidget); // outline
-    expect(_pillColour(tester, 'Care').a, greaterThan(0));
+    expect(_pillColour(tester, 'Care'), AppPalette.light.tabPill);
     expect(_pillColour(tester, 'Discuss').a, 0);
-    // The name sits next to the icon, on the same line.
+    // The name sits under its icon, and the pill wraps both.
     final icon = tester.getRect(find.byIcon(AppIcons.careActive));
     final name = tester.getRect(find.text('Care'));
-    expect(name.left, greaterThan(icon.right));
-    expect((name.center.dy - icon.center.dy).abs(), lessThan(3));
+    final pill = tester.getRect(find.byKey(const ValueKey('tab-pill-Care')));
+    expect(name.top, greaterThanOrEqualTo(icon.bottom));
+    expect((name.center.dx - icon.center.dx).abs(), lessThan(2));
+    expect(pill.contains(icon.center) && pill.contains(name.center), isTrue);
   });
 
   testWidgets('screen readers hear every tab, selected or not', (tester) async {
@@ -95,17 +97,27 @@ void main() {
     expect(find.byType(BackdropFilter), findsOneWidget);
   });
 
-  testWidgets('the pill widens smoothly as the name appears', (tester) async {
+  testWidgets('the pill fades in smoothly', (tester) async {
     await tester.pumpWidget(_bar(index: 0));
     await tester.pumpAndSettle();
-    final narrow = tester.getSize(find.byKey(const ValueKey('tab-pill-Care')));
     await tester.pumpWidget(_bar(index: 1));
     await tester.pump(const Duration(milliseconds: 60));
-    final middle = tester.getSize(find.byKey(const ValueKey('tab-pill-Care')));
+    final middle =
+        tester
+            .widget<Container>(
+              find
+                  .descendant(
+                    of: find.byKey(const ValueKey('tab-pill-Care')),
+                    matching: find.byType(Container),
+                  )
+                  .first,
+            )
+            .decoration;
     await tester.pumpAndSettle();
-    final wide = tester.getSize(find.byKey(const ValueKey('tab-pill-Care')));
-    expect(middle.width, greaterThan(narrow.width));
-    expect(middle.width, lessThan(wide.width));
+    final alpha = (middle! as BoxDecoration).color!.a;
+    expect(alpha, greaterThan(0));
+    expect(alpha, lessThan(1));
+    expect(_pillColour(tester, 'Care'), AppPalette.light.tabPill);
   });
 
   testWidgets('Reduce motion: the pill and name just switch', (tester) async {
@@ -140,10 +152,10 @@ void main() {
     String shownId(WidgetTester tester) =>
         tester.widget<CatAvatar>(find.byType(CatAvatar)).id;
 
-    testWidgets('no avatar yet: the cat, and no "Me" text', (tester) async {
+    testWidgets('no avatar yet: the cat, with "Me" under it', (tester) async {
       await tester.pumpWidget(_bar());
       expect(shownId(tester), CatAvatars.fallback);
-      expect(find.text('Me'), findsNothing);
+      expect(find.text('Me'), findsOneWidget);
     });
 
     testWidgets('with an avatar: hers, read out as "Me", last tab', (
