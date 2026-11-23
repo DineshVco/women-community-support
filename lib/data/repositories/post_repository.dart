@@ -530,7 +530,11 @@ class PostRepository {
       'authorId': uid,
       'createdAt': FieldValue.serverTimestamp(),
     });
-    batch.update(_post(postId), {'commentCount': FieldValue.increment(1)});
+    // The rules accept +1 only together with this reply (lastCommentId).
+    batch.update(_post(postId), {
+      'commentCount': FieldValue.increment(1),
+      'lastCommentId': commentRef.id,
+    });
     await batch.commit();
   }
 

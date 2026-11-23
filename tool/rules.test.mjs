@@ -95,6 +95,7 @@ function addCommentBatch(db, uid, postId, commentId, alias = 'Gentle Heron') {
   });
   batch.update(doc(db, 'posts', postId), {
     commentCount: 1,
+    lastCommentId: commentId,
   });
   return batch.commit();
 }
@@ -683,6 +684,8 @@ function reportBatch(db, { postId, reportId, reporterId, flagCount = 1 }) {
 
 describe('reports', () => {
   beforeEach(async () => {
+    // Reporting needs a finished member.
+    for (const uid of ['siti', 'amira']) await makeMember(uid);
     await seed((db) =>
       setDoc(doc(db, 'posts', 'p1'), {
         alias: 'Quiet Fox',
@@ -1346,3 +1349,121 @@ describe('reading: members only, visible items only', () => {
 function expect(ok) {
   if (!ok) throw new Error('expectation failed');
 }
+
+// ───────────────────────── Reply count ─────────────────────────
+
+describe('reply count goes up only with a real new reply', () => {
+  beforeEach(async () => {
+    await makeMember('amira');
+    await makeMember('siti');
+    await seedPost('p1');
+  });
+
+  function bump(db, { lastCommentId = 'c1', commentCount = 1 } = {}) {
+    return updateDoc(doc(db, 'posts', 'p1'), { commentCount, lastCommentId });
+  }
+
+  test('reply + author record + count +1 in one write: allowed', async () => {
+    await assertSucceeds(addCommentBatch(as('siti'), 'siti', 'p1', 'c1'));
+  });
+
+  test('a count bump on its own is refused', async () => {
+    await assertFails(bump(as('siti')));
+    await assertFails(
+      updateDoc(doc(as('siti'), 'posts', 'p1'), { commentCount: 1 }),
+    );
+  });
+
+  test('+2 is refused, even with a reply', async () => {
+    const db = as('siti');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'p1', 'comments', 'c1'), {
+      alias: 'Gentle Heron', content: 'Hi', timestamp: serverTimestamp(),
+      parentCommentId: null, status: 'visible', flagCount: 0,
+    });
+    batch.set(doc(db, 'posts', 'p1', 'commentAuthors', 'c1'), {
+      authorId: 'siti', createdAt: serverTimestamp(),
+    });
+    batch.update(doc(db, 'posts', 'p1'), { commentCount: 2, lastCommentId: 'c1' });
+    await assertFails(batch.commit());
+  });
+
+  test('pointing at a reply that already existed is refused', async () => {
+    await seedReply('p1', 'old');
+    await assertFails(bump(as('siti'), { lastCommentId: 'old' }));
+  });
+
+  test("the reply's author record must be hers", async () => {
+    const db = as('siti');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'p1', 'comments', 'c1'), {
+      alias: 'Gentle Heron', content: 'Hi', timestamp: serverTimestamp(),
+      parentCommentId: null, status: 'visible', flagCount: 0,
+    });
+    batch.set(doc(db, 'posts', 'p1', 'commentAuthors', 'c1'), {
+      authorId: 'amira', createdAt: serverTimestamp(),
+    });
+    batch.update(doc(db, 'posts', 'p1'), { commentCount: 1, lastCommentId: 'c1' });
+    await assertFails(batch.commit());
+  });
+
+  test('a reply without the count going up is refused', async () => {
+    const db = as('siti');
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'p1', 'comments', 'c1'), {
+      alias: 'Gentle Heron', content: 'Hi', timestamp: serverTimestamp(),
+      parentCommentId: null, status: 'visible', flagCount: 0,
+    });
+    batch.set(doc(db, 'posts', 'p1', 'commentAuthors', 'c1'), {
+      authorId: 'siti', createdAt: serverTimestamp(),
+    });
+    await assertFails(batch.commit());
+  });
+});
+
+// ───────────────────────── Reports: who and what ─────────────────────────
+
+describe('reports: members only, real posts, once each', () => {
+  function report(db, uid, postId) {
+    const hashed = createHash('sha256').update(`looma-report:${uid}`).digest('hex');
+    return reportBatch(db, {
+      postId,
+      reportId: `${postId}_${hashed}`,
+      reporterId: hashed,
+    });
+  }
+
+  test('a member can report a post that exists', async () => {
+    await makeMember('nur');
+    await seedPost('p1');
+    await assertSucceeds(report(as('nur'), 'nur', 'p1'));
+  });
+
+  test('someone who did not finish sign-up cannot report', async () => {
+    await seedPost('p1');
+    await assertFails(report(as('stranger'), 'stranger', 'p1'));
+  });
+
+  test('a post that does not exist cannot be reported', async () => {
+    await makeMember('nur');
+    const hashed = createHash('sha256').update('looma-report:nur').digest('hex');
+    const db = as('nur');
+    await assertFails(
+      setDoc(doc(db, 'reports', `ghost_${hashed}`), {
+        postId: 'ghost',
+        postTitle: 'x',
+        reason: 'Spam or advertising',
+        reporterId: hashed,
+        createdAt: serverTimestamp(),
+        status: 'open',
+      }),
+    );
+  });
+
+  test('the same person cannot report the same post twice', async () => {
+    await makeMember('nur');
+    await seedPost('p1');
+    await assertSucceeds(report(as('nur'), 'nur', 'p1'));
+    await assertFails(report(as('nur'), 'nur', 'p1'));
+  });
+});

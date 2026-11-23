@@ -222,11 +222,21 @@ service cloud.firestore {
         && oneVoteMore(resource.data.voteCounts, request.resource.data.voteCounts);
     }
 
-    // A reply was added: +1 reply count.
-    function isReplyCountUpdate() {
-      return changedKeys().hasOnly(['commentCount'])
+    // A reply was added: +1 reply count, only together with that reply.
+    // lastCommentId names the new reply; it must not have existed before,
+    // must exist after this write, and its private author record (written
+    // in the same batch) must be hers.
+    function isReplyCountUpdate(postId) {
+      let id = request.resource.data.get('lastCommentId', '');
+      let reply = /databases/$(database)/documents/posts/$(postId)/comments/$(id);
+      let author = /databases/$(database)/documents/posts/$(postId)/commentAuthors/$(id);
+      return changedKeys().hasOnly(['commentCount', 'lastCommentId'])
+        && id is string && id.size() > 0
         && request.resource.data.commentCount ==
-             resource.data.get('commentCount', 0) + 1;
+             resource.data.get('commentCount', 0) + 1
+        && !exists(reply) && existsAfter(reply)
+        && existsAfter(author)
+        && getAfter(author).data.authorId == request.auth.uid;
     }
 
     function isModeratorUpdate() {
@@ -249,7 +259,7 @@ service cloud.firestore {
         isReportUpdate(postId) ||
         isMeTooUpdate(postId) ||
         isVoteUpdate(postId) ||
-        isReplyCountUpdate() ||
+        isReplyCountUpdate(postId) ||
         isModeratorUpdate()
       );
       allow delete: if isAuthorOf(postId);
@@ -289,6 +299,10 @@ service cloud.firestore {
               request.resource.data.parentCommentId is string)
           && get(/databases/$(database)/documents/posts/$(postId))
                .data.get('status', 'visible') == 'visible'
+          // The reply count goes up by one in the same write.
+          && getAfter(postPath(postId)).data.get('commentCount', 0) ==
+               get(postPath(postId)).data.get('commentCount', 0) + 1
+          && getAfter(postPath(postId)).data.get('lastCommentId', '') == commentId
           && existsAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
           && getAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
                .data.authorId == request.auth.uid;
@@ -460,7 +474,13 @@ service cloud.firestore {
     // ───────────── reports ─────────────
 
     match /reports/{reportId} {
-      allow create: if signedIn()
+      // A finished member reports a post that exists, once: the id is
+      // postId + '_' + her hashed id, so a second report by her on the same
+      // post would be an update, which only moderators may make.
+      allow create: if isWomanMember()
+        && request.resource.data.postId is string
+        && exists(postPath(request.resource.data.postId))
+        && !exists(/databases/$(database)/documents/reports/$(reportId))
         && reportId == request.resource.data.postId + '_' + reporterIdOf()
         && request.resource.data.keys().hasOnly(
              ['postId', 'postTitle', 'reason', 'reporterId', 'createdAt', 'status'])
