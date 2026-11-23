@@ -215,7 +215,7 @@ class _TabItem extends StatelessWidget {
     final palette = context.palette;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final duration = AppMotion.of(context, AppMotion.medium);
-    final color = active ? palette.text : palette.textSecondary;
+    final color = active ? palette.text : palette.tabInactive;
 
     return Semantics(
       container: true,

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show SemanticsFlag;
 
 import 'package:flutter/material.dart';
@@ -175,6 +176,47 @@ void main() {
     testWidgets('an unknown id falls back to the cat', (tester) async {
       await tester.pumpWidget(_bar(meAvatarId: 'not_a_cat'));
       expect(shownId(tester), CatAvatars.fallback);
+    });
+  });
+
+  group('inactive icons: darker warm grey, 24 px', () {
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+    }
+
+    for (final (name, p) in [
+      ('light', AppPalette.light),
+      ('dark', AppPalette.dark),
+    ]) {
+      test('$name: at least 3:1 on the see-through bar', () {
+        // The bar is the page colour at 82% over whatever scrolls under it.
+        for (final under in [
+          p.background,
+          p.surface,
+          Colors.white,
+          Colors.black,
+        ]) {
+          final bar = Color.alphaBlend(
+            p.background.withValues(alpha: 0.82),
+            under,
+          );
+          expect(contrast(p.tabInactive, bar), greaterThanOrEqualTo(3));
+        }
+        // Darker than the old grey on light, lighter on dark.
+        expect(
+          contrast(p.tabInactive, p.background),
+          greaterThan(contrast(p.textSecondary, p.background)),
+        );
+      });
+    }
+
+    testWidgets('used for inactive tabs, at 24 px', (tester) async {
+      await tester.pumpWidget(_bar(index: 0));
+      final icon = find.byIcon(AppIcons.care);
+      final theme = IconTheme.of(tester.element(icon));
+      expect(theme.color, AppPalette.light.tabInactive);
+      expect(theme.size, 24);
     });
   });
 }

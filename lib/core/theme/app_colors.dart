@@ -90,6 +90,12 @@ class AppPalette {
 
   bool get _isDark => background.computeLuminance() < 0.2;
 
+  /// Inactive tab icons: a darker warm grey than [textSecondary], so thin
+  /// line icons do not look pale (at least 3:1 on the tab bar, light and
+  /// dark).
+  Color get tabInactive =>
+      _isDark ? const Color(0xFFC4BEB5) : const Color(0xFF4A453F);
+
   /// The soft fill of a category pill: Health sage, Education sand,
   /// Career blush, Safety lavender (deep tints in dark mode). The pill's
   /// text is [text], which passes AA on all of them.
