@@ -93,4 +93,47 @@ void main() {
       });
     }
   });
+
+  group('mockup colours', () {
+    test('light mode uses the exact mockup colours', () {
+      const p = AppPalette.light;
+      expect(p.background, const Color(0xFFFEF7F2));
+      expect(p.profileGradient, const [Color(0xFFF9DDD8), Color(0xFFFDF6F1)]);
+      expect(p.tabPill, const Color(0xFFF6D8D3));
+      expect(p.titleAccent, const Color(0xFFEFCEC7));
+      expect(p.emergencyFill, const Color(0xFFFDEEED));
+      expect(p.emergencyButton, const Color(0xFF252221));
+      expect(p.writePill, const Color(0xFF191518));
+      expect(p.chipFill, const Color(0xFFFAEAE6));
+      expect(p.discussHeroGradient, const [
+        Color(0xFFFAE7E0),
+        Color(0xFFF2CDC4),
+      ]);
+    });
+
+    for (final (name, p) in [
+      ('light', AppPalette.light),
+      ('dark', AppPalette.dark),
+    ]) {
+      test('$name: text on every new fill passes AA', () {
+        for (final fill in [
+          p.background,
+          p.tabPill,
+          p.emergencyFill,
+          p.chipFill,
+          ...p.profileGradient,
+          ...p.discussHeroGradient,
+        ]) {
+          expect(contrast(p.text, fill), greaterThanOrEqualTo(4.5));
+        }
+        expect(
+          contrast(p.onEmergencyButton, p.emergencyButton),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(contrast(p.onWritePill, p.writePill), greaterThanOrEqualTo(4.5));
+        // The red left edge of the danger card stays visible (3:1).
+        expect(contrast(p.danger, p.emergencyFill), greaterThanOrEqualTo(3));
+      });
+    }
+  });
 }

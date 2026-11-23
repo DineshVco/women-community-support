@@ -72,7 +72,7 @@ class PeekingCat extends StatelessWidget {
   static const double size = 60;
 
   /// The circle behind the drawing, the same in light and dark mode.
-  static const Color halo = Color(0xFFFBF7F3);
+  static const Color halo = Color(0xFFFEF7F2);
 
   @override
   Widget build(BuildContext context) {

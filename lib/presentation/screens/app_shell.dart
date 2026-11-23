@@ -213,7 +213,6 @@ class _TabItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final duration = AppMotion.of(context, AppMotion.medium);
     final color = active ? palette.text : palette.tabInactive;
 
@@ -238,8 +237,8 @@ class _TabItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color:
                     active
-                        ? palette.blush.withValues(alpha: dark ? 0.28 : 0.45)
-                        : palette.blush.withValues(alpha: 0),
+                        ? palette.tabPill
+                        : palette.tabPill.withValues(alpha: 0),
                 borderRadius: BorderRadius.circular(999),
               ),
               // The pill grows smoothly as the name appears (instantly

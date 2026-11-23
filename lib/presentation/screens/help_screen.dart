@@ -155,7 +155,7 @@ class EmergencyCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: Container(
         decoration: BoxDecoration(
-          color: palette.blushTint,
+          color: palette.emergencyFill,
           border: Border(left: BorderSide(color: palette.danger, width: 4)),
         ),
         padding: const EdgeInsets.fromLTRB(
@@ -188,8 +188,8 @@ class EmergencyCard extends StatelessWidget {
                 height: AppSpacing.buttonHeight,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: palette.primary,
-                    foregroundColor: palette.onPrimary,
+                    backgroundColor: palette.emergencyButton,
+                    foregroundColor: palette.onEmergencyButton,
                     shape: const StadiumBorder(),
                     // Body font (headings only use Newsreader).
                     textStyle: theme.textTheme.labelLarge?.copyWith(

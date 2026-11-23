@@ -57,7 +57,7 @@ class HeroVeil {
   static Color colorFor(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFF0E0E0E)
-          : const Color(0xFFFBF7F3);
+          : const Color(0xFFFEF7F2);
 
   static List<double> alphasFor(Brightness brightness) =>
       brightness == Brightness.dark ? darkAlphas : lightAlphas;

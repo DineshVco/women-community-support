@@ -90,6 +90,48 @@ class AppPalette {
 
   bool get _isDark => background.computeLuminance() < 0.2;
 
+  // ───── Mockup colours (light exact; dark chosen to match) ─────
+
+  /// The pill behind the active tab.
+  Color get tabPill =>
+      _isDark ? const Color(0xFF3B2B29) : const Color(0xFFF6D8D3);
+
+  /// The short rounded line under Discuss, Care and Me.
+  Color get titleAccent =>
+      _isDark ? const Color(0xFF8A5F58) : const Color(0xFFEFCEC7);
+
+  /// The "In danger right now?" card (it keeps its red left edge).
+  Color get emergencyFill =>
+      _isDark ? const Color(0xFF3A1D1B) : const Color(0xFFFDEEED);
+
+  /// The Call 999 button and its text.
+  Color get emergencyButton =>
+      _isDark ? const Color(0xFFF5F2EC) : const Color(0xFF252221);
+  Color get onEmergencyButton =>
+      _isDark ? const Color(0xFF111111) : const Color(0xFFFFFFFF);
+
+  /// The "Write a post" pill and its text.
+  Color get writePill =>
+      _isDark ? const Color(0xFFF5F2EC) : const Color(0xFF191518);
+  Color get onWritePill =>
+      _isDark ? const Color(0xFF111111) : const Color(0xFFFFFFFF);
+
+  /// Interest chips on Me.
+  Color get chipFill =>
+      _isDark ? const Color(0xFF33292A) : const Color(0xFFFAEAE6);
+
+  /// The profile card on Me, left to right.
+  List<Color> get profileGradient =>
+      _isDark
+          ? const [Color(0xFF3A2A28), Color(0xFF1F1B1A)]
+          : const [Color(0xFFF9DDD8), Color(0xFFFDF6F1)];
+
+  /// The Discuss hero, left to right.
+  List<Color> get discussHeroGradient =>
+      _isDark
+          ? const [Color(0xFF2C2422), Color(0xFF3A2B29)]
+          : const [Color(0xFFFAE7E0), Color(0xFFF2CDC4)];
+
   /// Inactive tab icons: a darker warm grey than [textSecondary], so thin
   /// line icons do not look pale (at least 3:1 on the tab bar, light and
   /// dark).
@@ -122,7 +164,7 @@ class AppPalette {
   ];
 
   static const AppPalette light = AppPalette(
-    background: Color(0xFFFBF7F3), // warm off-white
+    background: Color(0xFFFEF7F2), // warm off-white (mockup)
     surface: Color(0xFFFFFFFF),
     softFill: Color(0xFFF4EFEB),
     border: Color(0xFFE8E2DE),
@@ -136,7 +178,7 @@ class AppPalette {
     accent: Color(0xFFC8553D),
     blush: Color(0xFFE9B8B3),
     danger: Color(0xFFB3261E),
-    dangerSoft: Color(0xFFFBEAE9),
+    dangerSoft: Color(0xFFFDEEED),
   );
 
   static const AppPalette dark = AppPalette(

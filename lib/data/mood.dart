@@ -7,11 +7,11 @@ import 'encrypted_box.dart';
 enum Mood {
   // A calm order of colour, hardest to best: deeper dusty rose, soft rose,
   // sand, light sage, sage. Soft colours only (never red).
-  great('Great', Color(0xFFB9CDB8)), // sage
-  good('Good', Color(0xFFD5E2D2)), // light sage
-  okay('Okay', Color(0xFFEADCC2)), // sand
-  low('Low', Color(0xFFEFCACA)), // soft rose
-  rough('Rough', Color(0xFFD3A9AE)); // deeper dusty rose
+  great('Great', Color(0xFFCAD3BB)), // sage
+  good('Good', Color(0xFFD7DEC9)), // light sage
+  okay('Okay', Color(0xFFF2E3C9)), // sand
+  low('Low', Color(0xFFF5D4D1)), // a little lighter rose
+  rough('Rough', Color(0xFFF0C3C0)); // rose
 
   const Mood(this.label, this.dot);
 

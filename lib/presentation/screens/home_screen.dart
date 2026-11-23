@@ -511,7 +511,7 @@ class WritePill extends StatelessWidget {
             shadows: LoomaCard.shadowFor(Theme.of(context).brightness),
           ),
           child: Material(
-            color: palette.primary,
+            color: palette.writePill,
             shape: const StadiumBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
@@ -523,7 +523,11 @@ class WritePill extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(AppIcons.write, size: 20, color: palette.onPrimary),
+                      Icon(
+                        AppIcons.write,
+                        size: 20,
+                        color: palette.onWritePill,
+                      ),
                       // The label folds away while scrolling down.
                       GentleSize(
                         curve: AppMotion.spring,
@@ -537,7 +541,7 @@ class WritePill extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
-                                      color: palette.onPrimary,
+                                      color: palette.onWritePill,
                                     ),
                                   ),
                                 )
