@@ -38,7 +38,14 @@ void main() {
       final secure = MemorySecureStore();
       await SafetyPlanStore(secure).save(_plan);
       final stored = secure.values[SafetyPlanStore.dataKey]!;
-      for (final word in ['Aunty', 'Rose', 'pineapple', 'Shah Alam', '012']) {
+      // Whole words only: random ciphertext can contain a short piece like
+      // "012" by chance (that made this test flaky).
+      for (final word in [
+        'Aunty Rose',
+        'pineapple',
+        'Shah Alam',
+        '012-345 6789',
+      ]) {
         expect(stored, isNot(contains(word)));
       }
       // The key is separate, and random.

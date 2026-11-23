@@ -58,10 +58,13 @@ void main() {
     await tester.tap(find.text('Breathe slowly with the cat'));
     expect(steps, [CheckInStep.breathe]);
 
-    // Stored only encrypted: nothing readable in the raw values.
+    // Stored only encrypted: no JSON in the raw values. (Quotes never
+    // appear in encrypted base64 text, so this cannot pass by chance or
+    // fail by chance.)
     final raw = secure.values.values.join(' ');
-    expect(raw, isNot(contains('low')));
-    expect(raw, isNot(contains('2026-11-23')));
+    expect(raw, isNot(contains('"mood"')));
+    expect(raw, isNot(contains('"low"')));
+    expect(raw, isNot(contains('"2026-11-23"')));
 
     // A fresh store on the same phone reads it back.
     final entries = (await tester.runAsync(() => MoodStore(secure).load()))!;
