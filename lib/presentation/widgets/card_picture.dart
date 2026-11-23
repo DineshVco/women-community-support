@@ -11,25 +11,32 @@ class CardPictures {
   /// Right side of the "Today for you" card on Care.
   static const String catGrass = 'assets/images/hero/hero_cat_grass.webp';
 
-  static final Map<String, Future<bool>> _exists = {};
+  /// Answers already found (only finished answers are kept, never a lookup
+  /// still in progress, so one slow lookup can never block later ones).
+  static final Map<String, bool> _known = {};
 
-  /// Whether [asset] is bundled with the app (asked once, then remembered).
-  static Future<bool> exists(String asset) =>
-      _exists.putIfAbsent(asset, () async {
-        try {
-          final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-          return manifest.listAssets().contains(asset);
-        } catch (_) {
-          return false;
-        }
-      });
+  /// The answer if it is already known, else null.
+  static bool? knownExists(String asset) => _known[asset];
+
+  /// Whether [asset] is bundled with the app.
+  static Future<bool> exists(String asset) async {
+    final known = _known[asset];
+    if (known != null) return known;
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      return _known[asset] = manifest.listAssets().contains(asset);
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 /// A picture for the right side of a card. Its left [clearUntil] share is
 /// fully clear, then it fades in until [fullFrom], so text can run into the
-/// clear part but never sits on the picture. If the file is missing or cannot load, a soft gradient in
-/// [fallback] colours shows instead. In dark mode it is dimmed.
-class CardPicture extends StatelessWidget {
+/// clear part but never sits on the picture. If the file is missing or
+/// cannot load, a soft gradient in [fallback] colours shows instead. In
+/// dark mode it is dimmed.
+class CardPicture extends StatefulWidget {
   const CardPicture({
     super.key,
     required this.asset,
@@ -48,6 +55,24 @@ class CardPicture extends StatelessWidget {
   final Alignment alignment;
 
   @override
+  State<CardPicture> createState() => _CardPictureState();
+}
+
+class _CardPictureState extends State<CardPicture> {
+  /// Asked once per card; known at once if another card already asked.
+  late bool? _exists = CardPictures.knownExists(widget.asset);
+
+  @override
+  void initState() {
+    super.initState();
+    if (_exists == null) {
+      CardPictures.exists(widget.asset).then((found) {
+        if (mounted) setState(() => _exists = found);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final gradient = DecoratedBox(
@@ -56,7 +81,7 @@ class CardPicture extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: fallback,
+          colors: widget.fallback,
         ),
       ),
     );
@@ -68,25 +93,21 @@ class CardPicture extends StatelessWidget {
           shaderCallback:
               (rect) => const LinearGradient(
                 colors: [Color(0x00000000), Color(0xFF000000)],
-                stops: [clearUntil, fullFrom],
+                stops: [CardPicture.clearUntil, CardPicture.fullFrom],
               ).createShader(rect),
           blendMode: BlendMode.dstIn,
-          // Only tries to draw the picture once it is known to be in the
-          // app (a missing file never reaches the image decoder).
-          child: FutureBuilder<bool>(
-            future: CardPictures.exists(asset),
-            builder:
-                (context, snap) =>
-                    snap.data == true
-                        ? Image.asset(
-                          asset,
-                          fit: BoxFit.cover,
-                          alignment: alignment,
-                          excludeFromSemantics: true,
-                          errorBuilder: (_, _, _) => gradient,
-                        )
-                        : gradient,
-          ),
+          // Only draws the picture once it is known to be in the app (a
+          // missing file never reaches the image decoder).
+          child:
+              _exists == true
+                  ? Image.asset(
+                    widget.asset,
+                    fit: BoxFit.cover,
+                    alignment: widget.alignment,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) => gradient,
+                  )
+                  : gradient,
         ),
       ),
     );

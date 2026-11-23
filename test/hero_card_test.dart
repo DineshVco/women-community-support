@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_colors.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
+import 'package:women_community_support/presentation/widgets/card_picture.dart';
 import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
 
@@ -99,6 +100,32 @@ void main() {
         expect(file.lengthSync(), lessThan(150 * 1024), reason: scene.asset);
       }
     });
+  });
+
+  testWidgets('the card pictures are real WebP files, 1200 px, under 150 KB', (
+    tester,
+  ) async {
+    for (final asset in [CardPictures.magnolia, CardPictures.catGrass]) {
+      final file = File(asset);
+      expect(file.existsSync(), isTrue, reason: asset);
+      expect(file.lengthSync(), lessThan(150 * 1024), reason: asset);
+      final bytes = file.readAsBytesSync();
+      expect(String.fromCharCodes(bytes.sublist(8, 12)), 'WEBP');
+      final width = await tester.runAsync(() async {
+        final codec = await ui.instantiateImageCodec(bytes);
+        return (await codec.getNextFrame()).image.width;
+      });
+      expect(width, 1200, reason: asset);
+    }
+    // No PNG copies left behind.
+    for (final png in [
+      'assets/images/hero_magnolia.png',
+      'assets/images/hero_cat_grass.png',
+      'assets/images/hero/hero_magnolia.png',
+      'assets/images/hero/hero_cat_grass.png',
+    ]) {
+      expect(File(png).existsSync(), isFalse, reason: png);
+    }
   });
 
   testWidgets('the night painting is a real WebP, at most 1600 px wide', (

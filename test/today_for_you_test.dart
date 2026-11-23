@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/content_library.dart';
 import 'package:women_community_support/data/today_for_you.dart';
+import 'package:women_community_support/presentation/widgets/card_picture.dart';
 import 'package:women_community_support/presentation/widgets/looma_card.dart';
 import 'package:women_community_support/presentation/widgets/today_for_you_card.dart';
 
@@ -190,13 +191,27 @@ void main() {
         ),
       );
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-      await tester.pump();
-      expect(find.byKey(const ValueKey('today-picture')), findsOneWidget);
-      // Not in the project yet: a soft gradient instead.
-      expect(
-        find.byKey(const ValueKey('card-picture-fallback')),
-        findsOneWidget,
+      // Wait (up to 2 s) for the app to find the picture in its bundle.
+      final picture = find.descendant(
+        of: find.byKey(const ValueKey('today-picture')),
+        matching: find.byType(Image),
       );
+      for (var i = 0; i < 100 && picture.evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      expect(find.byKey(const ValueKey('today-picture')), findsOneWidget);
+      // The cat-in-the-grass painting is in the app now.
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const ValueKey('today-picture')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect((image.image as AssetImage).assetName, CardPictures.catGrass);
+      expect(find.byKey(const ValueKey('card-picture-fallback')), findsNothing);
       final card = tester.getRect(find.byType(LoomaCard));
       final pictureStarts =
           card.right - TodayForYouCard.textRightInset(card.width);

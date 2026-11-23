@@ -316,15 +316,28 @@ void main() {
         tester.widget<LoomaCard>(card).gradient,
         LinearGradient(colors: AppPalette.light.profileGradient),
       );
-      // The magnolia picture is not in the project yet: a soft gradient
-      // shows in its place.
-      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-      await tester.pump();
-      expect(find.byKey(const ValueKey('profile-picture')), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('card-picture-fallback')),
-        findsOneWidget,
+      // The magnolia painting is in the app now: it shows, not the
+      // gradient stand-in.
+      // Wait (up to 2 s) for the app to find the picture in its bundle.
+      final picture = find.descendant(
+        of: find.byKey(const ValueKey('profile-picture')),
+        matching: find.byType(Image),
       );
+      for (var i = 0; i < 100 && picture.evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+      expect(find.byKey(const ValueKey('profile-picture')), findsOneWidget);
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const ValueKey('profile-picture')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect((image.image as AssetImage).assetName, CardPictures.magnolia);
+      expect(find.byKey(const ValueKey('card-picture-fallback')), findsNothing);
       // The alias and "Edit chat profile" stay left of the painting.
       final cardRect = tester.getRect(card);
       final pictureStarts =
