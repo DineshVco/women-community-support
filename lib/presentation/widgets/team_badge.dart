@@ -9,10 +9,6 @@ class LoomaTeam {
 
   static const String alias = 'Looma Team';
 
-  /// Shown on Home while starter posts are in the feed.
-  static const String starterLine =
-      'Starter posts to begin the conversation. Add yours.';
-
   static bool isTeam(String alias) => alias == LoomaTeam.alias;
 }
 

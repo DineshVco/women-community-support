@@ -89,12 +89,11 @@ void main() {
     expect(find.text(' · 3h'), findsOneWidget);
   });
 
-  testWidgets('the starter line is not on the hero (empty state only)', (
+  testWidgets('the empty-feed line is not on the hero (empty state only)', (
     tester,
   ) async {
     await tester.pumpWidget(_app(const FeedGreeting()));
     await tester.pump(const Duration(seconds: 1));
-    expect(find.text(LoomaTeam.starterLine), findsNothing);
-    expect(HomeScreen.emptyMessage, contains(LoomaTeam.starterLine));
+    expect(find.text(HomeScreen.emptyMessage), findsNothing);
   });
 }

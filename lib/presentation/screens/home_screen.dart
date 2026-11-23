@@ -13,13 +13,13 @@ import '../../core/utils/haptics.dart';
 import '../../data/models/category.dart';
 import '../../data/models/community.dart';
 import '../../data/models/post.dart';
+import '../../data/microcopy.dart';
 import '../../data/repositories/post_repository.dart';
 import '../widgets/community_cards.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/feed_greeting.dart';
-import '../widgets/floating_illustration.dart';
 import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/living_cat.dart';
@@ -27,7 +27,6 @@ import '../widgets/looma_card.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/post_card.dart';
 import '../widgets/tap_zone.dart';
-import '../widgets/team_badge.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/heart_burst.dart';
 import '../widgets/posted_confirmation.dart';
@@ -41,12 +40,8 @@ import '../../core/theme/app_icons.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  /// Shown only when there are no discussions (these used to sit on the
-  /// hero card).
-  static const String emptyMessage =
-      'No new discussions today yet. Yours could be the first.\n'
-      '${LoomaTeam.starterLine}\n'
-      'You will post under a random alias.';
+  /// Shown only when there are no discussions (from microcopy.json).
+  static String get emptyMessage => Microcopy.emptyFeed;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -438,10 +433,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (allPosts.isEmpty) {
       return [
-        EmptyState(
-          illustration: LoomaCats.heart,
-          title: 'No discussions yet',
-          message: HomeScreen.emptyMessage,
+        CatEmptyState(
+          line: HomeScreen.emptyMessage,
           actionLabel: 'Write a post',
           onAction: _openCompose,
         ),
@@ -449,18 +442,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (posts.isEmpty) {
-      final category =
-          _categoryId == null ? null : AppCategories.fromId(_categoryId!);
-      return [
-        EmptyState(
-          illustration: LoomaCats.heart,
-          title: 'Nothing found',
-          message:
-              _query.trim().isNotEmpty
-                  ? 'No discussions match “${_query.trim()}”.'
-                  : 'There are no ${category?.shortName ?? ''} discussions yet.',
-        ),
-      ];
+      // Search or a category found nothing.
+      return [CatEmptyState(line: Microcopy.emptySearch)];
     }
 
     // Rows fade and rise 8 px, 40 ms apart, on the first load only. Later

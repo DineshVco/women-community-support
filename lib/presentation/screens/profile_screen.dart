@@ -11,6 +11,7 @@ import '../../core/utils/haptics.dart';
 import '../../data/models/chat_profile.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/chat_repository.dart';
+import '../../data/microcopy.dart';
 import '../../data/repositories/post_repository.dart';
 import '../providers/app_settings.dart';
 import '../providers/theme_provider.dart';
@@ -223,10 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   note:
                                       'Only you can see this list. Others '
                                       'only ever see a random alias.',
-                                  emptyTitle: 'No posts yet',
-                                  emptyMessage:
-                                      'Discussions you start will be listed '
-                                      'here.',
+                                  emptyMessage: Microcopy.emptyMyPosts,
                                 ),
                               ),
                         ),
@@ -238,11 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 PostListScreen(
                                   title: 'Saved posts',
                                   load: _repo.savedPosts,
-                                  emptyTitle: 'Nothing saved yet',
-                                  emptyMessage:
-                                      'Tap the bookmark at the top of a '
-                                      'discussion, or press and hold a post, '
-                                      'to keep it here.',
+                                  emptyMessage: Microcopy.emptySaved,
                                 ),
                               ),
                         ),

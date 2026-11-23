@@ -96,6 +96,7 @@ flutter:
     - content/daily_questions.json
     - content/small_wins.json
     - content/today_for_you.json
+    - content/microcopy.json
     # Caveat (handwriting), bundled so google_fonts never downloads it at
     # runtime. Used only for the onboarding line and the Home greeting.
     - assets/google_fonts/Caveat-Regular.ttf

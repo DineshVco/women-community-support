@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import 'fade_slide_in.dart';
+import 'feed_greeting.dart' show PeekingCat;
 import 'floating_illustration.dart';
+import 'living_cat.dart';
 import 'looma_button.dart';
 import 'looma_character.dart';
 
@@ -76,6 +79,71 @@ class EmptyState extends StatelessWidget {
             ],
           ]),
         ],
+      ),
+    );
+  }
+}
+
+/// An empty list: the Looma cat (gently alive, still with Reduce motion) and
+/// one warm line, with an optional button.
+class CatEmptyState extends StatelessWidget {
+  const CatEmptyState({
+    super.key,
+    required this.line,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String line;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  static const double catSize = 96;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.xxl,
+      ),
+      child: FadeSlideIn(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeSemantics(
+              child: Container(
+                key: const ValueKey('empty-cat'),
+                width: catSize,
+                height: catSize,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  // Cream in both modes: the drawing has dark lines.
+                  color: PeekingCat.halo,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: palette.border),
+                ),
+                child: const LivingCat(size: catSize - 22, listen: false),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              line,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(color: palette.text),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              LoomaButton.primary(
+                label: actionLabel!,
+                onPressed: onAction,
+                showArrow: false,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

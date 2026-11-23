@@ -6,7 +6,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/post.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/floating_illustration.dart';
 import '../../widgets/post_card.dart';
 import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
@@ -19,14 +18,12 @@ class PostListScreen extends StatefulWidget {
     super.key,
     required this.title,
     required this.load,
-    required this.emptyTitle,
     required this.emptyMessage,
     this.note,
   });
 
   final String title;
   final Future<List<Post>> Function() load;
-  final String emptyTitle;
   final String emptyMessage;
 
   /// One line above the list, e.g. "Only you can see this list."
@@ -85,13 +82,7 @@ class _PostListScreenState extends State<PostListScreen> {
               } else if (!snapshot.hasData) {
                 children = const [SkeletonPostList()];
               } else if (snapshot.data!.isEmpty) {
-                children = [
-                  EmptyState(
-                    illustration: LoomaCats.heart,
-                    title: widget.emptyTitle,
-                    message: widget.emptyMessage,
-                  ),
-                ];
+                children = [CatEmptyState(line: widget.emptyMessage)];
               } else {
                 children = [
                   if (widget.note != null)

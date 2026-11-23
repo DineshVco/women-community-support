@@ -20,7 +20,6 @@ import 'package:women_community_support/presentation/widgets/looma_header.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
 import 'package:women_community_support/presentation/widgets/looma_card.dart';
 import 'package:women_community_support/presentation/widgets/post_card.dart';
-import 'package:women_community_support/presentation/widgets/team_badge.dart';
 
 // The bug: "after scrolling up and down a few times, the feed gets stuck".
 // Cause: the long-press menu on each post (CupertinoContextMenu) floated a
@@ -261,17 +260,20 @@ void main() {
         find.textContaining('new discussion'),
         findsNothing,
       ); // the count left the hero
-      expect(find.text(LoomaTeam.starterLine), findsNothing);
+      expect(find.text(HomeScreen.emptyMessage), findsNothing);
     });
 
-    testWidgets('only the empty feed shows those lines', (tester) async {
-      // Reduce motion: the empty-state cat would otherwise float forever.
+    testWidgets('only the empty feed shows the cat and its warm line', (
+      tester,
+    ) async {
+      // Reduce motion: the empty-state cat would otherwise keep living.
       await _pumpHome(tester, posts: const [], reduceMotion: true);
       expect(
-        find.textContaining('No new discussions today yet'),
+        find.text('Nothing here yet. Be the first to say hello.'),
         findsOneWidget,
       );
-      expect(find.textContaining(LoomaTeam.starterLine), findsOneWidget);
+      expect(find.byKey(const ValueKey('empty-cat')), findsOneWidget);
+      expect(find.text('Write a post'), findsWidgets);
     });
 
     testWidgets('hero and question scroll away; search and filters stay', (
