@@ -41,7 +41,7 @@ class FeedGreeting extends StatelessWidget {
           HeroCard(
             scene: HeroScene.forTime(time),
             minHeight: heroHeight,
-            tinted: true,
+            veil: HeroVeil.discuss,
             children: [
               // Handwritten (Caveat): one of only two places it is used.
               Row(

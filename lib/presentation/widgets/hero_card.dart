@@ -36,53 +36,80 @@ enum HeroScene {
 /// text), fading out to the right so the painting shows. Kept as numbers
 /// so the tests can check AA contrast over the darkest and lightest pixels.
 class HeroVeil {
-  HeroVeil._();
+  const HeroVeil({
+    required this.textWidth,
+    required this.stops,
+    required this.lightAlphas,
+    required this.darkAlphas,
+    this.tinted = false,
+  });
 
-  /// Text stays inside this share of the card's width (the left 55%), so
-  /// the right of the painting stays almost clear.
-  static const double textWidth = 0.55;
+  /// Text stays inside this share of the card's width.
+  final double textWidth;
 
-  /// Strong only behind the text (the left 55%), then a quick fade so the
-  /// painting shows on the right.
-  static const List<double> stops = [0, 0.45, textWidth, 0.75, 1];
-  static const List<double> lightAlphas = [0.94, 0.88, 0.82, 0.15, 0.04];
+  /// Where the veil's strength changes (0 = left edge, 1 = right edge),
+  /// and how strong it is there, in light and dark mode.
+  final List<double> stops;
+  final List<double> lightAlphas;
+  final List<double> darkAlphas;
 
-  /// Dark mode is darker all over, so the painting does not glare.
-  static const List<double> darkAlphas = [0.92, 0.86, 0.82, 0.30, 0.20];
+  /// Discuss: a blush gradient instead of plain cream.
+  final bool tinted;
+
+  /// Text on the left 55%, the painting showing on the right.
+  static const HeroVeil standard = HeroVeil(
+    textWidth: 0.55,
+    stops: [0, 0.45, 0.55, 0.75, 1],
+    lightAlphas: [0.94, 0.88, 0.82, 0.15, 0.04],
+    // Dark mode is dimmer on the right, so the painting does not glare.
+    darkAlphas: [0.92, 0.86, 0.82, 0.30, 0.20],
+  );
+
+  /// Care: a wider text column (65%) so "A calm corner for you" fits on
+  /// one line, and a lighter veil over the vase.
+  static const HeroVeil care = HeroVeil(
+    textWidth: 0.65,
+    stops: [0, 0.55, 0.65, 0.8, 1],
+    lightAlphas: [0.94, 0.88, 0.82, 0.10, 0],
+    darkAlphas: [0.92, 0.86, 0.82, 0.25, 0.15],
+  );
+
+  /// Discuss (mockup): the blush tint #FAE7E0 to #F2CDC4, strong behind the
+  /// text and clear from 60% to the right edge, so the painting shows on
+  /// the right. Dark mode keeps a faint veil there against glare.
+  static const HeroVeil discuss = HeroVeil(
+    tinted: true,
+    textWidth: 0.55,
+    stops: [0, 0.45, 0.55, 0.6, 1],
+    lightAlphas: [0.95, 0.9, 0.85, 0, 0],
+    darkAlphas: [0.92, 0.88, 0.85, 0.2, 0.2],
+  );
+
+  static const List<HeroVeil> all = [standard, care, discuss];
 
   /// A soft blush wash in the top left corner (light mode).
   static const double blushWash = 0.18;
 
-  /// The veil's colour: warm cream in light mode, near-black in dark mode.
+  /// The plain veil's colour: warm cream in light mode, near-black in dark.
   static Color colorFor(Brightness brightness) =>
       brightness == Brightness.dark
           ? const Color(0xFF0E0E0E)
           : const Color(0xFFFEF7F2);
 
-  static List<double> alphasFor(Brightness brightness) =>
-      brightness == Brightness.dark ? darkAlphas : lightAlphas;
-
-  /// The veil's strength at [x] (0 = left edge, 1 = right edge).
-  static double alphaAt(Brightness brightness, double x) =>
-      _at(alphasFor(brightness), x);
-
-  // Discuss (mockup): a blush gradient veil, #FAE7E0 on the left to
-  // #F2CDC4 on the right, strong behind the text, and lighter on the right
-  // so the painting shows faintly through the tint.
-  static const List<double> tintLightAlphas = [0.95, 0.9, 0.85, 0.62, 0.5];
-  static const List<double> tintDarkAlphas = [0.92, 0.88, 0.85, 0.6, 0.5];
-
-  static List<double> tintAlphasFor(Brightness brightness) =>
-      brightness == Brightness.dark ? tintDarkAlphas : tintLightAlphas;
-
-  static double tintAlphaAt(Brightness brightness, double x) =>
-      _at(tintAlphasFor(brightness), x);
-
   /// The tint's colour at [x], between the two gradient colours.
   static Color tintColorAt(List<Color> gradient, double x) =>
       Color.lerp(gradient.first, gradient.last, x)!;
 
-  static double _at(List<double> alphas, double x) {
+  List<double> alphasFor(Brightness brightness) =>
+      brightness == Brightness.dark ? darkAlphas : lightAlphas;
+
+  /// The veil's colour at [x].
+  Color colorAt(Brightness brightness, List<Color> tint, double x) =>
+      tinted ? tintColorAt(tint, x) : colorFor(brightness);
+
+  /// The veil's strength at [x] (0 = left edge, 1 = right edge).
+  double alphaAt(Brightness brightness, double x) {
+    final alphas = alphasFor(brightness);
     for (var i = 1; i < stops.length; i++) {
       if (x <= stops[i]) {
         final t = (x - stops[i - 1]) / (stops[i] - stops[i - 1]);
@@ -105,7 +132,7 @@ class HeroCard extends StatelessWidget {
     this.onTap,
     this.minHeight = 176,
     this.paintingScale = 1,
-    this.tinted = false,
+    this.veil = HeroVeil.standard,
   });
 
   final HeroScene scene;
@@ -116,8 +143,8 @@ class HeroCard extends StatelessWidget {
   /// Enlarges the painting from its right side (Care's flower vase).
   final double paintingScale;
 
-  /// Discuss: the blush gradient veil from the mockup.
-  final bool tinted;
+  /// How the text side is veiled (see [HeroVeil] presets).
+  final HeroVeil veil;
 
   /// The text, top to bottom, on the left of the card.
   final List<Widget> children;
@@ -131,8 +158,7 @@ class HeroCard extends StatelessWidget {
     final palette = context.palette;
     final brightness = Theme.of(context).brightness;
     final radius = BorderRadius.circular(AppRadius.card);
-    final veil = HeroVeil.colorFor(brightness);
-    final alphas = HeroVeil.alphasFor(brightness);
+    final alphas = veil.alphasFor(brightness);
 
     final text = Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -145,7 +171,7 @@ class HeroCard extends StatelessWidget {
         alignment: Alignment.centerLeft,
         // The padding takes a little of the card, so the text stays well
         // inside the strong part of the veil.
-        widthFactor: HeroVeil.textWidth,
+        widthFactor: veil.textWidth,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -199,17 +225,16 @@ class HeroCard extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    stops: HeroVeil.stops,
+                    stops: veil.stops,
                     colors: [
-                      for (var i = 0; i < HeroVeil.stops.length; i++)
-                        tinted
-                            ? HeroVeil.tintColorAt(
+                      for (var i = 0; i < veil.stops.length; i++)
+                        veil
+                            .colorAt(
+                              brightness,
                               palette.discussHeroGradient,
-                              HeroVeil.stops[i],
-                            ).withValues(
-                              alpha: HeroVeil.tintAlphasFor(brightness)[i],
+                              veil.stops[i],
                             )
-                            : veil.withValues(alpha: alphas[i]),
+                            .withValues(alpha: alphas[i]),
                     ],
                   ),
                 ),

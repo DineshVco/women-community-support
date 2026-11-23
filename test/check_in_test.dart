@@ -9,6 +9,8 @@ import 'package:women_community_support/data/mood.dart';
 import 'package:women_community_support/presentation/screens/care/care_screen.dart';
 import 'package:women_community_support/presentation/widgets/check_in_row.dart';
 
+import 'support/real_fonts.dart';
+
 final _today = DateTime(2026, 11, 23, 9, 30);
 
 Widget _app(
@@ -264,5 +266,24 @@ void main() {
     );
     expect(CareScreen.vaseScale, greaterThan(1));
     expect(painting.transform.getMaxScaleOnAxis(), CareScreen.vaseScale);
+  });
+
+  group('Care hero with real fonts', () {
+    setUpAll(loadRealFonts);
+
+    testWidgets('"A calm corner for you" fits on one line', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      tester.view.physicalSize = const Size(390, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.light, home: const CareScreen()),
+      );
+      await _settle(tester);
+      final title = find.text(CareScreen.heroTitle);
+      final style = tester.widget<Text>(title).style!;
+      final line = style.fontSize! * (style.height ?? 1.2);
+      expect(tester.getSize(title).height, lessThan(line * 1.5));
+    });
   });
 }

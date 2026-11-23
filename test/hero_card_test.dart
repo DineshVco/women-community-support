@@ -21,19 +21,22 @@ double _contrast(Color a, Color b) {
 
 /// What sits behind the text at [x] over a painting [pixel], layer by layer
 /// exactly as HeroCard paints them.
-Color _behindText(Brightness brightness, Color pixel, double x) {
-  var c = pixel;
-  final veil = HeroVeil.colorFor(brightness);
-  c = Color.alphaBlend(
-    veil.withValues(alpha: HeroVeil.alphaAt(brightness, x)),
-    c,
+Color _behindText(
+  HeroVeil veil,
+  Brightness brightness,
+  AppPalette p,
+  Color pixel,
+  double x,
+) {
+  var c = Color.alphaBlend(
+    veil
+        .colorAt(brightness, p.discussHeroGradient, x)
+        .withValues(alpha: veil.alphaAt(brightness, x)),
+    pixel,
   );
   if (brightness == Brightness.light) {
     // Worst case: the blush wash at full strength.
-    c = Color.alphaBlend(
-      AppPalette.light.blush.withValues(alpha: HeroVeil.blushWash),
-      c,
-    );
+    c = Color.alphaBlend(p.blush.withValues(alpha: HeroVeil.blushWash), c);
   }
   return c;
 }
@@ -143,78 +146,59 @@ void main() {
   });
 
   group('text stays readable (WCAG AA, 4.5:1)', () {
-    for (final (name, brightness, text) in [
-      ('light', Brightness.light, AppPalette.light.text),
-      ('dark', Brightness.dark, AppPalette.dark.text),
+    for (final (veilName, veil) in [
+      ('standard', HeroVeil.standard),
+      ('Care', HeroVeil.care),
+      ('Discuss', HeroVeil.discuss),
     ]) {
-      test('$name mode, any painting (night too): over the darkest '
-          'and lightest painting, up to the edge of the text', () {
-        for (final pixel in const [Color(0xFF000000), Color(0xFFFFFFFF)]) {
-          for (var x = 0.0; x <= HeroVeil.textWidth + 1e-9; x += 0.05) {
-            final behind = _behindText(brightness, pixel, x);
-            expect(
-              _contrast(text, behind),
-              greaterThanOrEqualTo(4.5),
-              reason: 'x=$x over $pixel',
-            );
-          }
-        }
-      });
-    }
-
-    for (final (name, brightness, p) in [
-      ('light', Brightness.light, AppPalette.light),
-      ('dark', Brightness.dark, AppPalette.dark),
-    ]) {
-      test('$name: the Discuss blush tint keeps the text AA', () {
-        for (final pixel in const [Color(0xFF000000), Color(0xFFFFFFFF)]) {
-          for (var x = 0.0; x <= HeroVeil.textWidth + 1e-9; x += 0.05) {
-            var c = Color.alphaBlend(
-              HeroVeil.tintColorAt(
-                p.discussHeroGradient,
-                x,
-              ).withValues(alpha: HeroVeil.tintAlphaAt(brightness, x)),
-              pixel,
-            );
-            if (brightness == Brightness.light) {
-              c = Color.alphaBlend(
-                p.blush.withValues(alpha: HeroVeil.blushWash),
-                c,
+      for (final (name, brightness, p) in [
+        ('light', Brightness.light, AppPalette.light),
+        ('dark', Brightness.dark, AppPalette.dark),
+      ]) {
+        test('$veilName, $name: over the darkest and lightest painting, up '
+            'to the edge of the text', () {
+          for (final pixel in const [Color(0xFF000000), Color(0xFFFFFFFF)]) {
+            for (var x = 0.0; x <= veil.textWidth + 1e-9; x += 0.025) {
+              expect(
+                _contrast(p.text, _behindText(veil, brightness, p, pixel, x)),
+                greaterThanOrEqualTo(4.5),
+                reason: 'x=$x over $pixel',
               );
             }
-            expect(
-              _contrast(p.text, c),
-              greaterThanOrEqualTo(4.5),
-              reason: 'x=$x over $pixel',
-            );
           }
-        }
-      });
+        });
+      }
     }
 
-    test('the painting shows: the veil is strong only behind the text', () {
-      expect(HeroVeil.textWidth, closeTo(0.55, 0.01));
-      // Light: almost clear from three quarters across.
+    test('the painting shows: each veil is strong only behind the text', () {
+      for (final veil in HeroVeil.all) {
+        for (final b in Brightness.values) {
+          expect(veil.alphaAt(b, veil.textWidth), greaterThanOrEqualTo(0.8));
+        }
+      }
+      // Standard: almost clear on the right in light mode.
       expect(
-        HeroVeil.alphaAt(Brightness.light, 0.75),
-        lessThanOrEqualTo(0.15 + 1e-9),
+        HeroVeil.standard.alphaAt(Brightness.light, 1),
+        lessThanOrEqualTo(0.05),
       );
-      expect(HeroVeil.alphaAt(Brightness.light, 1), lessThanOrEqualTo(0.05));
-      // Dark: still lighter on the right, a little dimmer so it does not glare.
-      expect(HeroVeil.alphaAt(Brightness.dark, 1), lessThanOrEqualTo(0.2));
-      // Behind the text it stays strong.
-      for (final b in Brightness.values) {
+      // Care: a 65% text column, and the vase side almost clear.
+      expect(HeroVeil.care.textWidth, closeTo(0.65, 0.001));
+      expect(
+        HeroVeil.care.alphaAt(Brightness.light, 0.9),
+        lessThanOrEqualTo(0.06),
+      );
+      // Discuss: fully clear from 60% to the right edge (light).
+      for (var x = 0.6; x <= 1.0001; x += 0.05) {
         expect(
-          HeroVeil.alphaAt(b, HeroVeil.textWidth),
-          greaterThanOrEqualTo(0.8),
+          HeroVeil.discuss.alphaAt(Brightness.light, x),
+          0,
+          reason: 'x=$x',
         );
       }
-    });
-
-    test('dark mode veils the painting more than light mode', () {
+      // Dark mode keeps a faint veil against glare.
       expect(
-        HeroVeil.alphaAt(Brightness.dark, 1),
-        greaterThan(HeroVeil.alphaAt(Brightness.light, 1)),
+        HeroVeil.discuss.alphaAt(Brightness.dark, 1),
+        lessThanOrEqualTo(0.2),
       );
     });
   });
@@ -240,7 +224,9 @@ void main() {
     final text = tester.getRect(find.text('You are not alone here.'));
     expect(
       text.right,
-      lessThanOrEqualTo(card.left + card.width * HeroVeil.textWidth + 1),
+      lessThanOrEqualTo(
+        card.left + card.width * HeroVeil.standard.textWidth + 1,
+      ),
     );
     expect(find.text('Write a post'), findsOneWidget);
 

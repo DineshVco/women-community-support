@@ -48,7 +48,7 @@ class CareScreen extends StatefulWidget {
   const CareScreen({super.key});
 
   /// How much bigger the flower vase is drawn on the hero.
-  static const double vaseScale = 1.15;
+  static const double vaseScale = 1.4;
 
   /// The hero's link: it scrolls down to the Tools list.
   static const String heroAction = 'See all tools';
@@ -180,6 +180,8 @@ class _CareScreenState extends State<CareScreen> {
                   ),
                   child: HeroCard(
                     scene: HeroScene.flowers,
+                    // A wider text column so the title fits on one line.
+                    veil: HeroVeil.care,
                     // The flower vase a little bigger.
                     paintingScale: CareScreen.vaseScale,
                     actionLabel: CareScreen.heroAction,
@@ -187,7 +189,8 @@ class _CareScreenState extends State<CareScreen> {
                     children: [
                       Text(
                         CareScreen.heroTitle,
-                        style: AppTypography.heading(24, palette.text),
+                        // One line on a 390 px phone (with the 65% column).
+                        style: AppTypography.heading(22, palette.text),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
