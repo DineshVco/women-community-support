@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -183,5 +184,67 @@ void main() {
     final tools = tester.getRect(find.text('TOOLS'));
     expect(call.top, lessThan(row.top));
     expect(row.top, lessThan(tools.top));
+  });
+
+  group('mood colours: a calm order', () {
+    double contrast(Color a, Color b) {
+      final la = a.computeLuminance(), lb = b.computeLuminance();
+      return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+    }
+
+    test('rose for hard days, sand for okay, sage for good days', () {
+      bool rose(Color c) => c.r > c.g; // warmer than green
+      bool sage(Color c) => c.g > c.r && c.g > c.b;
+      expect(rose(Mood.rough.dot), isTrue);
+      expect(rose(Mood.low.dot), isTrue);
+      expect(sage(Mood.good.dot), isTrue);
+      expect(sage(Mood.great.dot), isTrue);
+      // Sand: warm, between rose and sage.
+      expect(Mood.okay.dot.r, greaterThan(Mood.okay.dot.b));
+      // Deeper at the ends: Rough deeper than Low, Great deeper than Good.
+      expect(
+        Mood.rough.dot.computeLuminance(),
+        lessThan(Mood.low.dot.computeLuminance()),
+      );
+      expect(
+        Mood.great.dot.computeLuminance(),
+        lessThan(Mood.good.dot.computeLuminance()),
+      );
+    });
+
+    test('the dark face icon stays clear on every colour (3:1)', () {
+      for (final mood in Mood.values) {
+        expect(
+          contrast(const Color(0xFF111111), mood.dot),
+          greaterThanOrEqualTo(3),
+          reason: mood.name,
+        );
+      }
+    });
+  });
+
+  testWidgets('Care hero: "See all tools" scrolls to the Tools list', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      Provider<MoodStore>.value(
+        value: MoodStore(MemorySecureStore()),
+        child: MaterialApp(theme: AppTheme.light, home: const CareScreen()),
+      ),
+    );
+    await _settle(tester);
+    expect(find.text(CareScreen.heroAction), findsOneWidget);
+    final before = tester.getRect(find.text('TOOLS')).top;
+
+    await tester.tap(find.text(CareScreen.heroAction));
+    await _settle(tester);
+    final tools = tester.getRect(find.text('TOOLS'));
+    expect(tools.top, lessThan(before)); // it scrolled up
+    expect(tools.top, greaterThan(40)); // not under the header row
+    expect(tools.top, lessThan(844 / 2)); // brought up into view
   });
 }

@@ -5,11 +5,13 @@ import 'encrypted_box.dart';
 
 /// "How are you feeling": five moods, from best to hardest.
 enum Mood {
-  great('Great', Color(0xFFBFD0C1)), // sage
-  good('Good', Color(0xFFE6D3B3)), // sand
-  okay('Okay', Color(0xFFCFC9DB)), // lavender-grey
-  low('Low', Color(0xFFE9B8B3)), // blush
-  rough('Rough', Color(0xFFB9AFC6)); // deeper lavender (never red)
+  // A calm order of colour, hardest to best: deeper dusty rose, soft rose,
+  // sand, light sage, sage. Soft colours only (never red).
+  great('Great', Color(0xFFB9CDB8)), // sage
+  good('Good', Color(0xFFD5E2D2)), // light sage
+  okay('Okay', Color(0xFFEADCC2)), // sand
+  low('Low', Color(0xFFEFCACA)), // soft rose
+  rough('Rough', Color(0xFFD3A9AE)); // deeper dusty rose
 
   const Mood(this.label, this.dot);
 

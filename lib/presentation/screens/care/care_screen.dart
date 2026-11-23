@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../data/encrypted_box.dart';
@@ -43,8 +44,11 @@ Future<void> openJournal(BuildContext context) async {
 
 /// The Care tab: calm tools that work offline, the help lines, the guides
 /// library and the directory. "Get help" now lives here.
-class CareScreen extends StatelessWidget {
+class CareScreen extends StatefulWidget {
   const CareScreen({super.key});
+
+  /// The hero's link: it scrolls down to the Tools list.
+  static const String heroAction = 'See all tools';
 
   static const String heroTitle = 'A calm corner for you';
 
@@ -52,6 +56,28 @@ class CareScreen extends StatelessWidget {
       'Small tools for hard moments. What you write here stays on your phone.';
 
   /// Opens compose in the "Ask Looma Team" category.
+  @override
+  State<CareScreen> createState() => _CareScreenState();
+}
+
+class _CareScreenState extends State<CareScreen> {
+  /// Marks the Tools list, for "See all tools".
+  final GlobalKey _toolsKey = GlobalKey(debugLabel: 'care-tools');
+
+  /// Scrolls the Tools list into view (a jump with Reduce motion).
+  Future<void> _showTools() async {
+    final target = _toolsKey.currentContext;
+    if (target == null) return;
+    await Scrollable.ensureVisible(
+      target,
+      duration: AppMotion.of(context, AppMotion.slow),
+      curve: AppMotion.enter,
+      // Just under the header row, not hidden behind it.
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+      alignment: 0.12,
+    );
+  }
+
   Future<void> _askLooma(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final alias = await Navigator.of(context).push<String>(
@@ -151,16 +177,16 @@ class CareScreen extends StatelessWidget {
                   ),
                   child: HeroCard(
                     scene: HeroScene.flowers,
-                    actionLabel: 'Breathe with the cat',
-                    onTap: () => _push(context, const BreatheScreen()),
+                    actionLabel: CareScreen.heroAction,
+                    onTap: _showTools,
                     children: [
                       Text(
-                        heroTitle,
+                        CareScreen.heroTitle,
                         style: AppTypography.heading(24, palette.text),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        intro,
+                        CareScreen.intro,
                         style: TextStyle(
                           fontSize: 15,
                           height: 1.4,
@@ -194,6 +220,7 @@ class CareScreen extends StatelessWidget {
 
                 // ───────── 2. Tools ─────────
                 GroupedSection(
+                  key: _toolsKey,
                   header: 'Tools',
                   children: [
                     GroupedRow(
