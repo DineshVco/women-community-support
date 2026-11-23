@@ -223,6 +223,20 @@ void main() {
       );
     });
 
+    test('the "Me too" key matches the rules, and differs per post', () {
+      // python: hashlib.sha256(b'looma-metoo:poll1:siti').hexdigest()
+      expect(
+        PostRepository.reactionKeyFor('siti', 'poll1'),
+        'ebc74ae133c27fae4cfd077292ba57aaa5ba6f6b65c4e8c2f92e7f6c12aa84e5',
+      );
+      expect(
+        PostRepository.reactionKeyFor('siti', 'poll2'),
+        isNot(PostRepository.reactionKeyFor('siti', 'poll1')),
+      );
+      // Never the uid itself.
+      expect(PostRepository.reactionKeyFor('siti', 'poll1'), isNot('siti'));
+    });
+
     test('the vote key matches the one the rules compute', () {
       // node -e "crypto.createHash('sha256').update('looma-vote:poll1:siti')"
       expect(

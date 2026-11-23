@@ -61,6 +61,12 @@ class PostRepository {
   static String voteKeyFor(String uid, String postId) =>
       sha256.convert(utf8.encode('looma-vote:$postId:$uid')).toString();
 
+  /// Her "Me too" key for a post: one-way, and different on every post, so
+  /// it says nothing about who tapped. firestore.rules (reactionKeyOf)
+  /// computes the same value.
+  static String reactionKeyFor(String uid, String postId) =>
+      sha256.convert(utf8.encode('looma-metoo:$postId:$uid')).toString();
+
   /// The alias only moderators may use (firestore.rules checks it).
   static const String teamAlias = 'Looma Team';
 
@@ -175,12 +181,11 @@ class PostRepository {
         await _db.collection('authors').where('authorId', isEqualTo: uid).get();
     final moderator = await isModerator();
     for (final doc in authored.docs) {
-      refs
-        ..add(_post(doc.id))
-        ..add(doc.reference);
-      // A moderator's Small wins pin goes with its post (only moderators
-      // may delete threads, so others skip this).
-      if (moderator) refs.add(_db.collection('threads').doc(doc.id));
+      // A moderator's Small wins pin goes first (only moderators may
+      // delete threads, so others skip this).
+      if (moderator) await _db.collection('threads').doc(doc.id).delete();
+      // The post with its replies, votes and "Me too" taps.
+      await deletePost(doc.id);
     }
 
     // Her replies, in any discussion.
@@ -200,14 +205,7 @@ class PostRepository {
     final saved = await _me().collection('saved').get();
     refs.addAll(saved.docs.map((d) => d.reference));
 
-    // Firestore batches hold up to 500 writes.
-    for (var i = 0; i < refs.length; i += 400) {
-      final batch = _db.batch();
-      for (final ref in refs.skip(i).take(400)) {
-        batch.delete(ref);
-      }
-      await batch.commit();
-    }
+    await _deleteAll(refs);
 
     // Last: the private profile (women-only answer, birth year).
     await _me().delete();
@@ -481,11 +479,40 @@ class PostRepository {
     return posts.where((p) => p.isVisible).toList();
   }
 
+  /// Deletes her post completely, in this order: the replies and their
+  /// private author records, the poll votes and the "Me too" taps under it,
+  /// then the post, then her private "who wrote this" record last (the
+  /// rules check it to allow the steps before).
   Future<void> deletePost(String postId) async {
-    final batch = _db.batch();
-    batch.delete(_post(postId));
-    batch.delete(_db.collection('authors').doc(postId));
-    await batch.commit();
+    final post = _post(postId);
+    final replies = await post.collection('comments').get();
+    final votes = await post.collection('votes').get();
+    final reactions = await post.collection('reactions').get();
+
+    final refs = <DocumentReference<Map<String, dynamic>>>[
+      for (final reply in replies.docs) ...[
+        reply.reference,
+        post.collection('commentAuthors').doc(reply.id),
+      ],
+      for (final vote in votes.docs) vote.reference,
+      for (final reaction in reactions.docs) reaction.reference,
+    ];
+    await _deleteAll(refs);
+    await post.delete();
+    await _db.collection('authors').doc(postId).delete();
+  }
+
+  /// Firestore batches hold up to 500 writes.
+  Future<void> _deleteAll(
+    List<DocumentReference<Map<String, dynamic>>> refs,
+  ) async {
+    for (var i = 0; i < refs.length; i += 400) {
+      final batch = _db.batch();
+      for (final ref in refs.skip(i).take(400)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
   }
 
   // ───────────────────────── Comments ─────────────────────────
@@ -540,24 +567,58 @@ class PostRepository {
 
   // ───────────────────────── "Me too" ─────────────────────────
 
+  /// True if she tapped "Me too" (a hashed key, or an older uid key).
   Stream<bool> watchMeToo(String postId) {
     final uid = _requireUid();
-    return _post(postId)
-        .collection('reactions')
-        .doc(uid)
-        .snapshots()
-        .map((snapshot) => snapshot.exists);
+    final reactions = _post(postId).collection('reactions');
+    final hashed = reactions.doc(reactionKeyFor(uid, postId)).snapshots();
+    final legacy = reactions.doc(uid).snapshots();
+
+    bool? a;
+    bool? b;
+    final subs = <StreamSubscription<Object?>>[];
+    late final StreamController<bool> out;
+    void emit() {
+      if (a != null && b != null) out.add(a! || b!);
+    }
+
+    out = StreamController<bool>(
+      onListen: () {
+        subs
+          ..add(
+            hashed.listen((s) {
+              a = s.exists;
+              emit();
+            }, onError: out.addError),
+          )
+          ..add(
+            legacy.listen((s) {
+              b = s.exists;
+              emit();
+            }, onError: out.addError),
+          );
+      },
+      onCancel: () async {
+        for (final s in subs) {
+          await s.cancel();
+        }
+      },
+    );
+    return out.stream;
   }
 
   Future<void> setMeToo(String postId, {required bool on}) async {
     final uid = _requireUid();
-    final reactionRef = _post(postId).collection('reactions').doc(uid);
+    final reactions = _post(postId).collection('reactions');
+    final reactionRef = reactions.doc(reactionKeyFor(uid, postId));
 
     final batch = _db.batch();
     if (on) {
       batch.set(reactionRef, {'createdAt': FieldValue.serverTimestamp()});
     } else {
-      batch.delete(reactionRef);
+      // Take back whichever tap she has (older taps used her uid).
+      final legacy = await reactions.doc(uid).get();
+      batch.delete(legacy.exists ? legacy.reference : reactionRef);
     }
     batch.update(_post(postId), {
       'meTooCount': FieldValue.increment(on ? 1 : -1),

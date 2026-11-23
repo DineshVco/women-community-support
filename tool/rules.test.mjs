@@ -1589,3 +1589,115 @@ describe('reporting replies', () => {
     await assertFails(getDoc(doc(as('siti'), 'reports', `p1_c1_${hashed}`)));
   });
 });
+
+// ───────────────────────── Me too (hashed keys) ─────────────────────────
+
+function reactionKey(uid, postId) {
+  return createHash('sha256').update(`looma-metoo:${postId}:${uid}`).digest('hex');
+}
+
+function meTooBatch(db, uid, { on = true, count = 1, key } = {}) {
+  const batch = writeBatch(db);
+  const ref = doc(db, 'posts', 'p1', 'reactions', key ?? reactionKey(uid, 'p1'));
+  if (on) batch.set(ref, { createdAt: serverTimestamp() });
+  else batch.delete(ref);
+  batch.update(doc(db, 'posts', 'p1'), { meTooCount: count });
+  return batch.commit();
+}
+
+describe('"Me too" with hashed keys', () => {
+  beforeEach(async () => {
+    for (const uid of ['amira', 'siti']) await makeMember(uid);
+    await seedPost('p1');
+  });
+
+  test('a tap uses her hashed key: +1; taking it back: -1', async () => {
+    await assertSucceeds(meTooBatch(as('siti'), 'siti', { count: 1 }));
+    await assertSucceeds(meTooBatch(as('siti'), 'siti', { on: false, count: 0 }));
+  });
+
+  test('her uid as the key is refused for new taps', async () => {
+    await assertFails(meTooBatch(as('siti'), 'siti', { key: 'siti' }));
+  });
+
+  test('an older uid-keyed tap still counts and can be taken back', async () => {
+    await seed((db) => setDoc(doc(db, 'posts', 'p1', 'reactions', 'siti'), { createdAt: new Date() }));
+    await seed((db) => updateDoc(doc(db, 'posts', 'p1'), { meTooCount: 1 }));
+    // A second tap with the new key is refused (she already tapped).
+    await assertFails(meTooBatch(as('siti'), 'siti', { count: 2 }));
+    await assertSucceeds(meTooBatch(as('siti'), 'siti', { on: false, count: 0, key: 'siti' }));
+  });
+
+  test('she can see her own tap; others cannot', async () => {
+    await assertSucceeds(meTooBatch(as('siti'), 'siti', { count: 1 }));
+    await assertSucceeds(getDoc(doc(as('siti'), 'posts', 'p1', 'reactions', reactionKey('siti', 'p1'))));
+    await assertFails(getDoc(doc(as('amira'), 'posts', 'p1', 'reactions', reactionKey('siti', 'p1'))));
+  });
+});
+
+// ───────────────────────── Deleting a post ─────────────────────────
+
+describe('deleting a post: everything under it first', () => {
+  beforeEach(async () => {
+    for (const uid of ['amira', 'siti', 'nur']) await makeMember(uid);
+    await seedPost('p1'); // amira's
+    await seedReply('p1', 'c1', { authorId: 'siti' });
+    await seed(async (db) => {
+      await setDoc(doc(db, 'posts', 'p1', 'votes', voteKey('nur', 'p1')), { createdAt: new Date() });
+      await setDoc(doc(db, 'posts', 'p1', 'reactions', reactionKey('nur', 'p1')), { createdAt: new Date() });
+    });
+  });
+
+  /** What PostRepository.deletePost does, step by step. */
+  async function deletePost(db) {
+    const post = doc(db, 'posts', 'p1');
+    const replies = await getDocs(collection(post, 'comments'));
+    const votes = await getDocs(collection(post, 'votes'));
+    const reactions = await getDocs(collection(post, 'reactions'));
+    const batch = writeBatch(db);
+    for (const r of replies.docs) {
+      batch.delete(r.ref);
+      batch.delete(doc(post, 'commentAuthors', r.id));
+    }
+    for (const v of votes.docs) batch.delete(v.ref);
+    for (const r of reactions.docs) batch.delete(r.ref);
+    await batch.commit();
+    await deleteDoc(post);
+    await deleteDoc(doc(db, 'authors', 'p1'));
+  }
+
+  test('her own post: replies, authors, votes, taps, post, mapping all go', async () => {
+    await assertSucceeds(deletePost(as('amira')));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      for (const path of [
+        ['posts', 'p1'],
+        ['authors', 'p1'],
+        ['posts', 'p1', 'comments', 'c1'],
+        ['posts', 'p1', 'commentAuthors', 'c1'],
+        ['posts', 'p1', 'votes', voteKey('nur', 'p1')],
+        ['posts', 'p1', 'reactions', reactionKey('nur', 'p1')],
+      ]) {
+        const snap = await getDoc(doc(db, ...path));
+        expect(!snap.exists());
+      }
+    });
+  });
+
+  test('someone else cannot list or delete what is under it', async () => {
+    const db = as('nur');
+    await assertFails(getDocs(collection(db, 'posts', 'p1', 'votes')));
+    await assertFails(getDocs(collection(db, 'posts', 'p1', 'reactions')));
+    await assertFails(deleteDoc(doc(db, 'posts', 'p1', 'comments', 'c1')));
+    await assertFails(deleteDoc(doc(db, 'posts', 'p1', 'commentAuthors', 'c1')));
+    await assertFails(deleteDoc(doc(db, 'posts', 'p1')));
+  });
+
+  test('the post author still cannot read who wrote a reply', async () => {
+    await assertFails(getDoc(doc(as('amira'), 'posts', 'p1', 'commentAuthors', 'c1')));
+  });
+
+  test('the reply writer can still delete her own reply', async () => {
+    await assertSucceeds(deleteDoc(doc(as('siti'), 'posts', 'p1', 'comments', 'c1')));
+  });
+});
