@@ -20,7 +20,8 @@
 //                        flagCount: 0, meTooCount: 0, commentCount, status}
 //   authors/starter_NN  {authorId: 'looma-team', createdAt}
 //   replies (optional)  posts/starter_NN/comments/starter_NN_rM
-//                       {alias, content, timestamp, parentCommentId: null}
+//                       {alias, content, timestamp, parentCommentId: null,
+//                        status: 'visible', flagCount: 0}
 //                       + posts/starter_NN/commentAuthors/starter_NN_rM
 //   polls               posts/starter_poll_NN, the same fields plus
 //                       {type: 'poll', options: [...], voteCounts: [0, ...]}
@@ -294,6 +295,8 @@ for (const p of items) {
       content,
       timestamp: replyAt,
       parentCommentId: null,
+      status: 'visible',
+      flagCount: 0,
     });
     batch.set(postRef.collection('commentAuthors').doc(replyId), {
       authorId: TEAM_AUTHOR_ID,

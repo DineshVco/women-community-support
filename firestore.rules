@@ -73,6 +73,21 @@ service cloud.firestore {
         get(authorPath(postId)).data.authorId == request.auth.uid;
     }
 
+    function postPath(postId) {
+      return /databases/$(database)/documents/posts/$(postId);
+    }
+
+    // Hidden (3 reports) or removed (by a moderator) items are seen only by
+    // moderators and by the author of the discussion. A missing status
+    // counts as visible (older data).
+    function postStatus(postId) {
+      return get(postPath(postId)).data.get('status', 'visible');
+    }
+
+    function canSeeHidden(postId) {
+      return isModerator() || isAuthorOf(postId);
+    }
+
     // Keys that changed in an update.
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -219,7 +234,16 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if signedIn();
+      // Members only. Lists must ask for status == 'visible' (the feed does);
+      // a hidden or removed post is readable only by a moderator or its
+      // author.
+      // (Lists use the plain field so Firestore can check the query's
+      // filter; a default value there would let unfiltered lists through.)
+      allow get: if isWomanMember() && (
+        resource.data.get('status', 'visible') == 'visible'
+        || canSeeHidden(postId));
+      allow list: if isWomanMember() && (
+        resource.data.status == 'visible' || isModerator());
       allow create: if isWomanMember() && validNewPost(postId);
       allow update: if signedIn() && (
         isReportUpdate(postId) ||
@@ -233,12 +257,26 @@ service cloud.firestore {
       // ───────────── comments ─────────────
 
       match /comments/{commentId} {
-        allow read: if signedIn();
+        // Members only, and only visible replies on a visible discussion
+        // (lists must ask for status == 'visible'). Moderators and the
+        // discussion's author can also see hidden or removed ones.
+        allow get: if isWomanMember() && (
+          (resource.data.get('status', 'visible') == 'visible'
+             && postStatus(postId) == 'visible')
+          || canSeeHidden(postId));
+        allow list: if isWomanMember() && (
+          (resource.data.status == 'visible'
+             && postStatus(postId) == 'visible')
+          || canSeeHidden(postId));
         allow create: if isWomanMember()
           && request.resource.data.keys().hasOnly(
-               ['alias', 'content', 'timestamp', 'parentCommentId'])
+               ['alias', 'content', 'timestamp', 'parentCommentId',
+                'status', 'flagCount'])
           && request.resource.data.keys().hasAll(
-               ['alias', 'content', 'timestamp', 'parentCommentId'])
+               ['alias', 'content', 'timestamp', 'parentCommentId',
+                'status', 'flagCount'])
+          && request.resource.data.status == 'visible'
+          && request.resource.data.flagCount == 0
           && request.resource.data.alias is string
           && request.resource.data.alias.size() > 0
           && request.resource.data.alias.size() <= 40
@@ -287,7 +325,7 @@ service cloud.firestore {
       // check her own vote (to show the results); nobody can list votes.
 
       match /votes/{voteKey} {
-        allow get: if signedIn() && voteKey == voteKeyOf(postId);
+        allow get: if isWomanMember() && voteKey == voteKeyOf(postId);
         allow list: if false;
         allow create: if isWomanMember()
           && voteKey == voteKeyOf(postId)

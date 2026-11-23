@@ -86,6 +86,8 @@ function addCommentBatch(db, uid, postId, commentId, alias = 'Gentle Heron') {
     content: 'Same here. Try the faculty office first.',
     timestamp: serverTimestamp(),
     parentCommentId: null,
+    status: 'visible',
+    flagCount: 0,
   });
   batch.set(doc(db, 'posts', postId, 'commentAuthors', commentId), {
     authorId: uid,
@@ -1204,3 +1206,143 @@ describe('themed week banner', () => {
     await assertFails(getDoc(doc(visitor, 'themes', 'current')));
   });
 });
+
+// ───────────────────────── Who can read what ─────────────────────────
+
+/** A post (and its author record) straight into the database. */
+async function seedPost(id, { status = 'visible', authorId = 'amira' } = {}) {
+  await seed(async (db) => {
+    await setDoc(doc(db, 'posts', id), {
+      alias: 'Quiet Fox',
+      categoryId: 'education',
+      title: 'Scholarship tips?',
+      content: 'Any advice?',
+      timestamp: new Date(),
+      flagCount: status === 'visible' ? 0 : 3,
+      meTooCount: 0,
+      commentCount: 0,
+      status,
+    });
+    await setDoc(doc(db, 'authors', id), { authorId, createdAt: new Date() });
+  });
+}
+
+/** A reply (and its author record) straight into the database. */
+async function seedReply(postId, id, { status = 'visible', authorId = 'siti' } = {}) {
+  await seed(async (db) => {
+    await setDoc(doc(db, 'posts', postId, 'comments', id), {
+      alias: 'Gentle Heron',
+      content: 'Same here.',
+      timestamp: new Date(),
+      parentCommentId: null,
+      status,
+      flagCount: status === 'visible' ? 0 : 3,
+    });
+    await setDoc(doc(db, 'posts', postId, 'commentAuthors', id), {
+      authorId,
+      createdAt: new Date(),
+    });
+  });
+}
+
+describe('reading: members only, visible items only', () => {
+  beforeEach(async () => {
+    for (const uid of ['amira', 'siti', 'nur']) await makeMember(uid);
+    await makeModerator('mod');
+    await makeMember('mod');
+  });
+
+  test('signed in is not enough: only finished members read posts', async () => {
+    await seedPost('p1');
+    await assertFails(getDoc(doc(as('stranger'), 'posts', 'p1')));
+    await assertSucceeds(getDoc(doc(as('nur'), 'posts', 'p1')));
+  });
+
+  test('replies and poll votes also need a finished member', async () => {
+    await seedPost('p1');
+    await seedReply('p1', 'c1');
+    await assertFails(getDoc(doc(as('stranger'), 'posts', 'p1', 'comments', 'c1')));
+    await assertSucceeds(getDoc(doc(as('nur'), 'posts', 'p1', 'comments', 'c1')));
+    await seedPoll('poll1');
+    await assertFails(
+      getDoc(doc(as('stranger'), 'posts', 'poll1', 'votes', voteKey('stranger', 'poll1'))),
+    );
+  });
+
+  test('the feed must ask for visible posts only', async () => {
+    await seedPost('p1');
+    await seedPost('p2', { status: 'hidden' });
+    const db = as('nur');
+    // Asking for everything could return the hidden post: refused.
+    await assertFails(getDocs(collection(db, 'posts')));
+    await assertSucceeds(
+      getDocs(query(collection(db, 'posts'), where('status', '==', 'visible'))),
+    );
+  });
+
+  for (const status of ['hidden', 'removed']) {
+    test(`a ${status} post: not for members; yes for its author and moderators`, async () => {
+      await seedPost('p1', { status });
+      await assertFails(getDoc(doc(as('nur'), 'posts', 'p1')));
+      await assertSucceeds(getDoc(doc(as('amira'), 'posts', 'p1'))); // author
+      await assertSucceeds(getDoc(doc(as('mod'), 'posts', 'p1')));
+      // And it never comes back in a member's feed query.
+      const feed = await getDocs(
+        query(collection(as('nur'), 'posts'), where('status', '==', 'visible')),
+      );
+      expect(feed.size === 0);
+    });
+
+    test(`a ${status} reply: not for members; yes for the post author and moderators`, async () => {
+      await seedPost('p1');
+      await seedReply('p1', 'c1', { status });
+      await assertFails(getDoc(doc(as('nur'), 'posts', 'p1', 'comments', 'c1')));
+      await assertSucceeds(getDoc(doc(as('amira'), 'posts', 'p1', 'comments', 'c1')));
+      await assertSucceeds(getDoc(doc(as('mod'), 'posts', 'p1', 'comments', 'c1')));
+    });
+
+    test(`replies on a ${status} post are not for members`, async () => {
+      await seedPost('p1', { status });
+      await seedReply('p1', 'c1');
+      await assertFails(getDoc(doc(as('nur'), 'posts', 'p1', 'comments', 'c1')));
+      await assertSucceeds(getDoc(doc(as('amira'), 'posts', 'p1', 'comments', 'c1')));
+    });
+  }
+
+  test('reply lists must ask for visible replies only', async () => {
+    await seedPost('p1');
+    await seedReply('p1', 'c1');
+    await seedReply('p1', 'c2', { status: 'hidden' });
+    const db = as('nur');
+    // Asking for every reply could return the hidden one: refused.
+    await assertFails(getDocs(collection(db, 'posts', 'p1', 'comments')));
+    await assertSucceeds(
+      getDocs(
+        query(collection(db, 'posts', 'p1', 'comments'), where('status', '==', 'visible')),
+      ),
+    );
+  });
+
+  test('a new reply must start visible with no flags', async () => {
+    await seedPost('p1');
+    const db = as('siti');
+    const bad = writeBatch(db);
+    bad.set(doc(db, 'posts', 'p1', 'comments', 'c9'), {
+      alias: 'Gentle Heron',
+      content: 'Hi',
+      timestamp: serverTimestamp(),
+      parentCommentId: null,
+      status: 'hidden',
+      flagCount: 0,
+    });
+    bad.set(doc(db, 'posts', 'p1', 'commentAuthors', 'c9'), {
+      authorId: 'siti',
+      createdAt: serverTimestamp(),
+    });
+    await assertFails(bad.commit());
+  });
+});
+
+function expect(ok) {
+  if (!ok) throw new Error('expectation failed');
+}

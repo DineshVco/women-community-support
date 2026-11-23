@@ -304,6 +304,8 @@ for (const p of POSTS) {
       // Replies arrive 20 minutes apart after the post.
       timestamp: Timestamp.fromMillis(postedAt + (i + 1) * 20 * 60 * 1000),
       parentCommentId: null,
+      status: 'visible',
+      flagCount: 0,
       demo: true, // DEMO CONTENT marker
     });
   });

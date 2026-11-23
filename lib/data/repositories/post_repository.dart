@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -318,10 +319,12 @@ class PostRepository {
 
   // ───────────────────────── Feed & posts ─────────────────────────
 
-  /// Newest posts first. Hidden/removed posts are filtered out here.
+  /// Newest visible posts first. The rules only allow asking for visible
+  /// posts (hidden or removed ones are for moderators and the author).
   Stream<List<Post>> watchFeed() {
     return _db
         .collection('posts')
+        .where('status', isEqualTo: 'visible')
         .orderBy('timestamp', descending: true)
         .limit(feedLimit)
         .snapshots()
@@ -334,11 +337,28 @@ class PostRepository {
         );
   }
 
+  /// The post, or null if it is gone or she may no longer see it (hidden or
+  /// removed, and she is not its author or a moderator).
   Stream<Post?> watchPost(String postId) {
-    return _post(postId).snapshots().map(
-      (snapshot) => snapshot.exists ? Post.fromFirestore(snapshot) : null,
-    );
+    return _post(postId)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.exists ? Post.fromFirestore(snapshot) : null,
+        )
+        .transform(_notAllowedAsNull<Post?>());
   }
+
+  /// A "permission denied" answer means "not for you": treat it as gone.
+  static StreamTransformer<T, T> _notAllowedAsNull<T>() =>
+      StreamTransformer.fromHandlers(
+        handleError: (error, stack, sink) {
+          if (error is FirebaseException && error.code == 'permission-denied') {
+            sink.add(null as T);
+          } else {
+            sink.addError(error, stack);
+          }
+        },
+      );
 
   /// The signed-in person's id, or null when signed out.
   String? get myUid => _auth.currentUser?.uid;
@@ -416,9 +436,24 @@ class PostRepository {
   }
 
   Future<List<Post>> _postsByIds(Iterable<String> ids) async {
-    final snapshots = await Future.wait(ids.map((id) => _post(id).get()));
+    // A post she may not see any more (hidden or removed, not hers) is
+    // simply left out.
+    Future<DocumentSnapshot<Map<String, dynamic>>?> read(String id) async {
+      try {
+        return await _post(id).get();
+      } on FirebaseException catch (e) {
+        if (e.code == 'permission-denied') return null;
+        rethrow;
+      }
+    }
+
+    final snapshots = await Future.wait(ids.map(read));
     final posts =
-        snapshots.where((s) => s.exists).map(Post.fromFirestore).toList();
+        snapshots
+            .whereType<DocumentSnapshot<Map<String, dynamic>>>()
+            .where((s) => s.exists)
+            .map(Post.fromFirestore)
+            .toList();
     posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return posts;
   }
@@ -455,9 +490,11 @@ class PostRepository {
 
   // ───────────────────────── Comments ─────────────────────────
 
+  /// Visible replies, oldest first (the rules only allow asking for these).
   Stream<List<Comment>> watchComments(String postId) {
     return _post(postId)
         .collection('comments')
+        .where('status', isEqualTo: 'visible')
         .orderBy('timestamp')
         .snapshots()
         .map(
@@ -486,6 +523,8 @@ class PostRepository {
       'content': content,
       'timestamp': FieldValue.serverTimestamp(),
       'parentCommentId': parentCommentId,
+      'status': 'visible',
+      'flagCount': 0,
     });
     batch.set(_post(postId).collection('commentAuthors').doc(commentRef.id), {
       'authorId': uid,
