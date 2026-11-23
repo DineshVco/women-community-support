@@ -23,6 +23,7 @@ import '../widgets/feed_greeting.dart';
 import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/living_cat.dart';
+import '../widgets/post_route.dart';
 import '../widgets/looma_card.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/post_card.dart';
@@ -107,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openSmallWins(SmallWinsThread thread) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      PostRoute<void>(
         builder: (_) => PostDetailScreen(postId: thread.id, smallWins: true),
       ),
     );
@@ -231,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openPost(Post post) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      PostRoute<void>(
         builder: (_) => PostDetailScreen(postId: post.id, initialPost: post),
       ),
     );

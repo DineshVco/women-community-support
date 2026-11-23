@@ -30,7 +30,7 @@ void main() {
         matching: find.byType(AnimatedScale),
       ),
     );
-    expect(scale.scale, 0.97);
+    expect(scale.scale, 0.98);
 
     await gesture.up();
     await tester.pump(const Duration(milliseconds: 150));

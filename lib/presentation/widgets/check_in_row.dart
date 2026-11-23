@@ -116,7 +116,8 @@ class _CheckInRowState extends State<CheckInRow> {
   Future<void> _pick(Mood mood) async {
     final store = _store;
     if (store == null) return;
-    AppHaptics.selection();
+    // Mood saved: a light tap.
+    AppHaptics.light();
     // Keeps a note she already wrote today on the mood screen.
     final entry = MoodEntry(day: _day, mood: mood, note: _todays?.note ?? '');
     setState(() {

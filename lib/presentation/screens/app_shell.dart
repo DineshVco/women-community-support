@@ -104,11 +104,18 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       // Content runs under the translucent tab bar.
       extendBody: true,
-      body: IndexedStack(
-        index: _index,
+      // The tabs cross-fade; each keeps its place and state.
+      body: Stack(
+        fit: StackFit.expand,
         children: [
           for (var i = 0; i < _tabs.length; i++)
-            _opened.contains(i) ? _tabs[i] : const SizedBox.shrink(),
+            _opened.contains(i)
+                ? TabLayer(
+                  key: ValueKey(i),
+                  active: i == _index,
+                  child: _tabs[i],
+                )
+                : SizedBox.shrink(key: ValueKey(i)),
         ],
       ),
       bottomNavigationBar: AppShell.tabBar(
@@ -122,6 +129,64 @@ class _AppShellState extends State<AppShell> {
             _opened.add(value);
           });
         },
+      ),
+    );
+  }
+}
+
+/// One tab's page. The active one fades in while the old one fades out
+/// (220 ms); after that the old one is offstage but kept, so its scroll
+/// place and state stay. With Reduce motion it switches at once.
+class TabLayer extends StatefulWidget {
+  const TabLayer({super.key, required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<TabLayer> createState() => _TabLayerState();
+}
+
+class _TabLayerState extends State<TabLayer> {
+  /// On stage: active, or still fading out.
+  bool _onStage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _onStage = widget.active;
+  }
+
+  @override
+  void didUpdateWidget(TabLayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active) _onStage = true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = AppMotion.reduced(context);
+    final onStage = widget.active || (_onStage && !still);
+    return Offstage(
+      offstage: !onStage,
+      child: TickerMode(
+        enabled: onStage,
+        child: IgnorePointer(
+          ignoring: !widget.active,
+          child: AnimatedOpacity(
+            opacity: widget.active ? 1 : 0,
+            duration: still ? Duration.zero : AppMotion.medium,
+            curve: AppMotion.enter,
+            onEnd: () {
+              // With Reduce motion it is already offstage (no setState
+              // while building).
+              if (mounted && !still && !widget.active && _onStage) {
+                setState(() => _onStage = false);
+              }
+            },
+            child: widget.child,
+          ),
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/post_route.dart';
 import '../../widgets/skeleton.dart';
 
 /// Reports she made, and what happened to each.
@@ -96,7 +97,7 @@ class _ReportRow extends StatelessWidget {
       ),
       onTap:
           () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
+            PostRoute<void>(
               builder: (_) => PostDetailScreen(postId: report.postId),
             ),
           ),

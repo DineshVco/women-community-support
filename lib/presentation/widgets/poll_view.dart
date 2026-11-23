@@ -45,7 +45,7 @@ class _PollViewState extends State<PollView> {
 
   Future<void> _vote(int option) async {
     if (_sending) return;
-    AppHaptics.selection();
+    AppHaptics.light();
     setState(() {
       _sending = true;
       _picked = option;

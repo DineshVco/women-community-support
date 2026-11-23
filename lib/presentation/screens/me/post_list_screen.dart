@@ -9,6 +9,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/post_card.dart';
 import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/post_route.dart';
 import '../../widgets/skeleton.dart';
 
 /// A simple list of posts for "My posts" and "Saved posts" (Me tab).
@@ -48,7 +49,7 @@ class _PostListScreenState extends State<PostListScreen> {
 
   Future<void> _open(Post post) async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      PostRoute<void>(
         builder: (_) => PostDetailScreen(postId: post.id, initialPost: post),
       ),
     );

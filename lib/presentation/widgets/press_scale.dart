@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_motion.dart';
 
-/// Shrinks its child a little while a finger is down (100 ms): 97% for
-/// buttons, 98% for cards. It only listens, so taps still reach the button
+/// Shrinks its child a little while a finger is down (100 ms): 98% for
+/// buttons and cards. It only listens, so taps still reach the button
 /// inside. Nothing moves with Reduce motion.
 class PressScale extends StatefulWidget {
   const PressScale({
     super.key,
     required this.child,
     this.enabled = true,
-    this.scale = 0.97,
+    this.scale = 0.98,
   });
 
   final Widget child;

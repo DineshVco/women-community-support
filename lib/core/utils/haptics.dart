@@ -11,11 +11,12 @@ class AppHaptics {
   /// Picking between options: tabs, category chips, theme, report reason.
   static void selection() => HapticFeedback.selectionClick();
 
-  /// A small action happened: send a reply, "Me too", open compose.
+  /// A small action happened: post published, "Me too", mood saved, a
+  /// vote, a reply sent.
   static void light() => HapticFeedback.lightImpact();
 
-  /// Something important finished: post published, refresh started,
-  /// a moderation decision saved, a report sent.
+  /// Something important finished: refresh started, a moderation
+  /// decision saved, a report sent.
   static void medium() => HapticFeedback.mediumImpact();
 
   /// Before a destructive action: delete, remove.

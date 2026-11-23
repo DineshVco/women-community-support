@@ -141,8 +141,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         pollOptions: _isPoll ? _optionTexts : null,
       );
       if (!mounted) return;
-      AppHaptics.medium();
-      // The feed shows the "Posted" confirmation.
+      // The feed gives the light haptic and the "Posted" confirmation.
       Navigator.of(context).pop(alias);
     } on FirebaseException {
       _fail(

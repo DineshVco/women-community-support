@@ -14,6 +14,7 @@ import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/ios.dart';
+import '../widgets/post_route.dart';
 import '../widgets/skeleton.dart';
 import 'post_detail_screen.dart';
 
@@ -84,7 +85,7 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
 
   void _openPost(String postId) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      PostRoute<void>(
         builder:
             (_) => PostDetailScreen(postId: postId, showHiddenContent: true),
       ),
