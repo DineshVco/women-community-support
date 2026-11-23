@@ -468,16 +468,28 @@ void main() {
       );
       expect(
         timeAgo(now.subtract(const Duration(minutes: 5)), now: now),
-        '5 min ago',
+        '5m ago',
       );
       expect(
         timeAgo(now.subtract(const Duration(hours: 3)), now: now),
-        '3 h ago',
+        '3h ago',
       );
       expect(
         timeAgo(now.subtract(const Duration(days: 2)), now: now),
-        '2 d ago',
+        '2d ago',
       );
+    });
+
+    test('the edges: 59 s, 59 min, 23 h, 6 d', () {
+      String ago(Duration d) => timeAgo(now.subtract(d), now: now);
+      expect(ago(const Duration(seconds: 59)), 'just now');
+      expect(ago(const Duration(minutes: 1)), '1m ago');
+      expect(ago(const Duration(minutes: 59)), '59m ago');
+      expect(ago(const Duration(hours: 1)), '1h ago');
+      expect(ago(const Duration(hours: 23)), '23h ago');
+      expect(ago(const Duration(days: 1)), '1d ago');
+      expect(ago(const Duration(days: 4)), '4d ago');
+      expect(ago(const Duration(days: 6)), '6d ago');
     });
 
     test('shows a date after a week', () {
