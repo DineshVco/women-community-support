@@ -390,6 +390,38 @@ void main() {
     });
   });
 
+  // The Feels like / Humidity / Wind row used to overflow its panel.
+  for (final (width, scale) in [(320.0, 1.0), (320.0, 2.0), (420.0, 2.0)]) {
+    testWidgets('weather details fit: ${width.round()} px wide, '
+        'text ${scale}x', (tester) async {
+      tester.view.physicalSize = Size(width, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder:
+              (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(scale)),
+                child: AppSettingsScope(
+                  settings: AppSettings(weatherCity: 'Kuala Lumpur'),
+                  child: child!,
+                ),
+              ),
+          home: DecoyScreen(now: _day, service: OfflineWeather()),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      for (final label in ['Feels like', 'Humidity', 'Wind']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.textContaining('km/h'), findsOneWidget);
+    });
+  }
+
   // ───────────────────────── Choosing the disguise ─────────────────────────
 
   testWidgets('Settings choose which screen Quick exit shows', (tester) async {

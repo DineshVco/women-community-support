@@ -132,18 +132,27 @@ class _DecoyScreenState extends State<DecoyScreen> {
                   Row(
                     children: [
                       // Backup way back: tap the temperature 3 times.
-                      TripleTap(
-                        onTriple: _return,
-                        child: Text(
-                          '${report.temperature}°',
-                          key: const ValueKey('weather-temperature'),
-                          style: const TextStyle(
-                            fontSize: 96,
-                            fontWeight: FontWeight.w200,
+                      // Shrinks a little on a narrow phone or with large
+                      // text instead of running off the edge.
+                      Flexible(
+                        child: TripleTap(
+                          onTriple: _return,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${report.temperature}°',
+                              key: const ValueKey('weather-temperature'),
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontSize: 96,
+                                fontWeight: FontWeight.w200,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       Icon(report.icon, size: 72, color: _ink),
                     ],
                   ),
@@ -155,12 +164,20 @@ class _DecoyScreenState extends State<DecoyScreen> {
                   ),
                   const SizedBox(height: 28),
                   _Panel(
+                    // Three equal columns: never wider than the panel, on a
+                    // narrow phone or with large text.
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Detail('Feels like', '${report.feelsLike}°'),
-                        _Detail('Humidity', '${report.humidity}%'),
-                        _Detail('Wind', '${report.wind} km/h'),
+                        Expanded(
+                          child: _Detail('Feels like', '${report.feelsLike}°'),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _Detail('Humidity', '${report.humidity}%'),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: _Detail('Wind', '${report.wind} km/h')),
                       ],
                     ),
                   ),
@@ -185,12 +202,20 @@ class _DecoyScreenState extends State<DecoyScreen> {
                               children: [
                                 SizedBox(
                                   width: 64,
-                                  child: Text(
-                                    i == 0
-                                        ? 'Today'
-                                        : weekdays[report.days[i].date.weekday -
-                                            1],
-                                    style: const TextStyle(fontSize: 16),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      i == 0
+                                          ? 'Today'
+                                          : weekdays[report
+                                                  .days[i]
+                                                  .date
+                                                  .weekday -
+                                              1],
+                                      maxLines: 1,
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
                                   ),
                                 ),
                                 Icon(
@@ -204,16 +229,28 @@ class _DecoyScreenState extends State<DecoyScreen> {
                                     i == 0
                                         ? report.condition
                                         : report.days[i].condition,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: _soft,
                                     ),
                                   ),
                                 ),
-                                Text(
-                                  '${report.days[i].low}°  '
-                                  '${report.days[i].high}°',
-                                  style: const TextStyle(fontSize: 16),
+                                const SizedBox(width: 8),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 110,
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      '${report.days[i].low}°  '
+                                      '${report.days[i].high}°',
+                                      maxLines: 1,
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -268,12 +305,18 @@ class _Detail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // The label may wrap onto two lines with large text.
         Text(
           label,
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 12, color: Color(0xFF3E5D77)),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 18)),
+        // The value stays on one line and shrinks a little if it must.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value, maxLines: 1, style: const TextStyle(fontSize: 18)),
+        ),
       ],
     );
   }

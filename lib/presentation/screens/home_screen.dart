@@ -236,7 +236,12 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverList(
               delegate: SliverChildListDelegate([
-                wide(FeedGreeting(posts: snapshot.data)),
+                wide(
+                  FeedGreeting(
+                    posts: snapshot.data,
+                    onWrite: () => _openCompose(),
+                  ),
+                ),
                 if (_themedWeek != null)
                   wide(ThemedWeekBanner(week: _themedWeek!)),
                 if (_smallWins != null)

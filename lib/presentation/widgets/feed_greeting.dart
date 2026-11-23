@@ -7,16 +7,21 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
 import '../../data/models/post.dart';
 import '../providers/app_settings.dart';
+import 'hero_card.dart';
 import 'team_badge.dart';
 
-/// "Good evening" + how many discussions started in the last 24 hours.
+/// A painted card (by time of day) with "Good evening" and how many
+/// discussions started in the last 24 hours.
 /// Under it, a note while the Looma Team starter posts are in the feed.
 /// [posts] comes from the live feed, so the count updates by itself.
 class FeedGreeting extends StatelessWidget {
-  const FeedGreeting({super.key, required this.posts});
+  const FeedGreeting({super.key, required this.posts, this.onWrite});
 
   /// Null while the feed is still loading.
   final List<Post>? posts;
+
+  /// Tapping the painted card opens "Write a post".
+  final VoidCallback? onWrite;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +44,7 @@ class FeedGreeting extends StatelessWidget {
       };
     }
 
+    final now = DateTime.now();
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenHorizontal,
@@ -49,32 +55,47 @@ class FeedGreeting extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handwritten (Caveat): one of only two places it is used.
-          Text(
-            greetingFor(DateTime.now()),
-            style: AppTypography.script(34, palette.text),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            greetingReassurance,
-            style: theme.textTheme.bodyMedium?.copyWith(color: palette.text),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          // Fades between messages when the live count changes.
-          AnimatedSwitcher(
-            duration: AppMotion.of(context, AppMotion.medium),
-            switchInCurve: AppMotion.enter,
-            switchOutCurve: AppMotion.exit,
-            layoutBuilder:
-                (current, previous) => Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [...previous, if (current != null) current],
+          // The painted card changes with the time of day.
+          HeroCard(
+            scene: HeroScene.forTime(now),
+            actionLabel: 'Write a post',
+            onTap: onWrite,
+            children: [
+              // Handwritten (Caveat): one of only two places it is used.
+              Text(
+                greetingFor(now),
+                style: AppTypography.script(32, palette.text),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                greetingReassurance,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.text,
                 ),
-            child: Semantics(
-              liveRegion: true,
-              key: ValueKey(subline),
-              child: Text(subline, style: theme.textTheme.bodySmall),
-            ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              // Fades between messages when the live count changes.
+              AnimatedSwitcher(
+                duration: AppMotion.of(context, AppMotion.medium),
+                switchInCurve: AppMotion.enter,
+                switchOutCurve: AppMotion.exit,
+                layoutBuilder:
+                    (current, previous) => Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [...previous, if (current != null) current],
+                    ),
+                child: Semantics(
+                  liveRegion: true,
+                  key: ValueKey(subline),
+                  child: Text(
+                    subline,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: palette.text,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           // Only while the Looma Team starter posts are in the feed.
           if (list != null && list.any((p) => LoomaTeam.isTeam(p.alias))) ...[
