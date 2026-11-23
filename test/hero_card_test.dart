@@ -108,7 +108,7 @@ void main() {
   testWidgets('the card pictures are real WebP files, 1200 px, under 150 KB', (
     tester,
   ) async {
-    for (final asset in [CardPictures.magnolia, CardPictures.catGrass]) {
+    for (final asset in [CardPictures.magnolia]) {
       final file = File(asset);
       expect(file.existsSync(), isTrue, reason: asset);
       expect(file.lengthSync(), lessThan(150 * 1024), reason: asset);
@@ -120,8 +120,11 @@ void main() {
       });
       expect(width, 1200, reason: asset);
     }
-    // No PNG copies left behind.
+    // No PNG copies left behind, and the old cat picture is gone.
     for (final png in [
+      'assets/images/cat_nap.png',
+      'assets/images/hero/cat_nap.png',
+      'assets/images/hero/hero_cat_grass.webp',
       'assets/images/hero_magnolia.png',
       'assets/images/hero_cat_grass.png',
       'assets/images/hero/hero_magnolia.png',
@@ -129,6 +132,53 @@ void main() {
     ]) {
       expect(File(png).existsSync(), isFalse, reason: png);
     }
+  });
+
+  testWidgets('the napping cat: real WebP, about 800 px, under 100 KB', (
+    tester,
+  ) async {
+    final file = File(CardPictures.catNap);
+    expect(file.existsSync(), isTrue);
+    expect(file.lengthSync(), lessThan(100 * 1024));
+    final bytes = file.readAsBytesSync();
+    expect(String.fromCharCodes(bytes.sublist(8, 12)), 'WEBP');
+    final image =
+        (await tester.runAsync(() async {
+          final codec = await ui.instantiateImageCodec(bytes);
+          return (await codec.getNextFrame()).image;
+        }))!;
+    expect(image.width, 800);
+    // Clean edges: no faint specks away from the cat. Faint pixels are
+    // allowed only right at its outline (the soft edge), within 4 px.
+    final data =
+        (await tester.runAsync(
+          () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+        ))!;
+    final w = image.width, h = image.height;
+    int alpha(int x, int y) => data.getUint8((y * w + x) * 4 + 3);
+    var specks = 0;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final a = alpha(x, y);
+        if (a == 0 || a >= 16) continue;
+        var nearCat = false;
+        for (var dy = -4; dy <= 4 && !nearCat; dy++) {
+          for (var dx = -4; dx <= 4 && !nearCat; dx++) {
+            final nx = x + dx, ny = y + dy;
+            if (nx >= 0 &&
+                ny >= 0 &&
+                nx < w &&
+                ny < h &&
+                alpha(nx, ny) >= 128) {
+              nearCat = true;
+            }
+          }
+        }
+        if (!nearCat) specks++;
+      }
+    }
+    expect(specks, 0);
+    expect(data.getUint8(3), 0); // top-left corner is clear
   });
 
   testWidgets('the night painting is a real WebP, at most 1600 px wide', (

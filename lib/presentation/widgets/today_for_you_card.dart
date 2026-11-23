@@ -35,11 +35,11 @@ class TodayForYouCard extends StatelessWidget {
 
   static const String heading = 'Today for you';
 
-  /// The cat-in-the-grass picture takes the right 40%.
-  static const double pictureWidth = 0.4;
+  /// The napping cat takes the right 32%.
+  static const double pictureWidth = 0.32;
 
-  static double textRightInset(double cardWidth) =>
-      cardWidth * pictureWidth * (1 - CardPicture.clearUntil);
+  /// The text stops where the cat starts (it does not fade).
+  static double textRightInset(double cardWidth) => cardWidth * pictureWidth;
 
   static IconData iconFor(TodaySlot slot) => switch (slot) {
     TodaySlot.morning => AppIcons.morning,
@@ -90,7 +90,14 @@ class TodayForYouCard extends StatelessWidget {
                   heightFactor: 1,
                   child: CardPicture(
                     key: const ValueKey('today-picture'),
-                    asset: CardPictures.catGrass,
+                    asset: CardPictures.catNap,
+                    // A cut-out cat: shown whole, at the bottom right, with
+                    // no fade (the text stops before it).
+                    fit: BoxFit.contain,
+                    alignment: Alignment.bottomRight,
+                    clearUntil: 0,
+                    fullFrom: 0,
+                    darkOpacity: 0.9,
                     fallback: [
                       night ? palette.softFill : palette.surface,
                       tint,

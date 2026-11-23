@@ -8,8 +8,8 @@ class CardPictures {
   /// Right side of the profile card on Me.
   static const String magnolia = 'assets/images/hero/hero_magnolia.webp';
 
-  /// Right side of the "Today for you" card on Care.
-  static const String catGrass = 'assets/images/hero/hero_cat_grass.webp';
+  /// Right side of the "Today for you" card on Care: a ginger cat napping.
+  static const String catNap = 'assets/images/hero/cat_nap.webp';
 
   /// Answers already found (only finished answers are kept, never a lookup
   /// still in progress, so one slow lookup can never block later ones).
@@ -42,23 +42,59 @@ class CardPicture extends StatefulWidget {
     required this.asset,
     required this.fallback,
     this.alignment = Alignment.centerRight,
+    this.fit = BoxFit.cover,
+    this.scale = 1,
+    this.clearUntil = defaultClearUntil,
+    this.fullFrom = defaultFullFrom,
+    this.darkOpacity = 0.55,
   });
 
-  /// The picture is fully clear up to here (share of its own width)...
-  static const double clearUntil = 0.4;
+  /// By default the picture is fully clear up to here (share of its own
+  /// width)...
+  static const double defaultClearUntil = 0.4;
 
   /// ...and fully shown from here.
-  static const double fullFrom = 0.8;
+  static const double defaultFullFrom = 0.8;
 
   final String asset;
   final List<Color> fallback;
   final Alignment alignment;
+  final BoxFit fit;
+
+  /// Draws the picture bigger, from [alignment] (e.g. 1.3 = 30% bigger).
+  final double scale;
+
+  /// The fade, as shares of the picture's width; 0 and 0 = no fade (a
+  /// cut-out picture such as the napping cat).
+  final double clearUntil;
+  final double fullFrom;
+
+  bool get fades => fullFrom > 0;
+
+  /// In dark mode paintings are dimmed against glare; a cut-out picture
+  /// (the napping cat) stays nearly full so it does not look grey.
+  final double darkOpacity;
 
   @override
   State<CardPicture> createState() => _CardPictureState();
 }
 
 class _CardPictureState extends State<CardPicture> {
+  /// Clear on the left, full on the right (unless the picture does not
+  /// fade).
+  Widget _fadeIn(Widget child) {
+    if (!widget.fades) return child;
+    return ShaderMask(
+      shaderCallback:
+          (rect) => LinearGradient(
+            colors: const [Color(0x00000000), Color(0xFF000000)],
+            stops: [widget.clearUntil, widget.fullFrom],
+          ).createShader(rect),
+      blendMode: BlendMode.dstIn,
+      child: child,
+    );
+  }
+
   /// Asked once per card; known at once if another card already asked.
   late bool? _exists = CardPictures.knownExists(widget.asset);
 
@@ -87,27 +123,23 @@ class _CardPictureState extends State<CardPicture> {
     );
     return ExcludeSemantics(
       child: Opacity(
-        opacity: dark ? 0.55 : 1,
-        child: ShaderMask(
-          // Clear on the left, full on the right.
-          shaderCallback:
-              (rect) => const LinearGradient(
-                colors: [Color(0x00000000), Color(0xFF000000)],
-                stops: [CardPicture.clearUntil, CardPicture.fullFrom],
-              ).createShader(rect),
-          blendMode: BlendMode.dstIn,
-          // Only draws the picture once it is known to be in the app (a
-          // missing file never reaches the image decoder).
-          child:
-              _exists == true
-                  ? Image.asset(
+        opacity: dark ? widget.darkOpacity : 1,
+        child: _fadeIn(
+          _exists == true
+              ? ClipRect(
+                child: Transform.scale(
+                  scale: widget.scale,
+                  alignment: widget.alignment,
+                  child: Image.asset(
                     widget.asset,
-                    fit: BoxFit.cover,
+                    fit: widget.fit,
                     alignment: widget.alignment,
                     excludeFromSemantics: true,
                     errorBuilder: (_, _, _) => gradient,
-                  )
-                  : gradient,
+                  ),
+                ),
+              )
+              : gradient,
         ),
       ),
     );

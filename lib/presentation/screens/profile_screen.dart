@@ -410,16 +410,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 // ───────────────────────── Pieces ─────────────────────────
 
-/// How the profile card splits: the picture takes the right 40%; the
+/// How the profile card splits: the picture takes the right 34%; the
 /// alias and "Edit chat profile" keep to the left of it.
 class ProfileCardLayout {
   ProfileCardLayout._();
 
-  static const double pictureWidth = 0.4;
+  /// The flowers' size comes from the card's height (and the zoom below),
+  /// so a slightly narrower area keeps them as big and leaves the text room.
+  static const double pictureWidth = 0.34;
+
+  /// The magnolia, drawn 30% bigger from the right.
+  static const double magnoliaScale = 1.3;
+
+  /// Less faded: fully shown from 65% of its width (it was 80%); clear on
+  /// the first 40%, so "Edit chat profile" keeps one line beside it.
+  static const double clearUntil = 0.4;
+  static const double fullFrom = 0.65;
 
   /// The text stops where the picture starts to show.
   static double textRightInset(double cardWidth) =>
-      cardWidth * pictureWidth * (1 - CardPicture.clearUntil);
+      cardWidth * pictureWidth * (1 - clearUntil);
 }
 
 /// A rounded card on the grouped background (same inset as the lists).
@@ -449,6 +459,10 @@ class _Card extends StatelessWidget {
                   child: CardPicture(
                     key: const ValueKey('profile-picture'),
                     asset: CardPictures.magnolia,
+                    // About 30% bigger and less faded (round 2).
+                    scale: ProfileCardLayout.magnoliaScale,
+                    clearUntil: ProfileCardLayout.clearUntil,
+                    fullFrom: ProfileCardLayout.fullFrom,
                     fallback: [palette.profileGradient.last, palette.tabPill],
                   ),
                 ),

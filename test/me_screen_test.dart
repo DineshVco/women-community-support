@@ -344,7 +344,7 @@ void main() {
           cardRect.right -
           cardRect.width *
               ProfileCardLayout.pictureWidth *
-              (1 - CardPicture.clearUntil);
+              (1 - ProfileCardLayout.clearUntil);
       for (final text in ['Soft Owl', 'Edit chat profile']) {
         expect(
           tester.getRect(find.text(text)).right,

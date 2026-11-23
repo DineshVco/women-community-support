@@ -203,14 +203,14 @@ void main() {
         await tester.pump();
       }
       expect(find.byKey(const ValueKey('today-picture')), findsOneWidget);
-      // The cat-in-the-grass painting is in the app now.
+      // The napping cat picture.
       final image = tester.widget<Image>(
         find.descendant(
           of: find.byKey(const ValueKey('today-picture')),
           matching: find.byType(Image),
         ),
       );
-      expect((image.image as AssetImage).assetName, CardPictures.catGrass);
+      expect((image.image as AssetImage).assetName, CardPictures.catNap);
       expect(find.byKey(const ValueKey('card-picture-fallback')), findsNothing);
       final card = tester.getRect(find.byType(LoomaCard));
       final pictureStarts =
