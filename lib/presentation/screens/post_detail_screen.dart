@@ -20,6 +20,7 @@ import '../widgets/comment_tile.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/poll_view.dart';
+import '../widgets/living_cat.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/post_title_hero.dart';
 import '../widgets/press_scale.dart';
@@ -77,6 +78,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   String? _myAlias;
   bool _sending = false;
   bool _meTooBusy = false;
+  int _meTooNods = 0;
   bool _deleting = false;
 
   /// The comment being answered (shown as "Replying to ...").
@@ -177,8 +179,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Future<void> _toggleMeToo(bool currentlyOn) async {
     if (_meTooBusy) return;
-    AppHaptics.selection(); // Looma spec: selectionClick for "Me too".
-    setState(() => _meTooBusy = true);
+    AppHaptics.light();
+    setState(() {
+      _meTooBusy = true;
+      // Turning it on: a tiny cat nods next to the button.
+      if (!currentlyOn) _meTooNods++;
+    });
     try {
       await _repo.setMeToo(widget.postId, on: !currentlyOn);
     } catch (_) {
@@ -497,37 +503,44 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData;
 
-        return Semantics(
-          toggled: on,
-          child: PressScale(
-            child: OutlinedButton.icon(
-              onPressed:
-                  (loading || _meTooBusy) ? null : () => _toggleMeToo(on),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 44),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                // Pressed: soft blush with dark text (readable in both modes).
-                backgroundColor: on ? palette.blush : null,
-                foregroundColor: on ? palette.onBlush : palette.text,
-                side: BorderSide(
-                  color: on ? palette.blush : palette.primary,
-                  width: 1.5,
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              toggled: on,
+              child: PressScale(
+                child: OutlinedButton.icon(
+                  onPressed:
+                      (loading || _meTooBusy) ? null : () => _toggleMeToo(on),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    // Pressed: soft blush with dark text (readable in both modes).
+                    backgroundColor: on ? palette.blush : null,
+                    foregroundColor: on ? palette.onBlush : palette.text,
+                    side: BorderSide(
+                      color: on ? palette.blush : palette.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                  icon: _PopOnSelect(
+                    selected: on,
+                    child: Icon(
+                      on ? AppIcons.heartFilled : AppIcons.heart,
+                      size: 20,
+                    ),
+                  ),
+                  label: Text(
+                    AppSettings.gentleOf(context)
+                        ? 'Me too'
+                        : 'Me too · ${post.meTooCount}',
+                  ),
                 ),
-              ),
-              icon: _PopOnSelect(
-                selected: on,
-                child: Icon(
-                  on ? AppIcons.heartFilled : AppIcons.heart,
-                  size: 20,
-                ),
-              ),
-              label: Text(
-                AppSettings.gentleOf(context)
-                    ? 'Me too'
-                    : 'Me too · ${post.meTooCount}',
               ),
             ),
-          ),
+            const SizedBox(width: 6),
+            CatNodFlash(trigger: _meTooNods),
+          ],
         );
       },
     );

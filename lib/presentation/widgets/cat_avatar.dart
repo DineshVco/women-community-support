@@ -43,6 +43,10 @@ class CatAvatars {
 
 enum _Eyes { closed, open, happy, wink }
 
+/// Eyes to draw instead of an avatar's own (the living cat blinks and is
+/// sleepy at night).
+enum CatEyes { open, closed, happy, wink }
+
 enum _Extra { none, stripes, glasses, bow, heart, flower, patch }
 
 class _Look {
@@ -54,10 +58,13 @@ class _Look {
 }
 
 class CatAvatar extends StatelessWidget {
-  const CatAvatar({super.key, required this.id, this.size = 48});
+  const CatAvatar({super.key, required this.id, this.size = 48, this.eyes});
 
   final String id;
   final double size;
+
+  /// Overrides the avatar's own eyes when set.
+  final CatEyes? eyes;
 
   @override
   Widget build(BuildContext context) {
@@ -68,12 +75,22 @@ class CatAvatar extends StatelessWidget {
       child: RepaintBoundary(
         child: CustomPaint(
           size: Size.square(size),
-          painter: _CatPainter(CatAvatars._lookFor(id)),
+          painter: _CatPainter(_withEyesOf(CatAvatars._lookFor(id), eyes)),
         ),
       ),
     );
   }
 }
+
+_Look _withEyesOf(_Look look, CatEyes? eyes) =>
+    eyes == null
+        ? look
+        : _Look(look.background, switch (eyes) {
+          CatEyes.open => _Eyes.open,
+          CatEyes.closed => _Eyes.closed,
+          CatEyes.happy => _Eyes.happy,
+          CatEyes.wink => _Eyes.wink,
+        }, look.extra);
 
 class _CatPainter extends CustomPainter {
   _CatPainter(this.look);

@@ -22,6 +22,7 @@ import '../widgets/feed_greeting.dart';
 import '../widgets/floating_illustration.dart';
 import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
+import '../widgets/living_cat.dart';
 import '../widgets/looma_card.dart';
 import '../widgets/post_card.dart';
 import '../widgets/tap_zone.dart';
@@ -148,7 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (alias == null || !mounted) return;
 
+    AppHaptics.light();
     showPostedConfirmation(context, alias: alias);
+    LivingCat.cue(CatCue.wave);
     _celebrateIfFirstPost();
 
     // Bring the new post (it slides in at the top) into view.

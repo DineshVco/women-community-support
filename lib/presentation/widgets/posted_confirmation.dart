@@ -8,7 +8,8 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import 'transient_overlays.dart';
-import 'floating_illustration.dart';
+import '../../core/theme/app_icons.dart';
+import 'living_cat.dart';
 
 /// A short "Posted" pill that drops in at the top of the screen, stays for a
 /// moment and fades away. It never blocks taps.
@@ -42,7 +43,8 @@ class _PostedConfirmation extends StatefulWidget {
 
 class _PostedConfirmationState extends State<_PostedConfirmation>
     with SingleTickerProviderStateMixin {
-  static const Duration _hold = Duration(milliseconds: 1600);
+  /// About 1.2 seconds in all (in, a calm moment, out). It never blocks.
+  static const Duration _hold = Duration(milliseconds: 1000);
 
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -120,8 +122,8 @@ class _PostedConfirmationState extends State<_PostedConfirmation>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // The heart cat says thank you. White circle: the
-                        // drawing has dark lines and the pill is dark.
+                        // The cat nods. White circle: the drawing has dark
+                        // lines and the pill is dark.
                         Container(
                           width: 36,
                           height: 36,
@@ -130,13 +132,23 @@ class _PostedConfirmationState extends State<_PostedConfirmation>
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
-                          child: Image.asset(
-                            LoomaCats.heart,
-                            cacheWidth: 120,
-                            excludeFromSemantics: true,
+                          child: const ExcludeSemantics(
+                            child: LivingCat(
+                              size: 32,
+                              listen: false,
+                              startWith: CatCue.nod,
+                            ),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
+                        // A soft check.
+                        Icon(
+                          AppIcons.check,
+                          key: const ValueKey('posted-check'),
+                          size: 18,
+                          color: palette.blush,
+                        ),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             widget.message,

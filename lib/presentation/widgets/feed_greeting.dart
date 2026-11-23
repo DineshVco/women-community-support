@@ -6,7 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
 import '../../core/theme/app_icons.dart';
 import 'fade_slide_in.dart';
-import 'floating_illustration.dart';
+import 'living_cat.dart';
 import 'hero_card.dart';
 
 /// The top of Discuss: a short painted card (by time of day, about 120 px)
@@ -88,7 +88,13 @@ class FeedGreeting extends StatelessWidget {
             ],
           ),
           // Sits in the bottom right corner, over the painting a little.
-          const Positioned(right: 10, bottom: 10, child: PeekingCat()),
+          Positioned(
+            right: 10,
+            bottom: 10,
+            child: PeekingCat(
+              night: HeroScene.forTime(time) == HeroScene.night,
+            ),
+          ),
         ],
       ),
     );
@@ -97,9 +103,13 @@ class FeedGreeting extends StatelessWidget {
 
 /// A small Looma cat on a cream circle (dark lines on cream pass AA in
 /// light and dark mode). Decorative: screen readers skip it. It fades up
-/// once when it appears; with Reduce motion it is simply there.
+/// once when it appears, then gently lives (blinks, bobs 2 px, sleepy at
+/// night, waves when she posts); with Reduce motion it is simply there.
 class PeekingCat extends StatelessWidget {
-  const PeekingCat({super.key});
+  const PeekingCat({super.key, this.night = false});
+
+  /// Late at night the cat is sleepy.
+  final bool night;
 
   static const double size = 60;
 
@@ -122,7 +132,8 @@ class PeekingCat extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: palette.border),
           ),
-          child: Image.asset(LoomaCats.browse, fit: BoxFit.contain),
+          // Blinks, bobs, waves when she posts (see LivingCat).
+          child: LivingCat(size: size - 12, night: night),
         ),
       ),
     );
