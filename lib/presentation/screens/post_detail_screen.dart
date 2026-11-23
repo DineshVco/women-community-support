@@ -622,6 +622,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           comment: comment,
           isAuthor: comment.alias == post.alias,
           onReply: canReply ? () => _startReply(comment, comment.id) : null,
+          onReport:
+              canReply
+                  ? () => PostActions.reportReply(context, post, comment)
+                  : null,
         ),
         for (final reply in repliesByParent[comment.id] ?? const <Comment>[])
           CommentTile(
@@ -629,6 +633,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             isReply: true,
             isAuthor: reply.alias == post.alias,
             onReply: canReply ? () => _startReply(reply, comment.id) : null,
+            onReport:
+                canReply
+                    ? () => PostActions.reportReply(context, post, reply)
+                    : null,
           ),
       ],
     ];

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/utils/haptics.dart';
+import '../../data/models/comment.dart';
 import '../../data/models/post.dart';
 import '../../data/models/report.dart';
 import '../../data/repositories/post_repository.dart';
@@ -49,6 +50,56 @@ class PostActions {
 
     try {
       await repo.reportPost(post: post, reason: reason);
+      AppHaptics.medium();
+      if (context.mounted) {
+        _say(
+          context,
+          'Thank you. A moderator will review it. You can follow the outcome '
+          'under Me.',
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        _say(context, 'Could not send the report. Please try again.');
+      }
+    }
+  }
+
+  /// Report a reply: one private report per person per reply, same reasons
+  /// as posts. The third report hides the reply until a moderator decides.
+  static Future<void> reportReply(
+    BuildContext context,
+    Post post,
+    Comment comment,
+  ) async {
+    final repo = context.read<PostRepository>();
+    if (await repo.hasReportedComment(post.id, comment.id)) {
+      if (context.mounted) {
+        _say(
+          context,
+          'You already reported this reply. You can see what happened to it '
+          'under Me.',
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+
+    final reason = await showOptionsSheet<String>(
+      context,
+      title: 'Report this reply',
+      message:
+          'Your report is private. The person who wrote it is not told who '
+          'reported it.',
+      options: [
+        for (final reason in ReportReasons.all)
+          SheetOption(value: reason, label: reason),
+      ],
+    );
+    if (reason == null || !context.mounted) return;
+
+    try {
+      await repo.reportComment(post: post, comment: comment, reason: reason);
       AppHaptics.medium();
       if (context.mounted) {
         _say(

@@ -239,6 +239,26 @@ service cloud.firestore {
         && getAfter(author).data.authorId == request.auth.uid;
     }
 
+    // Reply reports: her report document for this reply appears in the same
+    // write, +1 flag, and the 3rd flag hides the reply.
+    function isReplyReportUpdate(postId, commentId) {
+      let report = /databases/$(database)/documents/reports/$(postId + '_' + commentId + '_' + reporterIdOf());
+      let oldStatus = resource.data.get('status', 'visible');
+      let newFlags = request.resource.data.get('flagCount', 0);
+      return changedKeys().hasOnly(['flagCount', 'status'])
+        && !exists(report) && existsAfter(report)
+        && newFlags == resource.data.get('flagCount', 0) + 1
+        && request.resource.data.status ==
+             ((newFlags >= 3 && oldStatus == 'visible') ? 'hidden' : oldStatus);
+    }
+
+    // A moderator keeps (visible, flags cleared) or removes a reply.
+    function isReplyModeratorUpdate() {
+      return isModerator()
+        && changedKeys().hasOnly(['status', 'flagCount'])
+        && request.resource.data.status in ['visible', 'hidden', 'removed'];
+    }
+
     function isModeratorUpdate() {
       return isModerator() && changedKeys().hasOnly(['status', 'flagCount']);
     }
@@ -306,7 +326,10 @@ service cloud.firestore {
           && existsAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
           && getAfter(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
                .data.authorId == request.auth.uid;
-        allow update: if false;
+        // A member reports a reply (+1 flag; the 3rd hides it), or a
+        // moderator keeps or removes it. Nothing else about a reply changes.
+        allow update: if (isWomanMember() && isReplyReportUpdate(postId, commentId))
+          || isReplyModeratorUpdate();
         allow delete: if signedIn() &&
           exists(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId)) &&
           get(/databases/$(database)/documents/posts/$(postId)/commentAuthors/$(commentId))
@@ -481,9 +504,17 @@ service cloud.firestore {
         && request.resource.data.postId is string
         && exists(postPath(request.resource.data.postId))
         && !exists(/databases/$(database)/documents/reports/$(reportId))
-        && reportId == request.resource.data.postId + '_' + reporterIdOf()
+        // A post report: postId + '_' + hash. A reply report also names
+        // the reply (which must exist): postId + '_' + commentId + '_' + hash.
+        && (('commentId' in request.resource.data)
+              ? (request.resource.data.commentId is string
+                 && exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)/comments/$(request.resource.data.commentId))
+                 && reportId == request.resource.data.postId + '_'
+                      + request.resource.data.commentId + '_' + reporterIdOf())
+              : reportId == request.resource.data.postId + '_' + reporterIdOf())
         && request.resource.data.keys().hasOnly(
-             ['postId', 'postTitle', 'reason', 'reporterId', 'createdAt', 'status'])
+             ['postId', 'commentId', 'postTitle', 'reason', 'reporterId',
+              'createdAt', 'status'])
         && request.resource.data.reporterId == reporterIdOf()
         && request.resource.data.status == 'open'
         && request.resource.data.createdAt == request.time

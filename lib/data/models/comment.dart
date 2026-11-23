@@ -9,6 +9,8 @@ class Comment {
     required this.content,
     required this.timestamp,
     this.parentCommentId,
+    this.status = 'visible',
+    this.flagCount = 0,
   });
 
   final String id;
@@ -19,6 +21,12 @@ class Comment {
 
   /// Set when this is a reply to another comment (one level deep).
   final String? parentCommentId;
+
+  /// 'visible', 'hidden' (3 reports) or 'removed' (by a moderator).
+  final String status;
+  final int flagCount;
+
+  bool get isVisible => status == 'visible';
 
   factory Comment.fromFirestore(
     String postId,
@@ -44,6 +52,8 @@ class Comment {
       content: data['content'] as String? ?? '',
       timestamp: timestamp is Timestamp ? timestamp.toDate() : DateTime.now(),
       parentCommentId: data['parentCommentId'] as String?,
+      status: data['status'] as String? ?? 'visible',
+      flagCount: (data['flagCount'] as num?)?.toInt() ?? 0,
     );
   }
 }

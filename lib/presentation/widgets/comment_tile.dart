@@ -14,6 +14,7 @@ class CommentTile extends StatelessWidget {
     required this.isAuthor,
     this.isReply = false,
     this.onReply,
+    this.onReport,
   });
 
   final Comment comment;
@@ -22,6 +23,9 @@ class CommentTile extends StatelessWidget {
   final bool isAuthor;
   final bool isReply;
   final VoidCallback? onReply;
+
+  /// Report this reply (same reasons as posts).
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -68,19 +72,34 @@ class CommentTile extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(comment.content, style: theme.textTheme.bodyLarge),
-        if (onReply != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: onReply,
-              style: TextButton.styleFrom(
-                foregroundColor: palette.textSecondary,
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                minimumSize: const Size(48, 40),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('Reply'),
-            ),
+        if (onReply != null || onReport != null)
+          Row(
+            children: [
+              if (onReply != null)
+                TextButton(
+                  onPressed: onReply,
+                  style: TextButton.styleFrom(
+                    foregroundColor: palette.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    minimumSize: const Size(48, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Reply'),
+                ),
+              if (onReply != null && onReport != null)
+                const SizedBox(width: AppSpacing.md),
+              if (onReport != null)
+                TextButton(
+                  onPressed: onReport,
+                  style: TextButton.styleFrom(
+                    foregroundColor: palette.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    minimumSize: const Size(48, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Report'),
+                ),
+            ],
           ),
       ],
     );

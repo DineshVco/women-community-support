@@ -692,6 +692,90 @@ class PostRepository {
     await batch.commit();
   }
 
+  /// Whether she already reported this reply (one report each).
+  Future<bool> hasReportedComment(String postId, String commentId) async {
+    final reporter = reporterIdFor(_requireUid());
+    try {
+      final snapshot =
+          await _db
+              .collection('reports')
+              .doc('${postId}_${commentId}_$reporter')
+              .get();
+      return snapshot.exists;
+    } on FirebaseException {
+      return false;
+    }
+  }
+
+  /// One report per person per reply; the third report from different
+  /// people hides the reply automatically (same as posts).
+  Future<void> reportComment({
+    required Post post,
+    required Comment comment,
+    required String reason,
+  }) async {
+    final reporter = reporterIdFor(_requireUid());
+    final newCount = comment.flagCount + 1;
+    final shouldHide = newCount >= 3 && comment.status == 'visible';
+
+    final batch = _db.batch();
+    batch.set(
+      _db.collection('reports').doc('${post.id}_${comment.id}_$reporter'),
+      {
+        'postId': post.id,
+        'commentId': comment.id,
+        'postTitle': post.title,
+        'reason': reason,
+        'reporterId': reporter,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'open',
+      },
+    );
+    batch.update(_post(post.id).collection('comments').doc(comment.id), {
+      'flagCount': FieldValue.increment(1),
+      'status': shouldHide ? 'hidden' : comment.status,
+    });
+    await batch.commit();
+  }
+
+  /// Moderators: one reply, whatever its status (for the report queue).
+  Future<Comment?> commentFor(String postId, String commentId) async {
+    final snapshot =
+        await _post(postId).collection('comments').doc(commentId).get();
+    return snapshot.exists ? Comment.fromFirestore(postId, snapshot) : null;
+  }
+
+  /// Moderators: closes every open report on a reply, then keeps it
+  /// (visible again, flags cleared) or removes it.
+  Future<void> resolveCommentReports({
+    required String postId,
+    required String commentId,
+    required bool removeReply,
+  }) async {
+    final open =
+        await _db
+            .collection('reports')
+            .where('postId', isEqualTo: postId)
+            .where('commentId', isEqualTo: commentId)
+            .where('status', isEqualTo: 'open')
+            .get();
+
+    final batch = _db.batch();
+    for (final doc in open.docs) {
+      batch.update(doc.reference, {
+        'status': removeReply ? 'removed' : 'dismissed',
+        'reviewedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    batch.update(
+      _post(postId).collection('comments').doc(commentId),
+      removeReply
+          ? {'status': 'removed'}
+          : {'status': 'visible', 'flagCount': 0},
+    );
+    await batch.commit();
+  }
+
   /// Reports I made, so I can see what happened to them.
   Stream<List<Report>> watchMyReports() {
     final reporter = reporterIdFor(_requireUid());
@@ -747,7 +831,8 @@ class PostRepository {
             .get();
 
     final batch = _db.batch();
-    for (final doc in open.docs) {
+    // Reply reports on this post are decided on their own.
+    for (final doc in open.docs.where((d) => d.data()['commentId'] == null)) {
       batch.update(doc.reference, {
         'status': removePost ? 'removed' : 'dismissed',
         'reviewedAt': FieldValue.serverTimestamp(),

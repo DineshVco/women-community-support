@@ -22,6 +22,32 @@ import 'post_detail_screen.dart';
 /// Only people with a `moderators/{uid}` document can load this list
 /// (firestore.rules), so opening it as anyone else just shows an error.
 class ModeratorScreen extends StatefulWidget {
+  /// One entry per reported post or reply, oldest report first, so nothing
+  /// waits too long.
+  static List<ReportedItem> group(List<Report> reports) {
+    final items = <String, ReportedItem>{};
+    for (final report in reports) {
+      final key =
+          report.commentId == null
+              ? report.postId
+              : '${report.postId}/${report.commentId}';
+      items
+          .putIfAbsent(
+            key,
+            () => ReportedItem(
+              postId: report.postId,
+              commentId: report.commentId,
+              title: report.postTitle,
+              firstReportedAt: report.createdAt,
+            ),
+          )
+          .reasons
+          .add(report.reason);
+    }
+    return items.values.toList()
+      ..sort((a, b) => a.firstReportedAt.compareTo(b.firstReportedAt));
+  }
+
   const ModeratorScreen({super.key});
 
   /// This week's prompt from content/small_wins.json (changes weekly).
@@ -64,14 +90,18 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
     );
   }
 
-  Future<void> _decide(_ReportedPost item, {required bool remove}) async {
+  Future<void> _decide(ReportedItem item, {required bool remove}) async {
+    final what = item.isReply ? 'reply' : 'post';
     if (remove) {
       final confirmed = await showConfirmDialog(
         context,
-        title: 'Remove this post?',
+        title: 'Remove this $what?',
         message:
-            '“${item.title}” will be removed for everyone. The people '
-            'who reported it will see that it was removed.',
+            item.isReply
+                ? 'The reply will be removed for everyone. The people who '
+                    'reported it will see that it was removed.'
+                : '“${item.title}” will be removed for everyone. The people '
+                    'who reported it will see that it was removed.',
         confirmLabel: 'Remove',
         destructive: true,
       );
@@ -79,13 +109,25 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    setState(() => _busy.add(item.postId));
+    setState(() => _busy.add(item.key));
     try {
-      await _repo.resolvePostReports(postId: item.postId, removePost: remove);
+      if (item.isReply) {
+        await _repo.resolveCommentReports(
+          postId: item.postId,
+          commentId: item.commentId!,
+          removeReply: remove,
+        );
+      } else {
+        await _repo.resolvePostReports(postId: item.postId, removePost: remove);
+      }
       AppHaptics.medium();
       messenger.showSnackBar(
         SnackBar(
-          content: Text(remove ? 'Post removed.' : 'Post kept and visible.'),
+          content: Text(
+            remove
+                ? '${item.isReply ? 'Reply' : 'Post'} removed.'
+                : '${item.isReply ? 'Reply' : 'Post'} kept and visible.',
+          ),
         ),
       );
     } catch (_) {
@@ -95,28 +137,8 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _busy.remove(item.postId));
+      if (mounted) setState(() => _busy.remove(item.key));
     }
-  }
-
-  /// One entry per post, oldest report first, so nothing waits too long.
-  List<_ReportedPost> _group(List<Report> reports) {
-    final byPost = <String, _ReportedPost>{};
-    for (final report in reports) {
-      byPost
-          .putIfAbsent(
-            report.postId,
-            () => _ReportedPost(
-              postId: report.postId,
-              title: report.postTitle,
-              firstReportedAt: report.createdAt,
-            ),
-          )
-          .reasons
-          .add(report.reason);
-    }
-    return byPost.values.toList()
-      ..sort((a, b) => a.firstReportedAt.compareTo(b.firstReportedAt));
   }
 
   Future<void> _startSmallWins() async {
@@ -182,7 +204,7 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final items = _group(snapshot.data!);
+              final items = ModeratorScreen.group(snapshot.data!);
               if (items.isEmpty) {
                 return const EmptyState(
                   title: 'All clear',
@@ -196,9 +218,10 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
                 separatorBuilder: (context, index) => const Divider(),
                 itemBuilder: (context, index) {
                   final item = items[index];
-                  return _ReportedPostRow(
+                  return _ReportedRow(
                     item: item,
-                    busy: _busy.contains(item.postId),
+                    repo: _repo,
+                    busy: _busy.contains(item.key),
                     onRead: () => _openPost(item.postId),
                     onKeep: () => _decide(item, remove: false),
                     onRemove: () => _decide(item, remove: true),
@@ -213,29 +236,39 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
   }
 }
 
-class _ReportedPost {
-  _ReportedPost({
+/// One thing in the queue: a post, or a reply in a post.
+class ReportedItem {
+  ReportedItem({
     required this.postId,
     required this.title,
     required this.firstReportedAt,
+    this.commentId,
   });
 
   final String postId;
+  final String? commentId;
   final String title;
   final DateTime firstReportedAt;
   final List<String> reasons = [];
+
+  bool get isReply => commentId != null;
+
+  /// Posts and each of their replies are separate items.
+  String get key => commentId == null ? postId : '$postId/$commentId';
 }
 
-class _ReportedPostRow extends StatelessWidget {
-  const _ReportedPostRow({
+class _ReportedRow extends StatelessWidget {
+  const _ReportedRow({
     required this.item,
+    required this.repo,
     required this.busy,
     required this.onRead,
     required this.onKeep,
     required this.onRemove,
   });
 
-  final _ReportedPost item;
+  final ReportedItem item;
+  final PostRepository repo;
   final bool busy;
   final VoidCallback onRead;
   final VoidCallback onKeep;
@@ -274,9 +307,27 @@ class _ReportedPostRow extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            item.title.isEmpty ? 'Untitled post' : item.title,
+            item.isReply
+                ? 'Reply in “${item.title.isEmpty ? 'Untitled post' : item.title}”'
+                : (item.title.isEmpty ? 'Untitled post' : item.title),
             style: theme.textTheme.titleMedium,
           ),
+          // A reply: show what it says, so the decision is informed.
+          if (item.isReply)
+            FutureBuilder(
+              future: repo.commentFor(item.postId, item.commentId!),
+              builder:
+                  (context, snapshot) => Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Text(
+                      snapshot.data?.content ??
+                          (snapshot.hasError
+                              ? 'Could not load the reply.'
+                              : 'Loading the reply…'),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+            ),
           const SizedBox(height: AppSpacing.xs),
           Text(reasonText, style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.sm),
@@ -287,13 +338,13 @@ class _ReportedPostRow extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: busy ? null : onRead,
-                child: const Text('Read post'),
+                child: Text(item.isReply ? 'Read discussion' : 'Read post'),
               ),
               PressScale(
                 enabled: !busy,
                 child: OutlinedButton(
                   onPressed: busy ? null : onKeep,
-                  child: const Text('Keep post'),
+                  child: Text(item.isReply ? 'Keep reply' : 'Keep post'),
                 ),
               ),
               PressScale(
@@ -304,7 +355,7 @@ class _ReportedPostRow extends StatelessWidget {
                     backgroundColor: palette.danger,
                     foregroundColor: palette.surface,
                   ),
-                  child: const Text('Remove post'),
+                  child: Text(item.isReply ? 'Remove reply' : 'Remove post'),
                 ),
               ),
               if (busy)

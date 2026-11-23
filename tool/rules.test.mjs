@@ -1467,3 +1467,125 @@ describe('reports: members only, real posts, once each', () => {
     await assertFails(report(as('nur'), 'nur', 'p1'));
   });
 });
+
+// ───────────────────────── Reporting replies ─────────────────────────
+
+/** What PostRepository.reportComment writes, in one batch. */
+function replyReportBatch(db, uid, { postId = 'p1', commentId = 'c1', flagCount = 1, status = 'visible' } = {}) {
+  const hashed = createHash('sha256').update(`looma-report:${uid}`).digest('hex');
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'reports', `${postId}_${commentId}_${hashed}`), {
+    postId,
+    commentId,
+    postTitle: 'Scholarship tips?',
+    reason: 'Harassment or hate',
+    reporterId: hashed,
+    createdAt: serverTimestamp(),
+    status: 'open',
+  });
+  batch.update(doc(db, 'posts', postId, 'comments', commentId), { flagCount, status });
+  return batch.commit();
+}
+
+describe('reporting replies', () => {
+  beforeEach(async () => {
+    for (const uid of ['amira', 'siti', 'nur', 'aisyah', 'farah']) await makeMember(uid);
+    await makeModerator('mod');
+    await makeMember('mod');
+    await seedPost('p1');
+    await seedReply('p1', 'c1');
+  });
+
+  test('a member reports a reply: +1 flag', async () => {
+    await assertSucceeds(replyReportBatch(as('nur'), 'nur'));
+  });
+
+  test('once per person per reply', async () => {
+    await assertSucceeds(replyReportBatch(as('nur'), 'nur'));
+    await assertFails(replyReportBatch(as('nur'), 'nur', { flagCount: 2 }));
+  });
+
+  test('the third report hides the reply', async () => {
+    await assertSucceeds(replyReportBatch(as('nur'), 'nur', { flagCount: 1 }));
+    await assertSucceeds(replyReportBatch(as('aisyah'), 'aisyah', { flagCount: 2 }));
+    // Third report: must hide it.
+    await assertFails(replyReportBatch(as('farah'), 'farah', { flagCount: 3, status: 'visible' }));
+    await assertSucceeds(replyReportBatch(as('farah'), 'farah', { flagCount: 3, status: 'hidden' }));
+    // Now members cannot read it; the post author and moderators can.
+    await assertFails(getDoc(doc(as('nur'), 'posts', 'p1', 'comments', 'c1')));
+    await assertSucceeds(getDoc(doc(as('amira'), 'posts', 'p1', 'comments', 'c1')));
+    await assertSucceeds(getDoc(doc(as('mod'), 'posts', 'p1', 'comments', 'c1')));
+  });
+
+  test('no flag without a report, and no other changes', async () => {
+    const db = as('nur');
+    await assertFails(
+      updateDoc(doc(db, 'posts', 'p1', 'comments', 'c1'), { flagCount: 1, status: 'visible' }),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'posts', 'p1', 'comments', 'c1'), { content: 'changed' }),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'posts', 'p1', 'comments', 'c1'), { status: 'removed' }),
+    );
+  });
+
+  test('non-members cannot report a reply', async () => {
+    await assertFails(replyReportBatch(as('stranger'), 'stranger'));
+  });
+
+  test('a reply that does not exist cannot be reported', async () => {
+    const hashed = createHash('sha256').update('looma-report:nur').digest('hex');
+    await assertFails(
+      setDoc(doc(as('nur'), 'reports', `p1_ghost_${hashed}`), {
+        postId: 'p1',
+        commentId: 'ghost',
+        postTitle: 'x',
+        reason: 'Spam or advertising',
+        reporterId: hashed,
+        createdAt: serverTimestamp(),
+        status: 'open',
+      }),
+    );
+  });
+
+  test('the report id must match the reply and her hash', async () => {
+    const hashed = createHash('sha256').update('looma-report:nur').digest('hex');
+    await assertFails(
+      setDoc(doc(as('nur'), 'reports', `p1_${hashed}`), {
+        postId: 'p1',
+        commentId: 'c1',
+        postTitle: 'x',
+        reason: 'Spam or advertising',
+        reporterId: hashed,
+        createdAt: serverTimestamp(),
+        status: 'open',
+      }),
+    );
+  });
+
+  test('a moderator removes or keeps a reply; members cannot', async () => {
+    await assertSucceeds(
+      updateDoc(doc(as('mod'), 'posts', 'p1', 'comments', 'c1'), { status: 'removed' }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(as('mod'), 'posts', 'p1', 'comments', 'c1'), { status: 'visible', flagCount: 0 }),
+    );
+    await assertFails(
+      updateDoc(doc(as('mod'), 'posts', 'p1', 'comments', 'c1'), { content: 'edited' }),
+    );
+    await assertFails(
+      updateDoc(doc(as('amira'), 'posts', 'p1', 'comments', 'c1'), { status: 'removed' }),
+    );
+  });
+
+  test('the moderator queue can read reply reports; reporters only their own', async () => {
+    await assertSucceeds(replyReportBatch(as('nur'), 'nur'));
+    await assertSucceeds(
+      getDocs(query(collection(as('mod'), 'reports'), where('status', '==', 'open'))),
+    );
+    const hashed = createHash('sha256').update('looma-report:nur').digest('hex');
+    await assertSucceeds(getDoc(doc(as('nur'), 'reports', `p1_c1_${hashed}`)));
+    await assertFails(getDoc(doc(as('siti'), 'reports', `p1_c1_${hashed}`)));
+  });
+});
