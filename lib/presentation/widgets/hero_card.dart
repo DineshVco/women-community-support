@@ -39,13 +39,14 @@ class HeroVeil {
   HeroVeil._();
 
   /// Text stays inside this share of the card's width.
-  static const double textWidth = 0.6;
+  /// Wide enough that a greeting or title fits on one or two lines.
+  static const double textWidth = 0.72;
 
-  static const List<double> stops = [0, 0.5, textWidth, 0.85, 1];
-  static const List<double> lightAlphas = [0.94, 0.88, 0.80, 0.30, 0];
+  static const List<double> stops = [0, 0.6, textWidth, 0.9, 1];
+  static const List<double> lightAlphas = [0.94, 0.88, 0.82, 0.30, 0];
 
   /// Dark mode is darker all over, so the painting does not glare.
-  static const List<double> darkAlphas = [0.92, 0.86, 0.80, 0.45, 0.25];
+  static const List<double> darkAlphas = [0.92, 0.86, 0.82, 0.45, 0.25];
 
   /// A soft blush wash in the top left corner (light mode).
   static const double blushWash = 0.18;
@@ -221,7 +222,10 @@ class HeroCard extends StatelessWidget {
       container: true,
       button: onTap != null,
       hint: onTap == null ? null : actionLabel,
-      child: onTap == null ? card : PressScale(child: card),
+      child:
+          onTap == null
+              ? card
+              : PressScale(scale: PressScale.card, child: card),
     );
   }
 }

@@ -33,17 +33,17 @@ class CommentTile extends StatelessWidget {
       children: [
         Row(
           children: [
-            Flexible(
-              child: Text(
-                comment.alias,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelLarge,
+            // The team is named once, by its black badge.
+            if (LoomaTeam.isTeam(comment.alias))
+              const TeamBadge()
+            else
+              Flexible(
+                child: Text(
+                  comment.alias,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge,
+                ),
               ),
-            ),
-            if (LoomaTeam.isTeam(comment.alias)) ...[
-              const SizedBox(width: AppSpacing.sm),
-              const TeamBadge(),
-            ],
             if (isAuthor) ...[
               const SizedBox(width: AppSpacing.sm),
               // Small black tag for the person who started the discussion.

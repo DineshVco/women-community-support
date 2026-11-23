@@ -44,7 +44,8 @@ class TeamBadge extends StatelessWidget {
   }
 }
 
-/// The alias, the team badge (team only), then e.g. " · 2h", on one line.
+/// The alias (for the team: just the black badge), then e.g. " · 2h",
+/// on one line.
 class AliasLine extends StatelessWidget {
   const AliasLine({
     super.key,
@@ -67,17 +68,23 @@ class AliasLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final team = LoomaTeam.isTeam(alias);
+    // The team is named once, by the black badge (not "Looma Team" twice).
+    final showText = !team || text != alias;
     return Row(
       children: [
-        Flexible(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
+        if (showText)
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
           ),
-        ),
-        if (team) ...[const SizedBox(width: 6), const TeamBadge()],
+        if (team) ...[
+          if (showText) const SizedBox(width: 6),
+          const TeamBadge(),
+        ],
         Flexible(
           child: Text(
             trailing,

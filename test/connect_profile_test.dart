@@ -342,8 +342,8 @@ void main() {
       );
 
       await tester.pumpWidget(_app(PostCard(post: post)));
-      expect(find.text('4 me too'), findsOneWidget);
-      expect(find.text('3 replies'), findsOneWidget);
+      expect(find.bySemanticsLabel('4 me too'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 replies'), findsOneWidget);
 
       await tester.pumpWidget(
         _app(
@@ -353,8 +353,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text('4 me too'), findsNothing);
-      expect(find.text('3 replies'), findsNothing);
+      expect(find.bySemanticsLabel('4 me too'), findsNothing);
+      expect(find.bySemanticsLabel('3 replies'), findsNothing);
       expect(find.text('Scholarship tips?'), findsOneWidget);
     });
   });

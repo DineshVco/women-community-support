@@ -88,6 +88,33 @@ class AppPalette {
   /// Every category label uses the accent.
   Color categoryColor(String categoryId) => accent;
 
+  bool get _isDark => background.computeLuminance() < 0.2;
+
+  /// The soft fill of a category pill: Health sage, Education sand,
+  /// Career blush, Safety lavender (deep tints in dark mode). The pill's
+  /// text is [text], which passes AA on all of them.
+  Color categoryFill(String categoryId) => switch (categoryId) {
+    'health_wellness' =>
+      _isDark ? const Color(0xFF26302A) : const Color(0xFFE3ECE2),
+    'education' => _isDark ? const Color(0xFF332C20) : const Color(0xFFF3E8D3),
+    'career_development' =>
+      _isDark ? const Color(0xFF3A2624) : const Color(0xFFF8E1DD),
+    'personal_safety' =>
+      _isDark ? const Color(0xFF2C2838) : const Color(0xFFE9E4F2),
+    _ => softFill,
+  };
+
+  /// Soft circles behind line-art avatars and tool icons.
+  List<Color> get softTints => [
+    for (final id in const [
+      'health_wellness',
+      'education',
+      'career_development',
+      'personal_safety',
+    ])
+      categoryFill(id),
+  ];
+
   static const AppPalette light = AppPalette(
     background: Color(0xFFFBF7F3), // warm off-white
     surface: Color(0xFFFFFFFF),

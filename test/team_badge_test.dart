@@ -41,7 +41,7 @@ void main() {
     expect(LoomaTeam.isTeam('looma team'), isFalse);
   });
 
-  testWidgets('feed: badge next to "Looma Team", none for members', (
+  testWidgets('feed: "Looma Team" once, as the badge; none for members', (
     tester,
   ) async {
     // A 390-point phone: the badge must fit beside the counts.
@@ -51,7 +51,7 @@ void main() {
 
     await tester.pumpWidget(_app(PostCard(post: _post('Looma Team'))));
     expect(_badge, findsOneWidget);
-    expect(find.text('Looma Team'), findsNWidgets(2)); // alias + badge
+    expect(find.text('Looma Team'), findsOneWidget); // the badge only
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(_app(PostCard(post: _post('Quiet Fox'))));
@@ -65,6 +65,7 @@ void main() {
       _app(CommentTile(comment: _reply('Looma Team'), isAuthor: true)),
     );
     expect(_badge, findsOneWidget);
+    expect(find.text('Looma Team'), findsOneWidget); // named once
     expect(find.text('Original poster'), findsOneWidget);
 
     await tester.pumpWidget(

@@ -11,6 +11,9 @@ import 'package:women_community_support/data/models/community.dart';
 import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/screens/home_screen.dart';
+import 'package:women_community_support/presentation/widgets/hero_card.dart';
+import 'package:women_community_support/presentation/widgets/looma_card.dart';
+import 'package:women_community_support/presentation/widgets/team_badge.dart';
 
 // The bug: "after scrolling up and down a few times, the feed gets stuck".
 // Cause: the long-press menu on each post (CupertinoContextMenu) floated a
@@ -160,5 +163,34 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('Save'), findsNothing);
+  });
+
+  testWidgets('at the end of the feed, "Write a post" covers no card', (
+    tester,
+  ) async {
+    await _pumpHome(tester);
+    // Scroll all the way down.
+    for (var i = 0; i < 20; i++) {
+      await tester.fling(_feed, const Offset(0, -2000), 5000);
+      await tester.pumpAndSettle();
+    }
+    final pill = tester.getRect(find.byType(WritePill));
+    final cards = find.byType(LoomaCard);
+    final lastBottom = cards
+        .evaluate()
+        .map((e) => tester.getRect(find.byWidget(e.widget)).bottom)
+        .reduce((a, b) => a > b ? a : b);
+    expect(lastBottom, lessThanOrEqualTo(pill.top));
+  });
+
+  testWidgets('the starter line sits inside the hero card', (tester) async {
+    await _pumpHome(tester);
+    expect(
+      find.descendant(
+        of: find.byType(HeroCard),
+        matching: find.text(LoomaTeam.starterLine),
+      ),
+      findsOneWidget,
+    );
   });
 }

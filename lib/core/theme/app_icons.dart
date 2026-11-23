@@ -84,5 +84,17 @@ class AppIcons {
   static const reduceMotion = PhosphorIconsRegular.spiral;
   static const weather = PhosphorIconsRegular.cloudSun;
   static const heart = PhosphorIconsRegular.heart;
+
+  // Line-art avatars (picked from the alias)
+  static const avatarFlower = PhosphorIconsRegular.flower;
+  static const avatarLeaf = PhosphorIconsRegular.leaf;
+  static const avatarMoon = PhosphorIconsRegular.moonStars;
+  static const avatarSun = PhosphorIconsRegular.sun;
+  static const avatarBird = PhosphorIconsRegular.bird;
+  static const avatarButterfly = PhosphorIconsRegular.butterfly;
+  static const avatarCat = PhosphorIconsRegular.cat;
+  static const avatarFeather = PhosphorIconsRegular.feather;
+  static const avatarTulip = PhosphorIconsRegular.flowerTulip;
+  static const avatarLotus = PhosphorIconsRegular.flowerLotus;
   static const heartFilled = PhosphorIconsFill.heart;
 }

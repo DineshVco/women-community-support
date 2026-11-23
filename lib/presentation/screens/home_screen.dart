@@ -22,7 +22,9 @@ import '../widgets/feed_greeting.dart';
 import '../widgets/floating_illustration.dart';
 import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
+import '../widgets/looma_card.dart';
 import '../widgets/post_card.dart';
+import '../widgets/press_scale.dart';
 import '../widgets/heart_burst.dart';
 import '../widgets/posted_confirmation.dart';
 import '../widgets/question_of_the_day.dart';
@@ -201,26 +203,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final fabDuration = AppMotion.of(context, AppMotion.medium);
-
     final palette = context.palette;
-    final fab = FloatingActionButton.extended(
+    final fab = WritePill(
+      extended: _fabExtended,
       onPressed: () {
         AppHaptics.light();
         _openCompose();
       },
-      tooltip: 'Write a post',
-      extendedPadding: EdgeInsets.symmetric(horizontal: _fabExtended ? 20 : 16),
-      extendedIconLabelSpacing: _fabExtended ? 8 : 0,
-      icon: const Icon(AppIcons.add),
-      // The label folds away while scrolling down and returns on the way up.
-      label: AnimatedSize(
-        duration: fabDuration,
-        curve: AppMotion.spring,
-        alignment: Alignment.centerLeft,
-        child:
-            _fabExtended ? const Text('Write a post') : const SizedBox.shrink(),
-      ),
     );
 
     return StreamBuilder<List<Post>>(
@@ -301,12 +290,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                const Divider(),
+                const SizedBox(height: AppSpacing.sm),
                 for (final child in _buildBody(context, snapshot, theme))
                   wide(child),
-                // Room for the "Write a post" button.
-                const SizedBox(height: 72),
+                // Room for the "Write a post" pill, so it never covers the
+                // last card.
+                const SizedBox(height: WritePill.room),
               ]),
             ),
           ],
@@ -385,19 +374,85 @@ class _HomeScreenState extends State<HomeScreen> {
           key: ValueKey(post.id),
           animate: isNew,
           delay: delay,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              PostContextMenu(
-                post: post,
-                child: PostCard(post: post, onTap: () => _openPost(post)),
-              ),
-              const Divider(),
-            ],
+          child: PostContextMenu(
+            post: post,
+            child: PostCard(post: post, onTap: () => _openPost(post)),
           ),
         ),
       );
     }
     return rows;
+  }
+}
+
+/// "Write a post": a small black pill (44 px high) that folds to just the
+/// pencil while scrolling down and opens again on the way up.
+class WritePill extends StatelessWidget {
+  const WritePill({super.key, required this.extended, required this.onPressed});
+
+  final bool extended;
+  final VoidCallback onPressed;
+
+  static const double height = 44;
+
+  /// Space kept under the last card: the pill, its 16 px margin and a gap.
+  static const double room = height + 16 + 16;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Semantics(
+      button: true,
+      label: 'Write a post',
+      excludeSemantics: true,
+      child: PressScale(
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            shape: const StadiumBorder(),
+            shadows: LoomaCard.shadowFor(Theme.of(context).brightness),
+          ),
+          child: Material(
+            color: palette.primary,
+            shape: const StadiumBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onPressed,
+              child: SizedBox(
+                height: height,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: extended ? 16 : 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(AppIcons.write, size: 20, color: palette.onPrimary),
+                      // The label folds away while scrolling down.
+                      AnimatedSize(
+                        duration: AppMotion.of(context, AppMotion.medium),
+                        curve: AppMotion.spring,
+                        alignment: Alignment.centerLeft,
+                        child:
+                            extended
+                                ? Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Text(
+                                    'Write a post',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: palette.onPrimary,
+                                    ),
+                                  ),
+                                )
+                                : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

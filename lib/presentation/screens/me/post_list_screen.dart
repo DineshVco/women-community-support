@@ -113,10 +113,9 @@ class _PostListScreenState extends State<PostListScreen> {
                         ),
                       ),
                     ),
-                  for (final post in snapshot.data!) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  for (final post in snapshot.data!)
                     PostCard(post: post, onTap: () => _open(post)),
-                    const Divider(height: 1),
-                  ],
                 ];
               }
               // iOS pull-to-refresh spinner.

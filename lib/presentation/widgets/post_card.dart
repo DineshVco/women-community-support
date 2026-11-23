@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/time_format.dart';
 import '../../data/models/post.dart';
 import '../providers/app_settings.dart';
+import 'alias_avatar.dart';
 import 'category_label.dart';
+import 'looma_card.dart';
 import 'poll_view.dart';
 import 'post_title_hero.dart';
 import 'team_badge.dart';
 
-/// One row in the feed. Plain: no card, no shadow, separated by 1 px lines.
-///  CATEGORY
+/// One post in the feed, as a card (12 px apart):
+///  [Health]
 ///  Title (Newsreader 22)
-///  Two lines of preview in grey
-///  Quiet Fox · 2 h ago                    4 me too   3 replies
-/// Gentle mode hides the two numbers.
+///  Two lines of preview
+///  (avatar) Quiet Fox · 2h               heart 4   bubble 3
+/// The team is shown once, as its black badge. Gentle mode hides the
+/// numbers. Polls can be answered right on the card.
 class PostCard extends StatelessWidget {
   const PostCard({super.key, required this.post, this.onTap});
 
@@ -28,28 +32,21 @@ class PostCard extends StatelessWidget {
     final palette = context.palette;
     final small = theme.textTheme.bodySmall;
     final gentle = AppSettings.gentleOf(context);
-    final team = LoomaTeam.isTeam(post.alias);
-    final aliasLine = AliasLine(
-      alias: post.alias,
-      text: post.alias,
-      trailing: ' · ${timeAgo(post.timestamp)}',
-      style: small,
-    );
     final replies =
         '${post.commentCount} ${post.commentCount == 1 ? 'reply' : 'replies'}';
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.screenHorizontal,
-          vertical: AppSpacing.lg + 2,
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenHorizontal,
+        vertical: LoomaCard.gap / 2,
+      ),
+      child: LoomaCard(
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CategoryLabel(categoryId: post.categoryId),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             PostTitleHero(
               postId: post.id,
               title: post.title,
@@ -73,24 +70,67 @@ class PostCard extends StatelessWidget {
               LivePoll(post: post),
             ],
             const SizedBox(height: AppSpacing.md),
-            // Team posts: the alias and badge get their own line, so the
-            // badge has room next to the counts on a small phone.
-            if (team && !gentle) ...[aliasLine, const SizedBox(height: 4)],
             Row(
               children: [
+                AliasAvatar(alias: post.alias),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: team && !gentle ? const SizedBox.shrink() : aliasLine,
+                  child: AliasLine(
+                    alias: post.alias,
+                    text: post.alias,
+                    trailing:
+                        LoomaTeam.isTeam(post.alias)
+                            ? '  ${timeAgo(post.timestamp)}'
+                            : ' · ${timeAgo(post.timestamp)}',
+                    style: small,
+                  ),
                 ),
                 if (!gentle) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Text('${post.meTooCount} me too', style: small),
+                  _Count(
+                    icon: AppIcons.meToo,
+                    count: post.meTooCount,
+                    label: '${post.meTooCount} me too',
+                  ),
                   const SizedBox(width: AppSpacing.md),
-                  Text(replies, style: small),
+                  _Count(
+                    icon: AppIcons.reply,
+                    count: post.commentCount,
+                    label: replies,
+                  ),
                 ],
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// An icon with a number, read out as e.g. "4 me too".
+class _Count extends StatelessWidget {
+  const _Count({required this.icon, required this.count, required this.label});
+
+  final IconData icon;
+  final int count;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: palette.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            '$count',
+            style: TextStyle(fontSize: 13, color: palette.textSecondary),
+          ),
+        ],
       ),
     );
   }

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/daily_questions.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
-import '../../core/theme/app_spacing.dart';
-import '../../data/help_lines.dart';
 import '../../core/theme/app_icons.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
+import '../../data/help_lines.dart';
+import 'looma_card.dart';
 
-/// A soft card with today's gentle question (content/daily_questions.json,
-/// one per day). "Share your answer" opens the compose screen with the
+/// One compact card with today's gentle question (content/daily_questions
+/// .json, one per day). Tapping it opens the compose screen with the
 /// question as the title, so answers are anonymous like any post.
 class QuestionOfTheDay extends StatelessWidget {
   const QuestionOfTheDay({super.key, required this.onAnswer});
@@ -30,51 +31,43 @@ class QuestionOfTheDay extends StatelessWidget {
   }
 
   Widget _card(BuildContext context, String question) {
-    final theme = Theme.of(context);
     final palette = context.palette;
+    final small = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: palette.textSecondary,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenHorizontal,
-        AppSpacing.lg,
+        LoomaCard.gap,
         AppSpacing.screenHorizontal,
         0,
       ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: palette.primarySoft,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
+      child: LoomaCard(
+        onTap: () => onAnswer(question),
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Expanded(child: Text('Question of the day', style: small)),
+                Text(
+                  'Share your answer',
+                  style: small.copyWith(color: palette.text),
+                ),
+                const SizedBox(width: 2),
+                Icon(AppIcons.chevronRight, size: 14, color: palette.text),
+              ],
+            ),
+            const SizedBox(height: 6),
             Text(
-              'QUESTION OF THE DAY',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: palette.primary,
-                letterSpacing: 0.8,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: Text(question, style: theme.textTheme.titleMedium),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => onAnswer(question),
-                iconAlignment: IconAlignment.end,
-                icon: const Icon(AppIcons.arrowRight, size: 18),
-                label: const Text('Share your answer'),
-              ),
+              question,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.heading(19, palette.text, height: 1.25),
             ),
           ],
         ),

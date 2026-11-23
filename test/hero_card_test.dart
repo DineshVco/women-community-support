@@ -159,7 +159,10 @@ void main() {
 
     final card = tester.getRect(find.byType(HeroCard));
     final text = tester.getRect(find.text('You are not alone here.'));
-    expect(text.right, lessThanOrEqualTo(card.left + card.width * 0.6 + 1));
+    expect(
+      text.right,
+      lessThanOrEqualTo(card.left + card.width * HeroVeil.textWidth + 1),
+    );
     expect(find.text('Write a post'), findsOneWidget);
 
     await tester.tap(find.byType(HeroCard));
