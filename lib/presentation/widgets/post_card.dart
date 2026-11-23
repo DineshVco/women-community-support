@@ -11,6 +11,7 @@ import 'category_label.dart';
 import 'looma_card.dart';
 import 'poll_view.dart';
 import 'post_title_hero.dart';
+import 'tap_zone.dart';
 import 'team_badge.dart';
 
 /// One post in the feed, as a card (12 px apart):
@@ -68,38 +69,45 @@ class PostCard extends StatelessWidget {
             // Polls can be answered right here in the feed.
             if (post.isPoll && post.isVisible) ...[
               const SizedBox(height: AppSpacing.md),
-              LivePoll(post: post),
+              // Kept clear of floating buttons (see TapZone).
+              TapZone(
+                key: ValueKey('poll-answers-${post.id}'),
+                child: LivePoll(post: post),
+              ),
             ],
             const SizedBox(height: 10),
-            Row(
-              children: [
-                AliasAvatar(alias: post.alias),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: AliasLine(
-                    alias: post.alias,
-                    text: post.alias,
-                    trailing:
-                        LoomaTeam.isTeam(post.alias)
-                            ? '  ${timeAgo(post.timestamp)}'
-                            : ' · ${timeAgo(post.timestamp)}',
-                    style: small,
+            TapZone(
+              key: ValueKey('post-counts-${post.id}'),
+              child: Row(
+                children: [
+                  AliasAvatar(alias: post.alias),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AliasLine(
+                      alias: post.alias,
+                      text: post.alias,
+                      trailing:
+                          LoomaTeam.isTeam(post.alias)
+                              ? '  ${timeAgo(post.timestamp)}'
+                              : ' · ${timeAgo(post.timestamp)}',
+                      style: small,
+                    ),
                   ),
-                ),
-                if (!gentle) ...[
-                  _Count(
-                    icon: AppIcons.meToo,
-                    count: post.meTooCount,
-                    label: '${post.meTooCount} me too',
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  _Count(
-                    icon: AppIcons.reply,
-                    count: post.commentCount,
-                    label: replies,
-                  ),
+                  if (!gentle) ...[
+                    _Count(
+                      icon: AppIcons.meToo,
+                      count: post.meTooCount,
+                      label: '${post.meTooCount} me too',
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    _Count(
+                      icon: AppIcons.reply,
+                      count: post.commentCount,
+                      label: replies,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
