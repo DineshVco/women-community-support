@@ -127,18 +127,21 @@ class CareScreen extends StatelessWidget {
                   children: [
                     GroupedRow(
                       icon: AppIcons.breathe,
+                      tint: palette.categoryFill('health_wellness'),
                       title: 'Breathe',
                       subtitle: 'Slow breathing with the cat, 1 to 5 minutes',
                       onTap: () => _push(context, const BreatheScreen()),
                     ),
                     GroupedRow(
                       icon: AppIcons.ground,
+                      tint: palette.categoryFill('education'),
                       title: 'Ground yourself',
                       subtitle: '5-4-3-2-1: come back to right now',
                       onTap: () => _push(context, const GroundScreen()),
                     ),
                     GroupedRow(
                       icon: AppIcons.mood,
+                      tint: palette.categoryFill('career_development'),
                       title: 'How are you feeling',
                       subtitle:
                           private ? 'A private check-in' : EncryptedBox.webNote,
@@ -147,6 +150,7 @@ class CareScreen extends StatelessWidget {
                     ),
                     GroupedRow(
                       icon: AppIcons.book,
+                      tint: palette.categoryFill('personal_safety'),
                       title: 'My journal',
                       subtitle:
                           private
@@ -157,6 +161,7 @@ class CareScreen extends StatelessWidget {
                     ),
                     GroupedRow(
                       icon: AppIcons.safety,
+                      tint: palette.categoryFill('health_wellness'),
                       title: 'Safety plan',
                       subtitle:
                           private
@@ -183,18 +188,21 @@ class CareScreen extends StatelessWidget {
                   children: [
                     GroupedRow(
                       icon: AppIcons.guides,
+                      tint: palette.categoryFill('education'),
                       title: 'Guides library',
                       subtitle: 'Short, kind guides you can read offline',
                       onTap: () => _push(context, const GuidesScreen()),
                     ),
                     GroupedRow(
                       icon: AppIcons.directory,
+                      tint: palette.categoryFill('personal_safety'),
                       title: 'Directory',
                       subtitle: 'Organisations and help lines',
                       onTap: () => _push(context, const DirectoryScreen()),
                     ),
                     GroupedRow(
                       icon: AppIcons.askTeam,
+                      tint: palette.categoryFill('career_development'),
                       title: 'Ask Looma Team',
                       subtitle:
                           'A question for the team, answered as Looma Team',
