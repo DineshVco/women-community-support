@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
+import '../../core/theme/app_icons.dart';
 import 'fade_slide_in.dart';
 import 'floating_illustration.dart';
 import 'hero_card.dart';
@@ -40,11 +41,21 @@ class FeedGreeting extends StatelessWidget {
           HeroCard(
             scene: HeroScene.forTime(time),
             minHeight: heroHeight,
+            tinted: true,
             children: [
               // Handwritten (Caveat): one of only two places it is used.
-              Text(
-                greetingFor(time),
-                style: AppTypography.script(32, palette.text),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      greetingFor(time),
+                      style: AppTypography.script(28, palette.text),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(AppIcons.heart, size: 18, color: palette.text),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
@@ -55,8 +66,8 @@ class FeedGreeting extends StatelessWidget {
               ),
             ],
           ),
-          // Peeks in at the right edge, over the painting a little.
-          const Positioned(right: -10, bottom: -8, child: PeekingCat()),
+          // Sits in the bottom right corner, over the painting a little.
+          const Positioned(right: 10, bottom: 10, child: PeekingCat()),
         ],
       ),
     );

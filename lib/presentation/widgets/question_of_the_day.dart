@@ -48,26 +48,53 @@ class QuestionOfTheDay extends StatelessWidget {
       child: LoomaCard(
         onTap: () => onAnswer(question),
         padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(child: Text('Question of the day', style: small)),
-                Text(
-                  'Share your answer',
-                  style: small.copyWith(color: palette.text),
-                ),
-                const SizedBox(width: 2),
-                Icon(AppIcons.chevronRight, size: 14, color: palette.text),
-              ],
+            Container(
+              width: 34,
+              height: 34,
+              margin: const EdgeInsets.only(top: 2, right: 10),
+              decoration: BoxDecoration(
+                color: palette.tabPill,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(AppIcons.sparkle, size: 18, color: palette.text),
             ),
-            const SizedBox(height: 4),
-            Text(
-              question,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.heading(17, palette.text, height: 1.25),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('Question of the day', style: small),
+                      ),
+                      Text(
+                        'Share your answer',
+                        style: small.copyWith(color: palette.text),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        AppIcons.chevronRight,
+                        size: 14,
+                        color: palette.text,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    question,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.heading(
+                      17,
+                      palette.text,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

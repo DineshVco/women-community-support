@@ -293,9 +293,12 @@ void main() {
       await _pumpHome(tester);
       final hero = tester.getRect(find.byType(HeroCard));
       final cat = tester.getRect(find.byType(PeekingCat));
-      // Over the painting a little, and a little outside it.
-      expect(cat.left, lessThan(hero.right));
-      expect(cat.right, greaterThan(hero.right));
+      // In the bottom right corner of the hero, over the painting.
+      expect(
+        hero.contains(cat.topLeft) && hero.contains(cat.bottomRight),
+        isTrue,
+      );
+      expect(cat.center.dx, greaterThan(hero.center.dx));
       expect(cat.center.dy, greaterThan(hero.center.dy));
       // Decorative: screen readers skip it.
       expect(

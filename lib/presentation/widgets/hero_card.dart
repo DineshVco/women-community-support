@@ -63,8 +63,26 @@ class HeroVeil {
       brightness == Brightness.dark ? darkAlphas : lightAlphas;
 
   /// The veil's strength at [x] (0 = left edge, 1 = right edge).
-  static double alphaAt(Brightness brightness, double x) {
-    final alphas = alphasFor(brightness);
+  static double alphaAt(Brightness brightness, double x) =>
+      _at(alphasFor(brightness), x);
+
+  // Discuss (mockup): a blush gradient veil, #FAE7E0 on the left to
+  // #F2CDC4 on the right, strong behind the text, and lighter on the right
+  // so the painting shows faintly through the tint.
+  static const List<double> tintLightAlphas = [0.95, 0.9, 0.85, 0.62, 0.5];
+  static const List<double> tintDarkAlphas = [0.92, 0.88, 0.85, 0.6, 0.5];
+
+  static List<double> tintAlphasFor(Brightness brightness) =>
+      brightness == Brightness.dark ? tintDarkAlphas : tintLightAlphas;
+
+  static double tintAlphaAt(Brightness brightness, double x) =>
+      _at(tintAlphasFor(brightness), x);
+
+  /// The tint's colour at [x], between the two gradient colours.
+  static Color tintColorAt(List<Color> gradient, double x) =>
+      Color.lerp(gradient.first, gradient.last, x)!;
+
+  static double _at(List<double> alphas, double x) {
     for (var i = 1; i < stops.length; i++) {
       if (x <= stops[i]) {
         final t = (x - stops[i - 1]) / (stops[i] - stops[i - 1]);
@@ -87,6 +105,7 @@ class HeroCard extends StatelessWidget {
     this.onTap,
     this.minHeight = 176,
     this.paintingScale = 1,
+    this.tinted = false,
   });
 
   final HeroScene scene;
@@ -96,6 +115,9 @@ class HeroCard extends StatelessWidget {
 
   /// Enlarges the painting from its right side (Care's flower vase).
   final double paintingScale;
+
+  /// Discuss: the blush gradient veil from the mockup.
+  final bool tinted;
 
   /// The text, top to bottom, on the left of the card.
   final List<Widget> children;
@@ -178,7 +200,17 @@ class HeroCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     stops: HeroVeil.stops,
-                    colors: [for (final a in alphas) veil.withValues(alpha: a)],
+                    colors: [
+                      for (var i = 0; i < HeroVeil.stops.length; i++)
+                        tinted
+                            ? HeroVeil.tintColorAt(
+                              palette.discussHeroGradient,
+                              HeroVeil.stops[i],
+                            ).withValues(
+                              alpha: HeroVeil.tintAlphasFor(brightness)[i],
+                            )
+                            : veil.withValues(alpha: alphas[i]),
+                    ],
                   ),
                 ),
               ),

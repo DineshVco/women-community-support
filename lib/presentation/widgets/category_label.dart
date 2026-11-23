@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_icons.dart';
 import '../../data/models/category.dart';
 
 /// The category as a small pill in its soft colour: Health sage,
@@ -21,14 +22,23 @@ class CategoryLabel extends StatelessWidget {
         color: palette.categoryFill(categoryId),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        name,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          height: 1.2,
-          color: palette.text,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(AppIcons.category(categoryId), size: 13, color: palette.text),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              name,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.2,
+                color: palette.text,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -135,6 +135,36 @@ void main() {
       });
     }
 
+    for (final (name, brightness, p) in [
+      ('light', Brightness.light, AppPalette.light),
+      ('dark', Brightness.dark, AppPalette.dark),
+    ]) {
+      test('$name: the Discuss blush tint keeps the text AA', () {
+        for (final pixel in const [Color(0xFF000000), Color(0xFFFFFFFF)]) {
+          for (var x = 0.0; x <= HeroVeil.textWidth + 1e-9; x += 0.05) {
+            var c = Color.alphaBlend(
+              HeroVeil.tintColorAt(
+                p.discussHeroGradient,
+                x,
+              ).withValues(alpha: HeroVeil.tintAlphaAt(brightness, x)),
+              pixel,
+            );
+            if (brightness == Brightness.light) {
+              c = Color.alphaBlend(
+                p.blush.withValues(alpha: HeroVeil.blushWash),
+                c,
+              );
+            }
+            expect(
+              _contrast(p.text, c),
+              greaterThanOrEqualTo(4.5),
+              reason: 'x=$x over $pixel',
+            );
+          }
+        }
+      });
+    }
+
     test('the painting shows: the veil is strong only behind the text', () {
       expect(HeroVeil.textWidth, closeTo(0.55, 0.01));
       // Light: almost clear from three quarters across.
