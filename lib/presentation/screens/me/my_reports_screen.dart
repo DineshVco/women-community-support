@@ -9,6 +9,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/skeleton.dart';
 
 /// Reports she made, and what happened to each.
 class MyReportsScreen extends StatefulWidget {
@@ -39,7 +40,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                 );
               }
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const SingleChildScrollView(
+                  child: SkeletonPostList(label: 'Loading your reports'),
+                );
               }
               final reports = snapshot.data!;
               if (reports.isEmpty) {

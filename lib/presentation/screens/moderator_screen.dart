@@ -14,6 +14,7 @@ import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/ios.dart';
+import '../widgets/skeleton.dart';
 import 'post_detail_screen.dart';
 
 /// Open reports, grouped by post. A moderator reads the post, then keeps it
@@ -201,7 +202,9 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
                 );
               }
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const SingleChildScrollView(
+                  child: SkeletonPostList(label: 'Loading reports'),
+                );
               }
 
               final items = ModeratorScreen.group(snapshot.data!);

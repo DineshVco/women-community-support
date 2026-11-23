@@ -24,6 +24,7 @@ import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/living_cat.dart';
 import '../widgets/looma_card.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/post_card.dart';
 import '../widgets/tap_zone.dart';
 import '../widgets/team_badge.dart';
@@ -428,12 +429,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (!snapshot.hasData) {
-      return const [
-        Padding(
-          padding: EdgeInsets.all(AppSpacing.xxl),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ];
+      // Cards in the shape of real posts while the feed loads.
+      return const [SkeletonPostList(label: 'Loading discussions')];
     }
 
     final allPosts = snapshot.data!;

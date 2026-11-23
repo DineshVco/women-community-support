@@ -27,6 +27,7 @@ import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/team_badge.dart';
 import '../widgets/ios.dart';
+import '../widgets/skeleton.dart';
 import '../../core/theme/app_icons.dart';
 
 /// One discussion: the post, "Me too", replies (one level deep) and the
@@ -246,10 +247,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             actionLabel: 'Go back',
             onAction: () => Navigator.of(context).pop(),
           );
-        } else if (_deleting ||
-            (post == null &&
-                snapshot.connectionState == ConnectionState.waiting)) {
+        } else if (_deleting) {
           body = const Center(child: CircularProgressIndicator());
+        } else if (post == null &&
+            snapshot.connectionState == ConnectionState.waiting) {
+          // The post in the shape of a card, then two replies.
+          body = const SingleChildScrollView(
+            child: SkeletonShimmer(
+              label: 'Loading discussion',
+              child: Column(
+                children: [
+                  SizedBox(height: AppSpacing.sm),
+                  SkeletonPostCard(),
+                  SkeletonReply(),
+                  SkeletonReply(),
+                ],
+              ),
+            ),
+          );
         } else if (post == null) {
           body = const EmptyState(
             title: 'This discussion is gone',
@@ -587,9 +602,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!snapshot.hasData) {
       return [
         heading,
-        const Padding(
-          padding: EdgeInsets.all(AppSpacing.xl),
-          child: Center(child: CircularProgressIndicator()),
+        const SkeletonShimmer(
+          label: 'Loading replies',
+          child: Column(children: [SkeletonReply(), SkeletonReply()]),
         ),
       ];
     }

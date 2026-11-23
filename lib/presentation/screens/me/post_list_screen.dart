@@ -10,6 +10,7 @@ import '../../widgets/floating_illustration.dart';
 import '../../widgets/post_card.dart';
 import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/skeleton.dart';
 
 /// A simple list of posts for "My posts" and "Saved posts" (Me tab).
 /// Only she can see these lists.
@@ -82,12 +83,7 @@ class _PostListScreenState extends State<PostListScreen> {
                   ),
                 ];
               } else if (!snapshot.hasData) {
-                children = const [
-                  Padding(
-                    padding: EdgeInsets.all(AppSpacing.xxl),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ];
+                children = const [SkeletonPostList()];
               } else if (snapshot.data!.isEmpty) {
                 children = [
                   EmptyState(
