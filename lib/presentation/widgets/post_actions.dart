@@ -1,9 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../core/utils/haptics.dart';
 import '../../data/models/post.dart';
 import '../../data/models/report.dart';
@@ -96,61 +95,58 @@ class PostActions {
   }
 }
 
-/// Long-press a post in the feed: an iOS context menu with Save, Share and
+enum _PostAction { save, share, report }
+
+/// Long-press a post in the feed: an iOS action sheet with Save, Share and
 /// Report. A normal tap still opens the post.
+///
+/// Not a CupertinoContextMenu on purpose: that widget floats a copy of the
+/// post over the whole app while the finger rests on it, and if the post
+/// is scrolled out of the list before the copy shrinks back, Flutter never
+/// removes the copy. Each leftover copy is invisible glass that swallows
+/// touches, so after a few quick scrolls the feed could not be scrolled any
+/// more. A plain long press draws nothing over the app, and it gives way to
+/// scrolling as soon as the finger moves.
 class PostContextMenu extends StatelessWidget {
   const PostContextMenu({super.key, required this.post, required this.child});
 
   final Post post;
   final Widget child;
 
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return CupertinoContextMenu.builder(
-      enableHapticFeedback: true,
-      actions: [
-        CupertinoContextMenuAction(
-          trailingIcon: CupertinoIcons.bookmark,
-          onPressed: () {
-            Navigator.of(context, rootNavigator: true).pop();
-            PostActions.toggleSaved(context, post);
-          },
-          child: const Text('Save'),
-        ),
-        CupertinoContextMenuAction(
-          trailingIcon: CupertinoIcons.square_on_square,
-          onPressed: () {
-            Navigator.of(context, rootNavigator: true).pop();
-            PostActions.share(context, post);
-          },
-          child: const Text('Share'),
-        ),
-        CupertinoContextMenuAction(
-          isDestructiveAction: true,
-          trailingIcon: CupertinoIcons.flag,
-          onPressed: () {
-            Navigator.of(context, rootNavigator: true).pop();
-            PostActions.report(context, post);
-          },
-          child: const Text('Report'),
+  Future<void> _open(BuildContext context) async {
+    AppHaptics.medium();
+    final action = await showOptionsSheet<_PostAction>(
+      context,
+      title: post.title,
+      options: const [
+        SheetOption(value: _PostAction.save, label: 'Save'),
+        SheetOption(value: _PostAction.share, label: 'Share'),
+        SheetOption(
+          value: _PostAction.report,
+          label: 'Report',
+          isDestructive: true,
         ),
       ],
-      builder: (context, animation) {
-        // While held, the post lifts onto a rounded card.
-        final t = CupertinoContextMenu.animationOpensAt;
-        final lifted = (animation.value / t).clamp(0.0, 1.0);
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color.lerp(palette.background, palette.surface, lifted),
-            borderRadius: BorderRadius.circular(20 * lifted),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20 * lifted),
-            child: Material(type: MaterialType.transparency, child: child),
-          ),
-        );
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _PostAction.save:
+        await PostActions.toggleSaved(context, post);
+      case _PostAction.share:
+        await PostActions.share(context, post);
+      case _PostAction.report:
+        await PostActions.report(context, post);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      customSemanticsActions: {
+        const CustomSemanticsAction(label: 'Save, share or report'):
+            () => _open(context),
       },
+      child: GestureDetector(onLongPress: () => _open(context), child: child),
     );
   }
 }

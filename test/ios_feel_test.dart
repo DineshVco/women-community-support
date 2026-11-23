@@ -293,8 +293,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
-    final report = tester.widget<CupertinoContextMenuAction>(
-      find.widgetWithText(CupertinoContextMenuAction, 'Report'),
+    final report = tester.widget<CupertinoActionSheetAction>(
+      find.widgetWithText(CupertinoActionSheetAction, 'Report'),
     );
     expect(report.isDestructiveAction, isTrue);
   });
