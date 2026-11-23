@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds need these to reach Firebase, the help line
+         directory links and the weather disguise. (Debug and profile
+         builds add INTERNET on their own; release builds do not.) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:label="Looma"
         android:allowBackup="false"
