@@ -11,6 +11,7 @@ import '../../widgets/cat_avatar.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/fade_slide_in.dart';
 
 /// What the editor hands back when she taps Save.
 class ChatProfileDraft {
@@ -230,8 +231,7 @@ class _ChatProfileEditorState extends State<ChatProfileEditor> {
               ),
               const SizedBox(height: AppSpacing.xl),
 
-              AnimatedSize(
-                duration: AppMotion.of(context, AppMotion.medium),
+              GentleSize(
                 curve: AppMotion.spring,
                 child:
                     _saveError == null

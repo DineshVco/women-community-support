@@ -146,3 +146,32 @@ mixin EntranceOnce<T extends StatefulWidget> on State<T> {
 
   Entrance get entrance => Entrance(enabled: !_entered);
 }
+
+/// AnimatedSize that respects Reduce motion: the size just changes. (An
+/// AnimatedSize with a zero duration trips a Flutter layout assertion, so
+/// it is left out entirely.)
+class GentleSize extends StatelessWidget {
+  const GentleSize({
+    super.key,
+    required this.child,
+    this.duration = AppMotion.medium,
+    this.curve = AppMotion.enter,
+    this.alignment = Alignment.center,
+  });
+
+  final Widget child;
+  final Duration duration;
+  final Curve curve;
+  final AlignmentGeometry alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    if (AppMotion.reduced(context)) return child;
+    return AnimatedSize(
+      duration: duration,
+      curve: curve,
+      alignment: alignment,
+      child: child,
+    );
+  }
+}

@@ -67,6 +67,18 @@ void main() {
     }
   });
 
+  test('size animations go through GentleSize (safe with Reduce motion)', () {
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      if (file.path.endsWith('fade_slide_in.dart')) continue; // defines it
+      expect(
+        file.readAsStringSync().contains('AnimatedSize('),
+        isFalse,
+        reason: file.path,
+      );
+    }
+  });
+
   group('grey text passes AA (4.5:1)', () {
     for (final (name, p) in [
       ('light', AppPalette.light),

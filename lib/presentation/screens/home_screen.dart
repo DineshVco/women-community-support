@@ -426,8 +426,7 @@ class WritePill extends StatelessWidget {
                     children: [
                       Icon(AppIcons.write, size: 20, color: palette.onPrimary),
                       // The label folds away while scrolling down.
-                      AnimatedSize(
-                        duration: AppMotion.of(context, AppMotion.medium),
+                      GentleSize(
                         curve: AppMotion.spring,
                         alignment: Alignment.centerLeft,
                         child:

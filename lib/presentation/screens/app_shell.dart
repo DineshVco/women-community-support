@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +15,7 @@ import 'care/care_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import '../../core/theme/app_icons.dart';
+import '../widgets/fade_slide_in.dart';
 
 /// The signed-in app: Discuss, Care and Me under an iOS-style tab bar that
 /// is translucent and blurred (content scrolls under it). Connect joins
@@ -22,44 +23,35 @@ import '../../core/theme/app_icons.dart';
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
-  /// The tab bar: translucent and blurred (content scrolls under it), the
-  /// active tab with a filled icon on a soft blush pill.
-  /// The Me tab shows her chat avatar ([meAvatarId]); the cat when she
-  /// has not chosen one yet.
-  static CupertinoTabBar tabBar(
+  /// The tab bar: translucent and blurred (content scrolls under it). The
+  /// active tab shows its filled icon and its name in a soft blush pill;
+  /// the others show only the icon. The Me tab shows her chat avatar
+  /// ([meAvatarId]), or the cat when she has not chosen one.
+  static Widget tabBar(
     BuildContext context, {
     required int index,
     required ValueChanged<int> onTap,
     String? meAvatarId,
   }) {
-    final palette = context.palette;
-    BottomNavigationBarItem item(
-      IconData icon,
-      IconData active,
-      String label,
-    ) => BottomNavigationBarItem(
-      icon: TabIcon(icon: icon, active: false),
-      activeIcon: TabIcon(icon: active, active: true),
-      label: label,
-    );
-    return CupertinoTabBar(
-      currentIndex: index,
-      // See-through colour: CupertinoTabBar blurs what is behind it.
-      backgroundColor: barColor(context),
-      activeColor: palette.text,
-      inactiveColor: palette.textSecondary,
-      border: hairline(context, top: true),
-      iconSize: 24,
-      height: 56,
+    return LoomaTabBar(
+      index: index,
       onTap: onTap,
-      items: [
-        item(AppIcons.discuss, AppIcons.discussActive, 'Discuss'),
-        item(AppIcons.care, AppIcons.careActive, 'Care'),
-        // Last tab, label "Me", with her avatar.
-        BottomNavigationBarItem(
+      tabs: [
+        const TabSpec(
+          label: 'Discuss',
+          icon: Icon(AppIcons.discuss),
+          activeIcon: Icon(AppIcons.discussActive),
+        ),
+        const TabSpec(
+          label: 'Care',
+          icon: Icon(AppIcons.care),
+          activeIcon: Icon(AppIcons.careActive),
+        ),
+        // Last tab, "Me", with her avatar (never a label when inactive).
+        TabSpec(
+          label: 'Me',
           icon: MeTabIcon(avatarId: meAvatarId, active: false),
           activeIcon: MeTabIcon(avatarId: meAvatarId, active: true),
-          label: 'Me',
         ),
       ],
     );
@@ -136,30 +128,156 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// A tab icon. The active one sits on a soft blush pill (it fades in, or
-/// just appears with Reduce motion).
-class TabIcon extends StatelessWidget {
-  const TabIcon({super.key, required this.icon, required this.active});
+/// One tab: its name (always read out) and its icons.
+class TabSpec {
+  const TabSpec({
+    required this.label,
+    required this.icon,
+    required this.activeIcon,
+  });
 
-  final IconData icon;
+  final String label;
+  final Widget icon;
+  final Widget activeIcon;
+}
+
+/// Looma's tab bar: see-through and blurred, a hairline on top, one row of
+/// tabs. Each tab is a full-height tap area (56 px). Screen readers hear
+/// every tab's name, selected or not.
+class LoomaTabBar extends StatelessWidget {
+  const LoomaTabBar({
+    super.key,
+    required this.index,
+    required this.onTap,
+    required this.tabs,
+  });
+
+  final int index;
+  final ValueChanged<int> onTap;
+  final List<TabSpec> tabs;
+
+  static const double height = 56;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: barColor(context),
+            border: hairline(context, top: true),
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottom),
+            child: SizedBox(
+              height: height,
+              child: Row(
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    Expanded(
+                      child: _TabItem(
+                        spec: tabs[i],
+                        active: i == index,
+                        index: i,
+                        count: tabs.length,
+                        onTap: () => onTap(i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabItem extends StatelessWidget {
+  const _TabItem({
+    required this.spec,
+    required this.active,
+    required this.index,
+    required this.count,
+    required this.onTap,
+  });
+
+  final TabSpec spec;
   final bool active;
+  final int index;
+  final int count;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return AnimatedContainer(
-      duration: AppMotion.of(context, AppMotion.medium),
-      curve: AppMotion.enter,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
-      decoration: BoxDecoration(
-        color:
-            active
-                ? palette.blush.withValues(alpha: dark ? 0.28 : 0.45)
-                : palette.blush.withValues(alpha: 0),
-        borderRadius: BorderRadius.circular(999),
+    final duration = AppMotion.of(context, AppMotion.medium);
+    final color = active ? palette.text : palette.textSecondary;
+
+    return Semantics(
+      container: true,
+      button: true,
+      selected: active,
+      label: spec.label,
+      hint: 'Tab ${index + 1} of $count',
+      excludeSemantics: true,
+      child: InkWell(
+        key: ValueKey('tab-${spec.label}'),
+        onTap: onTap,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: AnimatedContainer(
+              key: ValueKey('tab-pill-${spec.label}'),
+              duration: duration,
+              curve: AppMotion.enter,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color:
+                    active
+                        ? palette.blush.withValues(alpha: dark ? 0.28 : 0.45)
+                        : palette.blush.withValues(alpha: 0),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              // The pill grows smoothly as the name appears (instantly
+              // with Reduce motion).
+              child: GentleSize(
+                duration: duration,
+                alignment: Alignment.centerLeft,
+                child: IconTheme.merge(
+                  data: IconThemeData(size: 24, color: color),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      active ? spec.activeIcon : spec.icon,
+                      if (active) ...[
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              spec.label,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: palette.text,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      child: Icon(icon),
     );
   }
 }
