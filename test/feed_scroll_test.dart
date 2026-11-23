@@ -11,8 +11,10 @@ import 'package:women_community_support/data/models/community.dart';
 import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/screens/home_screen.dart';
+import 'package:women_community_support/presentation/widgets/fade_slide_in.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
 import 'package:women_community_support/presentation/widgets/looma_card.dart';
+import 'package:women_community_support/presentation/widgets/post_card.dart';
 import 'package:women_community_support/presentation/widgets/team_badge.dart';
 
 // The bug: "after scrolling up and down a few times, the feed gets stuck".
@@ -192,5 +194,58 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('cards fade up with a short stagger; Reduce motion: none', (
+    tester,
+  ) async {
+    Future<List<double>> opacities(bool reduce) async {
+      // A tall screen, so several cards are on it at once.
+      tester.view.physicalSize = const Size(1170, 6000);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        Provider<PostRepository>.value(
+          value: _FakeRepo(),
+          child: MaterialApp(
+            theme: AppTheme.light,
+            builder:
+                (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(disableAnimations: reduce),
+                  child: child!,
+                ),
+            home: const HomeScreen(),
+          ),
+        ),
+      );
+      // Wait for the first frame with posts, then 60 ms into the entrance.
+      for (var i = 0; i < 20 && find.byType(PostCard).evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      for (var t = 0; t < 60; t += 15) {
+        await tester.pump(const Duration(milliseconds: 15));
+      }
+      return tester
+          .widgetList<FadeTransition>(
+            // Each card's own entrance (FadeSlideIn wraps one card).
+            find.descendant(
+              of: find.byType(FadeSlideIn),
+              matching: find.byType(FadeTransition),
+            ),
+          )
+          .map((f) => f.opacity.value)
+          .toList();
+    }
+
+    final moving = await opacities(false);
+    // Mid-entrance: the first card is further along than a later one.
+    expect(moving.first, greaterThan(moving.last));
+    expect(moving.last, lessThan(1));
+
+    await tester.pumpWidget(const SizedBox());
+    final still = await opacities(true);
+    expect(still, everyElement(1.0));
   });
 }
