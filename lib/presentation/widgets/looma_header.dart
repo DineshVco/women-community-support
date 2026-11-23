@@ -39,6 +39,10 @@ class LoomaHeader extends StatelessWidget {
   /// The row is never shorter than a comfortable tap target.
   static const double minRow = 48;
 
+  /// The rounded line under the title: 24 x 3 px, 4 px below it.
+  static const Size accentSize = Size(24, 3);
+  static const double accentSpace = 4 + 3;
+
   static double _lineHeight(TextScaler scaler, double size) =>
       scaler.scale(size) * 1.15;
 
@@ -47,7 +51,11 @@ class LoomaHeader extends StatelessWidget {
     final media = MediaQuery.of(context);
     final scaler = media.textScaler;
     final top = media.padding.top;
-    final largeRow = _lineHeight(scaler, largeSize).clamp(minRow, 400.0);
+    // The title line plus its small underline accent.
+    final largeRow = (_lineHeight(scaler, largeSize) + accentSpace).clamp(
+      minRow,
+      400.0,
+    );
     final smallRow = _lineHeight(scaler, smallSize).clamp(minRow, largeRow);
     return SliverPersistentHeader(
       pinned: true,
@@ -164,15 +172,32 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              style: AppTypography.heading(
-                                size,
-                                palette.text,
-                                height: 1.1,
-                                letterSpacing: -0.5 * (1 - t),
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  style: AppTypography.heading(
+                                    size,
+                                    palette.text,
+                                    height: 1.1,
+                                    letterSpacing: -0.5 * (1 - t),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // The small blush accent under the title.
+                                Container(
+                                  key: const ValueKey('title-accent'),
+                                  width: LoomaHeader.accentSize.width,
+                                  height: LoomaHeader.accentSize.height,
+                                  decoration: BoxDecoration(
+                                    color: palette.titleAccent,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

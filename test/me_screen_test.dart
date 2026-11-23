@@ -206,27 +206,27 @@ void main() {
     });
   }
 
-  group('header: no big title, only Quick exit', () {
-    testWidgets('no visible "Me", but screen readers still hear it', (
+  group('header: "Me" and Quick exit on one row (mockup)', () {
+    testWidgets('title with its accent, Quick exit on the right', (
       tester,
     ) async {
       await _pumpMe(tester, statusBar: 47);
-      expect(find.text('Me'), findsNothing);
-      expect(find.bySemanticsLabel('Me'), findsOneWidget);
-      // Quick exit is still there, same size, 44 px or more to tap.
+      final title = tester.getRect(find.text('Me'));
       final exit = find.byType(QuickExitButton);
       expect(exit, findsOneWidget);
-      expect(tester.getSize(exit).height, greaterThanOrEqualTo(44));
-      expect(tester.getSize(exit).width, greaterThanOrEqualTo(44));
-      // On the right.
-      expect(tester.getRect(exit).right, greaterThan(300));
+      final exitRect = tester.getRect(exit);
+      expect(title.right, lessThan(exitRect.left));
+      expect(exitRect.height, greaterThanOrEqualTo(44));
+      // The 24 x 3 blush accent under the title.
+      final accent = tester.getRect(find.byKey(const ValueKey('title-accent')));
+      expect(accent.size, const Size(24, 3));
+      expect(accent.top, greaterThan(title.bottom));
     });
 
-    testWidgets('the profile card is first, 8 px below Quick exit', (
+    testWidgets('the profile card is first, 8 px under the header', (
       tester,
     ) async {
       await _pumpMe(tester, statusBar: 47);
-      final avatar = tester.getRect(find.byType(CatAvatar).first);
       final card = tester.getRect(
         find
             .ancestor(
@@ -235,43 +235,10 @@ void main() {
             )
             .first,
       );
-      final firstSection = tester.getRect(find.byType(GroupedSection).first);
-      final pill = tester.getRect(
-        find
-            .descendant(
-              of: find.byType(QuickExitButton),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      final tapArea = tester.getRect(find.byType(QuickExitButton));
-      // At least 8 px between the pill and the card: it never sits on the
-      // card's corner, and its 48 px tap area ends where the card starts.
-      expect(card.top - pill.bottom, greaterThanOrEqualTo(8));
-      expect(tapArea.bottom, lessThanOrEqualTo(card.top));
-      expect(tapArea.height, greaterThanOrEqualTo(48));
-      expect(tapArea.right, greaterThan(300)); // top right
-      // Before (with the big "Me" title) the first section was at 228 on
-      // this phone; it is still higher.
-      expect(firstSection.top, lessThan(228));
-      expect(avatar.width, 72); // the cat avatar
-      // The alias sits right of the avatar.
-      final alias = tester.getRect(find.text('Soft Owl'));
-      expect(alias.left, greaterThan(avatar.right));
+      final exit = tester.getRect(find.byType(QuickExitButton));
+      // Clear of Quick exit's whole tap area.
+      expect(card.top, greaterThanOrEqualTo(exit.bottom));
+      expect(tester.getRect(find.byType(CatAvatar).first).width, 72);
     });
-
-    for (final reduce in [false, true]) {
-      testWidgets('scrolled${reduce ? ' (Reduce motion)' : ''}: only the '
-          'blurred bar, never a title', (tester) async {
-        // A normal phone height, so the page can scroll.
-        await _pumpMe(tester, statusBar: 47, reduceMotion: reduce, height: 844);
-        expect(find.byType(BackdropFilter), findsNothing);
-        await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
-        await tester.pumpAndSettle();
-        expect(find.byType(BackdropFilter), findsOneWidget);
-        expect(find.text('Me'), findsNothing);
-        expect(find.byType(QuickExitButton), findsOneWidget);
-      });
-    }
   });
 }

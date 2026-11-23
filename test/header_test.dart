@@ -77,7 +77,11 @@ void main() {
     final exit = tester.getRect(_quickExit);
     expect(find.text('Quick exit'), findsOneWidget);
     expect(title.right, lessThan(exit.left)); // title left, button right
-    expect((title.center.dy - exit.center.dy).abs(), lessThan(2));
+    // The title and its small accent are centred together with Quick exit.
+    expect(
+      (title.center.dy - exit.center.dy).abs(),
+      lessThan(LoomaHeader.accentSpace / 2 + 2),
+    );
     // 4 px under the status bar.
     expect(title.top, lessThan(47 + LoomaHeader.topGap + 8));
   });

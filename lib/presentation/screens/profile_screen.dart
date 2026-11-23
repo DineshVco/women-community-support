@@ -168,10 +168,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             chatSnapshot.connectionState == ConnectionState.active;
 
         return LargeTitleScaffold(
-          // No big "Me": the profile card is the first thing on the page.
-          // Screen readers still hear "Me".
+          // Title and Quick exit on one row, like Discuss and Care.
           title: 'Me',
-          showTitle: false,
           trailing: const QuickExitButton(),
           slivers: [
             SliverToBoxAdapter(
