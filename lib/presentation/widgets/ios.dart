@@ -71,10 +71,13 @@ class LargeTitleScaffold extends StatelessWidget {
         if (showTitle)
           LoomaHeader(title: title, leading: leading, trailing: trailing)
         else
-          // The page starts under the status bar; Quick exit floats above.
+          // The page starts 8 px below the Quick exit pill (where its
+          // 48 px tap area ends), so the pill never sits on the first card.
           SliverToBoxAdapter(
             child: SizedBox(
-              height: MediaQuery.paddingOf(context).top + LoomaHeader.topGap,
+              height:
+                  MediaQuery.paddingOf(context).top +
+                  FloatingQuickBar.heightBelowStatusBar(),
             ),
           ),
         if (onRefresh != null)

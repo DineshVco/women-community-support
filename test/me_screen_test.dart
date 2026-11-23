@@ -16,6 +16,7 @@ import 'package:women_community_support/presentation/screens/me/privacy_centre_s
 import 'package:women_community_support/presentation/screens/profile_screen.dart';
 import 'package:women_community_support/presentation/widgets/cat_avatar.dart';
 import 'package:women_community_support/presentation/widgets/ios.dart';
+import 'package:women_community_support/presentation/widgets/looma_card.dart';
 import 'package:women_community_support/presentation/widgets/quick_exit_button.dart';
 
 class _NoDb implements FirebaseFirestore {
@@ -221,19 +222,20 @@ void main() {
       expect(tester.getRect(exit).right, greaterThan(300));
     });
 
-    testWidgets('the profile card is first and the list starts higher', (
+    testWidgets('the profile card is first, 8 px below Quick exit', (
       tester,
     ) async {
       await _pumpMe(tester, statusBar: 47);
-      final card = tester.getRect(find.byType(CatAvatar).first);
+      final avatar = tester.getRect(find.byType(CatAvatar).first);
+      final card = tester.getRect(
+        find
+            .ancestor(
+              of: find.byType(CatAvatar).first,
+              matching: find.byType(LoomaCard),
+            )
+            .first,
+      );
       final firstSection = tester.getRect(find.byType(GroupedSection).first);
-      // Before (with the big "Me" title): avatar at 123, first section at
-      // 228 on this phone.
-      expect(card.top, lessThan(123 - 30));
-      expect(firstSection.top, lessThan(228 - 30));
-      expect(card.width, 72); // the cat avatar
-      // The alias sits right of the avatar and below the Quick exit pill.
-      final alias = tester.getRect(find.text('Soft Owl'));
       final pill = tester.getRect(
         find
             .descendant(
@@ -242,8 +244,20 @@ void main() {
             )
             .first,
       );
-      expect(alias.left, greaterThan(card.right));
-      expect(alias.top, greaterThanOrEqualTo(pill.bottom));
+      final tapArea = tester.getRect(find.byType(QuickExitButton));
+      // At least 8 px between the pill and the card: it never sits on the
+      // card's corner, and its 48 px tap area ends where the card starts.
+      expect(card.top - pill.bottom, greaterThanOrEqualTo(8));
+      expect(tapArea.bottom, lessThanOrEqualTo(card.top));
+      expect(tapArea.height, greaterThanOrEqualTo(48));
+      expect(tapArea.right, greaterThan(300)); // top right
+      // Before (with the big "Me" title) the first section was at 228 on
+      // this phone; it is still higher.
+      expect(firstSection.top, lessThan(228));
+      expect(avatar.width, 72); // the cat avatar
+      // The alias sits right of the avatar.
+      final alias = tester.getRect(find.text('Soft Owl'));
+      expect(alias.left, greaterThan(avatar.right));
     });
 
     for (final reduce in [false, true]) {
