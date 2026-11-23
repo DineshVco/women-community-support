@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:women_community_support/core/theme/app_colors.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
+import 'package:women_community_support/presentation/widgets/card_picture.dart';
+import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/data/models/chat_profile.dart';
 import 'package:women_community_support/data/models/user_profile.dart';
 import 'package:women_community_support/data/repositories/chat_repository.dart';
@@ -76,7 +78,12 @@ Future<void> _pumpMe(
         Provider<PostRepository>.value(value: _Posts()),
         Provider<ChatRepository>.value(
           value: _Chat(
-            const ChatProfile(alias: 'Soft Owl', avatarId: 'cat_05'),
+            const ChatProfile(
+              alias: 'Soft Owl',
+              avatarId: 'cat_05',
+              interests: ['health', 'money', 'friendship'],
+              lookingFor: ['talk', 'study_buddy'],
+            ),
           ),
         ),
         ChangeNotifierProvider<AppSettings>.value(value: settings),
@@ -114,7 +121,7 @@ void main() {
     tester,
   ) async {
     await _pumpMe(tester);
-    for (final header in ['YOUR SPACE', 'PRIVACY AND SAFETY', 'ACCOUNT']) {
+    for (final header in ['YOUR SPACE', 'PRIVACY & SAFETY', 'ACCOUNT']) {
       expect(find.text(header), findsOneWidget);
     }
     expect(find.text('Soft Owl'), findsOneWidget);
@@ -138,7 +145,7 @@ void main() {
       'App lock',
       'Quick exit disguise',
     ]) {
-      expect(_sectionOf(tester, row), 'Privacy and safety', reason: row);
+      expect(_sectionOf(tester, row), 'Privacy & safety', reason: row);
     }
     for (final row in ['Sign out', ProfileScreen.deleteLabel]) {
       expect(_sectionOf(tester, row), 'Account', reason: row);
@@ -239,6 +246,115 @@ void main() {
       // Clear of Quick exit's whole tap area.
       expect(card.top, greaterThanOrEqualTo(exit.bottom));
       expect(tester.getRect(find.byType(CatAvatar).first).width, 72);
+    });
+  });
+
+  group('mockup details on Me', () {
+    testWidgets('small icons before the section headers', (tester) async {
+      await _pumpMe(tester);
+      for (final (header, icon) in [
+        ('INTERESTS & LOOKING FOR', AppIcons.sectionInterests),
+        ('YOUR SPACE', AppIcons.sectionSpace),
+        ('PRIVACY & SAFETY', AppIcons.sectionPrivacy),
+      ]) {
+        final row = find.ancestor(
+          of: find.text(header),
+          matching: find.byType(Row),
+        );
+        expect(
+          find.descendant(of: row.first, matching: find.byIcon(icon)),
+          findsOneWidget,
+          reason: header,
+        );
+      }
+    });
+
+    testWidgets('interest chips: an icon inside, the chip colour', (
+      tester,
+    ) async {
+      await _pumpMe(tester);
+      for (final (label, id) in [
+        ('Health', 'health'),
+        ('Money', 'money'),
+        ('Friendship', 'friendship'),
+        ('Someone to talk to', 'talk'),
+        ('Study buddy', 'study_buddy'),
+      ]) {
+        final chip =
+            find
+                .ancestor(
+                  of: find.text(label),
+                  matching: find.byType(Container),
+                )
+                .first;
+        expect(
+          find.descendant(
+            of: chip,
+            matching: find.byIcon(AppIcons.interest(id)),
+          ),
+          findsOneWidget,
+          reason: label,
+        );
+        final fill =
+            (tester.widget<Container>(chip).decoration! as BoxDecoration).color;
+        expect(fill, AppPalette.light.chipFill, reason: label);
+      }
+    });
+
+    testWidgets('profile card: blush to cream, picture on the right', (
+      tester,
+    ) async {
+      await _pumpMe(tester);
+      final card =
+          find
+              .ancestor(
+                of: find.byType(CatAvatar).first,
+                matching: find.byType(LoomaCard),
+              )
+              .first;
+      expect(
+        tester.widget<LoomaCard>(card).gradient,
+        LinearGradient(colors: AppPalette.light.profileGradient),
+      );
+      // The magnolia picture is not in the project yet: a soft gradient
+      // shows in its place.
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('profile-picture')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('card-picture-fallback')),
+        findsOneWidget,
+      );
+      // The alias and "Edit chat profile" stay left of the painting.
+      final cardRect = tester.getRect(card);
+      final pictureStarts =
+          cardRect.right -
+          cardRect.width *
+              ProfileCardLayout.pictureWidth *
+              (1 - CardPicture.clearUntil);
+      for (final text in ['Soft Owl', 'Edit chat profile']) {
+        expect(
+          tester.getRect(find.text(text)).right,
+          lessThanOrEqualTo(pictureStarts + 0.5),
+          reason: text,
+        );
+      }
+      expect(find.byIcon(AppIcons.edit), findsOneWidget); // pencil
+    });
+
+    testWidgets('"Open to chat" is off by default', (tester) async {
+      expect(const ChatProfile(alias: 'A', avatarId: 'cat_01').open, isFalse);
+      await _pumpMe(tester);
+      final toggle = tester.widget<LoomaSwitch>(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('Open to chat'),
+            matching: find.byType(GroupedRow),
+          ),
+          matching: find.byType(LoomaSwitch),
+        ),
+      );
+      expect(toggle.value, isFalse);
     });
   });
 }

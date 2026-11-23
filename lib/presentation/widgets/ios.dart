@@ -306,10 +306,14 @@ class GroupedSection extends StatelessWidget {
     super.key,
     this.header,
     this.footer,
+    this.icon,
     required this.children,
   });
 
   final String? header;
+
+  /// A small icon before the header (Me's sections).
+  final IconData? icon;
   final String? footer;
   final List<Widget> children;
 
@@ -336,12 +340,22 @@ class GroupedSection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
               child: Semantics(
                 header: true,
-                child: Text(
-                  header!.toUpperCase(),
-                  style: small.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.6,
-                  ),
+                child: Row(
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 16, color: palette.textSecondary),
+                      const SizedBox(width: 6),
+                    ],
+                    Flexible(
+                      child: Text(
+                        header!.toUpperCase(),
+                        style: small.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

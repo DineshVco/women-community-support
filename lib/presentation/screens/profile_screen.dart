@@ -15,6 +15,7 @@ import '../../data/repositories/post_repository.dart';
 import '../providers/app_settings.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/adaptive.dart';
+import '../widgets/card_picture.dart';
 import '../widgets/cat_avatar.dart';
 import '../widgets/ios.dart';
 import '../widgets/looma_card.dart';
@@ -194,7 +195,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     // ───────── Interests ─────────
                     GroupedSection(
-                      header: 'Interests and looking for',
+                      header: 'Interests & looking for',
+                      icon: AppIcons.sectionInterests,
                       children: [
                         _InterestsSummary(
                           profile: profile,
@@ -206,6 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // ───────── Your space ─────────
                     GroupedSection(
                       header: 'Your space',
+                      icon: AppIcons.sectionSpace,
                       children: [
                         GroupedRow(
                           icon: AppIcons.myPosts,
@@ -288,7 +291,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       builder: (context, account) {
                         final joinedAt = account.data?.createdAt;
                         return GroupedSection(
-                          header: 'Privacy and safety',
+                          header: 'Privacy & safety',
+                          icon: AppIcons.sectionPrivacy,
                           children: [
                             OpenToChatTile.rowFor(
                               profile: profile,
@@ -393,6 +397,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 // ───────────────────────── Pieces ─────────────────────────
 
+/// How the profile card splits: the picture takes the right 40%; the
+/// alias and "Edit chat profile" keep to the left of it.
+class ProfileCardLayout {
+  ProfileCardLayout._();
+
+  static const double pictureWidth = 0.4;
+
+  /// The text stops where the picture starts to show.
+  static double textRightInset(double cardWidth) =>
+      cardWidth * pictureWidth * (1 - CardPicture.clearUntil);
+}
+
 /// A rounded card on the grouped background (same inset as the lists).
 class _Card extends StatelessWidget {
   const _Card({required this.child});
@@ -401,13 +417,44 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The cat moment at the top of Me: a card with a soft blush wash.
+    // The cat moment at the top of Me: blush to cream, with a magnolia
+    // painting on the right (a soft gradient until the picture is added).
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: LoomaCard(
-        color: context.palette.blushTint,
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: child,
+        gradient: LinearGradient(colors: palette.profileGradient),
+        padding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: ProfileCardLayout.pictureWidth,
+                  heightFactor: 1,
+                  child: CardPicture(
+                    key: const ValueKey('profile-picture'),
+                    asset: CardPictures.magnolia,
+                    fallback: [palette.profileGradient.last, palette.tabPill],
+                  ),
+                ),
+              ),
+            ),
+            LayoutBuilder(
+              builder:
+                  (context, box) => Padding(
+                    // The text keeps to the left, clear of the picture.
+                    padding: EdgeInsets.only(
+                      top: AppSpacing.md,
+                      bottom: AppSpacing.md,
+                      right: ProfileCardLayout.textRightInset(box.maxWidth),
+                    ),
+                    child: child,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -509,15 +556,16 @@ class ChatProfileHeader extends StatelessWidget {
                 if (!loading)
                   Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.xs),
-                    child: TextButton(
+                    child: TextButton.icon(
                       onPressed: onEdit,
+                      icon: const Icon(AppIcons.edit, size: 16),
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(0, 40),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: palette.text,
                       ),
-                      child: Text(
+                      label: Text(
                         p == null ? 'Set up chat profile' : 'Edit chat profile',
                       ),
                     ),
@@ -544,13 +592,25 @@ class _InterestsSummary extends StatelessWidget {
     final ids = [...?p?.interests];
     final looking = [...?p?.lookingFor];
 
-    Widget tag(String text, {bool looking = false}) => Container(
+    Widget tag(String text, IconData icon) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: looking ? palette.blushTint : palette.softFill,
+        color: palette.chipFill,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: TextStyle(fontSize: 14, color: palette.text)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: palette.text),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14, color: palette.text),
+            ),
+          ),
+        ],
+      ),
     );
 
     return Container(
@@ -568,11 +628,14 @@ class _InterestsSummary extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 children: [
                   for (final id in ids)
-                    tag(ConnectOptions.labelFor(ConnectOptions.interests, id)),
+                    tag(
+                      ConnectOptions.labelFor(ConnectOptions.interests, id),
+                      AppIcons.interest(id),
+                    ),
                   for (final id in looking)
                     tag(
                       ConnectOptions.labelFor(ConnectOptions.lookingFor, id),
-                      looking: true,
+                      AppIcons.interest(id),
                     ),
                 ],
               ),

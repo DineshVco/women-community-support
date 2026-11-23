@@ -17,6 +17,7 @@ class LoomaCard extends StatelessWidget {
     this.onTap,
     this.padding = const EdgeInsets.all(AppSpacing.lg),
     this.color,
+    this.gradient,
   });
 
   final Widget child;
@@ -25,6 +26,9 @@ class LoomaCard extends StatelessWidget {
 
   /// Defaults to the surface colour.
   final Color? color;
+
+  /// Paints over [color] (e.g. the profile card's blush to cream).
+  final Gradient? gradient;
 
   /// The gap between cards in a list.
   static const double gap = 12;
@@ -53,6 +57,7 @@ class LoomaCard extends StatelessWidget {
     final card = DecoratedBox(
       decoration: BoxDecoration(
         color: color ?? palette.surface,
+        gradient: gradient,
         borderRadius: radius,
         border: Border.all(color: palette.border),
         boxShadow: shadowFor(Theme.of(context).brightness),

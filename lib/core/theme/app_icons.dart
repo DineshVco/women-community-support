@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show IconData;
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Every icon in Looma, from one rounded set: Phosphor, regular weight.
@@ -84,6 +85,43 @@ class AppIcons {
   static const reduceMotion = PhosphorIconsRegular.spiral;
   static const weather = PhosphorIconsRegular.cloudSun;
   static const heart = PhosphorIconsRegular.heart;
+
+  // Section headers on Me
+  static const sectionInterests = PhosphorIconsRegular.heart;
+  static const sectionSpace = PhosphorIconsRegular.stack;
+  static const sectionPrivacy = PhosphorIconsRegular.lock;
+
+  static const edit = PhosphorIconsRegular.pencilSimple;
+  static const sparkle = PhosphorIconsRegular.sparkle;
+
+  /// Inside interest chips (by option id).
+  static IconData interest(String id) => switch (id) {
+    'health' => PhosphorIconsRegular.heart,
+    'study' => PhosphorIconsRegular.graduationCap,
+    'career' => PhosphorIconsRegular.briefcase,
+    'safety' => PhosphorIconsRegular.shieldCheck,
+    'family' => PhosphorIconsRegular.users,
+    'money' => PhosphorIconsRegular.database,
+    'friendship' => PhosphorIconsRegular.usersThree,
+    'mental_wellbeing' => PhosphorIconsRegular.flowerLotus,
+    'new_in_town' => PhosphorIconsRegular.mapPin,
+    'hobbies' => PhosphorIconsRegular.palette,
+    'talk' => PhosphorIconsRegular.chatCircle,
+    'study_buddy' => PhosphorIconsRegular.bookOpen,
+    'career_advice' => PhosphorIconsRegular.briefcase,
+    'friends' => PhosphorIconsRegular.handHeart,
+    _ => PhosphorIconsRegular.sparkle,
+  };
+
+  /// Inside category pills (by category id).
+  static IconData category(String id) => switch (id) {
+    'health_wellness' => PhosphorIconsRegular.leaf,
+    'education' => PhosphorIconsRegular.graduationCap,
+    'career_development' => PhosphorIconsRegular.briefcase,
+    'personal_safety' => PhosphorIconsRegular.shieldCheck,
+    'ask_looma' => PhosphorIconsRegular.question,
+    _ => PhosphorIconsRegular.chatCircle,
+  };
 
   // Today for you, by time of day
   static const morning = PhosphorIconsRegular.sunHorizon;
