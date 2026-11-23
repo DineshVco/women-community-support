@@ -6,18 +6,22 @@ import 'app_colors.dart';
 /// Two families:
 ///  * headings and the "Looma" wordmark: Newsreader Regular, a bundled serif
 ///    (assets/fonts, see pubspec.yaml).
-///  * everything else: the phone's own font (San Francisco on iPhone,
-///    Roboto on Android), so body text and buttons feel native.
+///  * everything else: Figtree, a warm humanist sans, bundled in
+///    assets/fonts (works offline, never downloaded).
 ///
 /// Sizes follow the Looma spec: screen titles 32–34 (letter spacing -0.5),
-/// body 16 with line height 1.45, small text 12–13, buttons 16 weight 500.
+/// body 16 with line height 1.45, buttons 16 weight 500. Small grey text is
+/// never under 13, so it stays readable.
 class AppTypography {
   AppTypography._();
 
   static const String headingFont = 'Newsreader';
 
-  /// `null` = the platform font. Keep it that way for body text.
-  static const String? bodyFont = null;
+  /// Body text, buttons and labels.
+  static const String bodyFont = 'Figtree';
+
+  /// The smallest size for secondary (grey) text.
+  static const double minSecondarySize = 13;
 
   /// The wordmark sizes: onboarding and the app bar.
   static const double wordmarkLarge = 56;
@@ -98,11 +102,11 @@ class AppTypography {
       ),
       // Category labels and small caps.
       labelSmall: _body(
-        11,
+        13,
         p.textSecondary,
         weight: FontWeight.w600,
         height: 1.2,
-        letterSpacing: 0.8,
+        letterSpacing: 0.6,
       ),
     );
   }

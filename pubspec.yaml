@@ -101,10 +101,21 @@ flutter:
     - assets/google_fonts/Caveat-OFL.txt
     # Newsreader's licence, shown on the app's licences page.
     - assets/fonts/OFL.txt
+    - assets/fonts/Figtree-OFL.txt
 
   # Headings only. Body text uses the phone's own font
   # (San Francisco on iPhone, Roboto on Android).
   fonts:
+    # Body text: Figtree, a humanist sans (bundled, works offline).
+    - family: Figtree
+      fonts:
+        - asset: assets/fonts/Figtree-Regular.ttf
+        - asset: assets/fonts/Figtree-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Figtree-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Figtree-Bold.ttf
+          weight: 700
     - family: Newsreader
       fonts:
         - asset: assets/fonts/Newsreader-Regular.ttf

@@ -95,8 +95,9 @@ class AppPalette {
     border: Color(0xFFE8E2DE),
     borderStrong: Color(0xFF111111),
     text: Color(0xFF111111),
-    textSecondary: Color(0xFF6B6B6B),
-    textMuted: Color(0xFF767676),
+    // Warm greys, at least 5:1 on every light background (AA).
+    textSecondary: Color(0xFF5E5953),
+    textMuted: Color(0xFF66615B),
     primary: Color(0xFF111111),
     onPrimary: Color(0xFFFFFFFF),
     accent: Color(0xFFC8553D),
@@ -113,8 +114,9 @@ class AppPalette {
     border: Color(0xFF3A3835),
     borderStrong: Color(0xFFF5F2EC),
     text: Color(0xFFF5F2EC),
-    textSecondary: Color(0xFF9A9690),
-    textMuted: Color(0xFF8C8882),
+    // At least 5:1 on every dark background (AA).
+    textSecondary: Color(0xFFA8A39C),
+    textMuted: Color(0xFF9E9992),
     primary: Color(0xFFF5F2EC),
     onPrimary: Color(0xFF111111),
     // Lighter shade of the accent so small labels stay readable on black.

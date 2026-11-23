@@ -34,7 +34,7 @@ class TeamBadge extends StatelessWidget {
         'Looma Team',
         semanticsLabel: 'Written by the Looma team',
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: palette.onPrimary,
           letterSpacing: 0.2,

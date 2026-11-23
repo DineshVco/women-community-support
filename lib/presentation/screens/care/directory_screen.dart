@@ -239,7 +239,7 @@ class _EntryCard extends StatelessWidget {
                 ? 'Last checked: not yet confirmed'
                 : 'Last checked: '
                     '${MaterialLocalizations.of(context).formatMediumDate(checked)}',
-            style: TextStyle(fontSize: 12, color: palette.textMuted),
+            style: TextStyle(fontSize: 13, color: palette.textMuted),
           ),
         ],
       ),

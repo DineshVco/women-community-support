@@ -65,9 +65,10 @@ class AppTheme {
         },
       ),
       brightness: brightness,
+      fontFamily: AppTypography.bodyFont,
       colorScheme: scheme,
       // iOS widgets (navigation bars, lists, switches, alerts) in Looma's
-      // colours. Body text uses the phone's own font.
+      // colours, with Figtree for text.
       cupertinoOverrideTheme: CupertinoThemeData(
         brightness: brightness,
         primaryColor: p.primary,
@@ -76,9 +77,18 @@ class AppTheme {
         barBackgroundColor: p.background.withValues(alpha: 0.82),
         textTheme: CupertinoTextThemeData(
           primaryColor: p.primary,
-          textStyle: TextStyle(fontSize: 17, color: p.text),
-          actionTextStyle: TextStyle(fontSize: 17, color: p.primary),
+          textStyle: TextStyle(
+            fontFamily: AppTypography.bodyFont,
+            fontSize: 17,
+            color: p.text,
+          ),
+          actionTextStyle: TextStyle(
+            fontFamily: AppTypography.bodyFont,
+            fontSize: 17,
+            color: p.primary,
+          ),
           navTitleTextStyle: TextStyle(
+            fontFamily: AppTypography.bodyFont,
             fontSize: 17,
             fontWeight: FontWeight.w600,
             color: p.text,
@@ -216,7 +226,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return text.labelMedium!.copyWith(
-            fontSize: 12,
+            fontSize: 13,
             color: selected ? p.text : p.textSecondary,
           );
         }),

@@ -26,7 +26,7 @@ class PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.palette;
-    final small = theme.textTheme.bodySmall?.copyWith(fontSize: 12.5);
+    final small = theme.textTheme.bodySmall;
     final gentle = AppSettings.gentleOf(context);
     final team = LoomaTeam.isTeam(post.alias);
     final aliasLine = AliasLine(

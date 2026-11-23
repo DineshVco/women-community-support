@@ -239,8 +239,8 @@ class _WelcomePage extends StatelessWidget {
               'SUPPORT · SHARE · EMPOWER',
               textAlign: TextAlign.center,
               style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 10.5,
-                letterSpacing: 2.4,
+                fontSize: 13,
+                letterSpacing: 1.8,
                 color: palette.textSecondary,
               ),
             ),
@@ -462,7 +462,7 @@ class _FeatureTile extends StatelessWidget {
             feature.text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 13,
               height: 1.35,
               color: palette.textSecondary,
             ),

@@ -394,7 +394,7 @@ class _MonthView extends StatelessWidget {
                     d,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: palette.textSecondary,
                     ),
                   ),

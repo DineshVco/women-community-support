@@ -357,8 +357,8 @@ class _GuideDetailScreenState extends State<GuideDetailScreen> {
                     '${guide.categoryLabel.toUpperCase()} · '
                     '${guide.readMinutes} MIN READ',
                     style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 0.8,
+                      fontSize: 13,
+                      letterSpacing: 0.6,
                       color: palette.textSecondary,
                     ),
                   ),

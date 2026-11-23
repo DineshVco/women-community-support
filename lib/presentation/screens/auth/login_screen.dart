@@ -353,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen>
                       'By continuing you agree to keep Looma kind and '
                       'respectful. Looma is a space for women.',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
+                      style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Center(
