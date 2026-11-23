@@ -17,6 +17,7 @@ import '../providers/theme_provider.dart';
 import '../widgets/adaptive.dart';
 import '../widgets/cat_avatar.dart';
 import '../widgets/ios.dart';
+import '../widgets/looma_card.dart';
 import '../widgets/content_width.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/app_lock_gate.dart';
@@ -226,17 +227,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: 'My reports',
                           onTap: () => _push(const MyReportsScreen()),
                         ),
+                        // Readable, with a tag (not greyed out).
                         const GroupedRow(
                           icon: AppIcons.envelope,
                           title: 'My requests',
-                          subtitle: 'Arrives with Connect',
-                          enabled: false,
+                          trailing: ComingSoonTag(),
                         ),
                         const GroupedRow(
                           icon: AppIcons.blocked,
                           title: 'Blocked list',
-                          subtitle: 'Arrives with Connect',
-                          enabled: false,
+                          trailing: ComingSoonTag(),
                         ),
                       ],
                     ),
@@ -320,14 +320,14 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: context.palette.surface,
-        borderRadius: BorderRadius.circular(12),
+    // The cat moment at the top of Me: a card with a soft blush wash.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: LoomaCard(
+        color: context.palette.blushTint,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: child,
       ),
-      child: child,
     );
   }
 }

@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
+import 'looma_card.dart';
 
 // iOS-style building blocks, used on Android too, in Looma's black and
 // white style (Newsreader headings, system font for body text).
@@ -160,8 +162,9 @@ class NavBarActions extends StatelessWidget {
 
 // ───────────────────────── Grouped lists ─────────────────────────
 
-/// An iOS inset grouped section: small grey caps header, rounded group,
-/// hairline separators.
+/// A grouped list in the Looma card style: a small grey header, then one
+/// card (20 px corners, 1 px warm border, soft shadow in light mode) with
+/// hairline separators that start after the icons.
 class GroupedSection extends StatelessWidget {
   const GroupedSection({
     super.key,
@@ -174,6 +177,10 @@ class GroupedSection extends StatelessWidget {
   final String? footer;
   final List<Widget> children;
 
+  /// Where a separator starts: after the icon circle, or at the text.
+  static double _inset(Widget child) =>
+      child is GroupedRow && child.icon != null ? 58 : 16;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
@@ -182,17 +189,82 @@ class GroupedSection extends StatelessWidget {
       color: palette.textSecondary,
       letterSpacing: 0.3,
     );
-    return CupertinoListSection.insetGrouped(
-      backgroundColor: palette.background,
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(12),
+    final radius = BorderRadius.circular(AppRadius.card);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (header != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  header!.toUpperCase(),
+                  style: small.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: radius,
+              border: Border.all(color: palette.border),
+              boxShadow: LoomaCard.shadowFor(Theme.of(context).brightness),
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: Column(
+                children: [
+                  for (var i = 0; i < children.length; i++) ...[
+                    if (i > 0)
+                      Padding(
+                        padding: EdgeInsets.only(left: _inset(children[i])),
+                        child: Container(height: 0.5, color: palette.border),
+                      ),
+                    children[i],
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (footer != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+              child: Text(footer!, style: small),
+            ),
+        ],
       ),
-      separatorColor: palette.border,
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      header: header == null ? null : Text(header!.toUpperCase(), style: small),
-      footer: footer == null ? null : Text(footer!, style: small),
-      children: children,
+    );
+  }
+}
+
+/// A small "Coming soon" tag for rows that are not ready yet. The row stays
+/// readable (not greyed out).
+class ComingSoonTag extends StatelessWidget {
+  const ComingSoonTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: palette.categoryFill('personal_safety'),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Coming soon',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: palette.text,
+        ),
+      ),
     );
   }
 }
@@ -210,10 +282,14 @@ class GroupedRow extends StatelessWidget {
     this.onTap,
     this.destructive = false,
     this.enabled = true,
+    this.tint,
   });
 
   final String title;
   final IconData? icon;
+
+  /// The soft circle behind the icon (defaults to a warm grey).
+  final Color? tint;
   final String? subtitle;
 
   /// Shown in grey before the chevron, e.g. "On" or a city.
@@ -250,7 +326,19 @@ class GroupedRow extends StatelessWidget {
         padding: const EdgeInsetsDirectional.fromSTEB(14, 11, 14, 11),
         backgroundColor: palette.surface,
         backgroundColorActivated: palette.softFill,
-        leading: icon == null ? null : Icon(icon, size: 22, color: color),
+        leadingSize: 32,
+        leading:
+            icon == null
+                ? null
+                : Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: tint ?? palette.softFill,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 18, color: color),
+                ),
         title: Text(
           title,
           maxLines: 3,
