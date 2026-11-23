@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
+import 'package:women_community_support/core/utils/greeting.dart';
 import 'package:women_community_support/data/models/community.dart';
 import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
@@ -47,6 +48,9 @@ class _FakeRepo extends PostRepository {
 
   @override
   String? get myUid => 'me';
+
+  @override
+  String? get myGreetingName => 'Bee';
 
   @override
   Stream<List<Post>> watchFeed() async* {
@@ -490,5 +494,10 @@ void main() {
         expect(scale.duration, Duration.zero); // no animation
       }
     });
+  });
+
+  testWidgets('Discuss greets her by her first name', (tester) async {
+    await _pumpHome(tester);
+    expect(find.text(greetingFor(DateTime.now(), name: 'Bee')), findsOneWidget);
   });
 }

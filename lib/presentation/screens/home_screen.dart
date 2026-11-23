@@ -308,7 +308,12 @@ class _HomeScreenState extends State<HomeScreen> {
               slivers: [
                 SliverList(
                   delegate: SliverChildListDelegate([
-                    wide(const FeedGreeting()),
+                    wide(
+                      FeedGreeting(
+                        // Her first name, on this phone only.
+                        name: context.read<PostRepository>().myGreetingName,
+                      ),
+                    ),
                     if (_themedWeek != null)
                       wide(ThemedWeekBanner(week: _themedWeek!)),
                     if (_smallWins != null)

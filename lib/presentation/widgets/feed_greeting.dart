@@ -14,12 +14,19 @@ import 'hero_card.dart';
 /// at its right edge. Counts and the starter-posts note live in the empty
 /// state, not here.
 class FeedGreeting extends StatelessWidget {
-  const FeedGreeting({super.key, this.now});
+  const FeedGreeting({super.key, this.now, this.name});
 
   /// For tests; defaults to the phone's local time.
   final DateTime? now;
 
+  /// Her first name (see greetingName), shown only here, on her phone.
+  final String? name;
+
   static const double heroHeight = 120;
+
+  /// Inside this small card, text grows at most this much (even with 2x
+  /// text), so the greeting stays on one line and the card stays 120 px.
+  static const double maxTextScale = 1.4;
 
   @override
   Widget build(BuildContext context) {
@@ -43,25 +50,39 @@ class FeedGreeting extends StatelessWidget {
             minHeight: heroHeight,
             veil: HeroVeil.discuss,
             children: [
-              // Handwritten (Caveat): one of only two places it is used.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      greetingFor(time),
-                      style: AppTypography.script(28, palette.text),
+              MediaQuery.withClampedTextScaling(
+                maxScaleFactor: maxTextScale,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handwritten (Caveat): one of only two places it is
+                    // used. One line; a long name ends with "...".
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            greetingFor(time, name: name),
+                            key: const ValueKey('greeting'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.script(28, palette.text),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(AppIcons.heart, size: 18, color: palette.text),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(AppIcons.heart, size: 18, color: palette.text),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                greetingReassurance,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.text,
+                    const SizedBox(height: 2),
+                    Text(
+                      greetingReassurance,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: palette.text,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

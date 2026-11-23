@@ -13,6 +13,7 @@ import '../models/community.dart';
 import '../models/post.dart';
 import '../models/report.dart';
 import '../models/user_profile.dart';
+import '../../core/utils/greeting.dart';
 
 /// All Firestore access lives here, so screens never talk to the database
 /// directly and the privacy rules are enforced in one place.
@@ -359,6 +360,10 @@ class PostRepository {
           }
         },
       );
+
+  /// Her first name for the Discuss greeting, on this phone only (see
+  /// greetingName). Never written anywhere.
+  String? get myGreetingName => greetingName(_auth.currentUser?.displayName);
 
   /// The signed-in person's id, or null when signed out.
   String? get myUid => _auth.currentUser?.uid;
