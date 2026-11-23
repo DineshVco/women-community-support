@@ -38,15 +38,17 @@ enum HeroScene {
 class HeroVeil {
   HeroVeil._();
 
-  /// Text stays inside this share of the card's width.
-  /// Wide enough that a greeting or title fits on one or two lines.
-  static const double textWidth = 0.72;
+  /// Text stays inside this share of the card's width (the left 55%), so
+  /// the right of the painting stays almost clear.
+  static const double textWidth = 0.55;
 
-  static const List<double> stops = [0, 0.6, textWidth, 0.9, 1];
-  static const List<double> lightAlphas = [0.94, 0.88, 0.82, 0.30, 0];
+  /// Strong only behind the text (the left 55%), then a quick fade so the
+  /// painting shows on the right.
+  static const List<double> stops = [0, 0.45, textWidth, 0.75, 1];
+  static const List<double> lightAlphas = [0.94, 0.88, 0.82, 0.15, 0.04];
 
   /// Dark mode is darker all over, so the painting does not glare.
-  static const List<double> darkAlphas = [0.92, 0.86, 0.82, 0.45, 0.25];
+  static const List<double> darkAlphas = [0.92, 0.86, 0.82, 0.30, 0.20];
 
   /// A soft blush wash in the top left corner (light mode).
   static const double blushWash = 0.18;
@@ -190,7 +192,7 @@ class HeroCard extends StatelessWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              height: 56,
+              height: 32,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -198,7 +200,7 @@ class HeroCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       palette.background.withValues(alpha: 0),
-                      palette.background.withValues(alpha: 0.55),
+                      palette.background.withValues(alpha: 0.4),
                     ],
                   ),
                 ),

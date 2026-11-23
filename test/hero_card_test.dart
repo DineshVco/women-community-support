@@ -7,7 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_colors.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
+import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
+
+import 'support/real_fonts.dart';
 
 /// WCAG contrast ratio of two opaque colours.
 double _contrast(Color a, Color b) {
@@ -132,6 +135,25 @@ void main() {
       });
     }
 
+    test('the painting shows: the veil is strong only behind the text', () {
+      expect(HeroVeil.textWidth, closeTo(0.55, 0.01));
+      // Light: almost clear from three quarters across.
+      expect(
+        HeroVeil.alphaAt(Brightness.light, 0.75),
+        lessThanOrEqualTo(0.15 + 1e-9),
+      );
+      expect(HeroVeil.alphaAt(Brightness.light, 1), lessThanOrEqualTo(0.05));
+      // Dark: still lighter on the right, a little dimmer so it does not glare.
+      expect(HeroVeil.alphaAt(Brightness.dark, 1), lessThanOrEqualTo(0.2));
+      // Behind the text it stays strong.
+      for (final b in Brightness.values) {
+        expect(
+          HeroVeil.alphaAt(b, HeroVeil.textWidth),
+          greaterThanOrEqualTo(0.8),
+        );
+      }
+    });
+
     test('dark mode veils the painting more than light mode', () {
       expect(
         HeroVeil.alphaAt(Brightness.dark, 1),
@@ -214,5 +236,37 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  group('the Discuss hero with real fonts', () {
+    setUpAll(loadRealFonts);
+
+    for (final (name, hour, theme) in [
+      ('morning', 9, AppTheme.light),
+      ('afternoon', 14, AppTheme.light),
+      ('evening', 19, AppTheme.dark),
+      ('late night', 23, AppTheme.dark),
+    ]) {
+      testWidgets('$name: about 120 px, the greeting fits, cat still there', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(390, 600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: FeedGreeting(now: DateTime(2026, 11, 23, hour)),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        final hero = tester.getSize(find.byType(HeroCard));
+        expect(hero.height, lessThanOrEqualTo(130));
+        expect(find.byType(PeekingCat), findsOneWidget);
+      });
+    }
   });
 }
