@@ -7,9 +7,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
 import 'looma_card.dart';
+import 'looma_header.dart';
 
 // iOS-style building blocks, used on Android too, in Looma's black and
 // white style (Newsreader headings, system font for body text).
@@ -24,8 +24,8 @@ Border hairline(BuildContext context, {bool top = false}) {
   return top ? Border(top: side) : Border(bottom: side);
 }
 
-/// A tab screen with an iOS large title that shrinks into the bar while
-/// scrolling. The bar is translucent and blurred; content scrolls under it.
+/// A tab screen with a large title that shrinks into a blurred bar while
+/// scrolling (see [LoomaHeader]); content scrolls under it.
 /// [onRefresh] adds the iOS pull-to-refresh spinner.
 class LargeTitleScaffold extends StatelessWidget {
   const LargeTitleScaffold({
@@ -59,28 +59,8 @@ class LargeTitleScaffold extends StatelessWidget {
         parent: AlwaysScrollableScrollPhysics(),
       ),
       slivers: [
-        CupertinoSliverNavigationBar(
-          largeTitle: Text(
-            title,
-            style: AppTypography.heading(34, palette.text, height: 1.1),
-          ),
-          middle: Text(
-            title,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: palette.text,
-            ),
-          ),
-          alwaysShowMiddle: false,
-          leading: leading,
-          trailing: trailing,
-          backgroundColor: barColor(context),
-          border: hairline(context),
-          // Several tab screens live in one route: no hero between them.
-          transitionBetweenRoutes: false,
-          automaticallyImplyLeading: false,
-        ),
+        // Title and Quick exit on one row; collapses while scrolling.
+        LoomaHeader(title: title, leading: leading, trailing: trailing),
         if (onRefresh != null)
           CupertinoSliverRefreshControl(onRefresh: onRefresh),
         ...slivers,

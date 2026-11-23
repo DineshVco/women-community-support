@@ -143,7 +143,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: AppSpacing.md),
+                    // 8 px under the header row.
+                    const SizedBox(height: AppSpacing.sm),
 
                     // ───────── Chat profile ─────────
                     _Card(

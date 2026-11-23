@@ -10,6 +10,7 @@ import 'package:women_community_support/presentation/providers/app_settings.dart
 import 'package:women_community_support/presentation/screens/help_screen.dart';
 import 'package:women_community_support/presentation/widgets/adaptive.dart';
 import 'package:women_community_support/presentation/widgets/ios.dart';
+import 'package:women_community_support/presentation/widgets/looma_header.dart';
 import 'package:women_community_support/presentation/widgets/post_actions.dart';
 import 'package:women_community_support/presentation/widgets/post_card.dart';
 
@@ -63,7 +64,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(CupertinoSliverNavigationBar), findsOneWidget);
+    expect(find.byType(LoomaHeader), findsOneWidget);
     final bigBefore = tester.getSize(find.text('Discuss').first).height;
 
     await tester.drag(find.text('Row 2'), const Offset(0, -300));

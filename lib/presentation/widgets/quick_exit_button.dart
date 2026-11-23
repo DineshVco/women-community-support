@@ -147,28 +147,73 @@ class QuickExit {
   );
 }
 
-/// The small pill in the top bar. The tap area is still the full 48 px.
+/// The compact pill in the header: eye-off icon and "Quick exit", 32 px
+/// high, while the tap area stays at least 48 x 48 (Material pads it).
+/// [iconOnly] drops the label when the header is too narrow (small phone,
+/// large text); screen readers still hear "Quick exit".
 class QuickExitButton extends StatelessWidget {
-  const QuickExitButton({super.key});
+  const QuickExitButton({super.key, this.iconOnly = false});
+
+  final bool iconOnly;
+
+  /// The pill's visible height.
+  static const double height = 32;
+
+  /// The pill's natural width for [textScaler] (used by the header to
+  /// decide whether the label fits).
+  static double widthFor(TextScaler textScaler) {
+    final label = TextPainter(
+      text: const TextSpan(
+        text: 'Quick exit',
+        style: TextStyle(
+          fontFamily: AppTypography.bodyFont,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textScaler: textScaler,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final width = 12 + 16 + 6 + label.width + 12;
+    label.dispose();
+    return width;
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final style = TextButton.styleFrom(
+      foregroundColor: palette.text,
+      backgroundColor: palette.surface.withValues(alpha: 0.7),
+      minimumSize: Size(iconOnly ? height : 0, height),
+      padding: EdgeInsets.symmetric(horizontal: iconOnly ? 8 : 12),
+      shape: StadiumBorder(side: BorderSide(color: palette.border)),
+      textStyle: Theme.of(
+        context,
+      ).textTheme.labelMedium?.copyWith(fontSize: 13, color: palette.text),
+      // At least 48 x 48 to tap, however small the pill looks.
+      tapTargetSize: MaterialTapTargetSize.padded,
+    );
+    void onTap() => QuickExit.onTap(context);
 
+    if (iconOnly) {
+      return Semantics(
+        button: true,
+        label: 'Quick exit',
+        excludeSemantics: true,
+        child: TextButton(
+          onPressed: onTap,
+          style: style,
+          child: const Icon(AppIcons.eyeSlash, size: 16),
+        ),
+      );
+    }
     return TextButton.icon(
-      onPressed: () => QuickExit.onTap(context),
-      style: TextButton.styleFrom(
-        foregroundColor: palette.text,
-        minimumSize: const Size(0, 34),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        shape: StadiumBorder(side: BorderSide(color: palette.border)),
-        textStyle: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(fontSize: 13, color: palette.text),
-        tapTargetSize: MaterialTapTargetSize.padded,
-      ),
+      onPressed: onTap,
+      style: style,
       icon: const Icon(AppIcons.eyeSlash, size: 16),
-      label: const Text('Quick exit'),
+      label: const Text('Quick exit', maxLines: 1),
     );
   }
 }

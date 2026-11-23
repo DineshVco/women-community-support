@@ -47,9 +47,10 @@ class FeedGreeting extends StatelessWidget {
     final now = DateTime.now();
     final starters = list != null && list.any((p) => LoomaTeam.isTeam(p.alias));
     return Padding(
+      // 8 px under the header row.
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenHorizontal,
-        AppSpacing.lg,
+        AppSpacing.sm,
         AppSpacing.screenHorizontal,
         0,
       ),
