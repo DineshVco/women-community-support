@@ -16,6 +16,7 @@ import 'package:women_community_support/presentation/screens/me/privacy_centre_s
 import 'package:women_community_support/presentation/screens/profile_screen.dart';
 import 'package:women_community_support/presentation/widgets/cat_avatar.dart';
 import 'package:women_community_support/presentation/widgets/ios.dart';
+import 'package:women_community_support/presentation/widgets/quick_exit_button.dart';
 
 class _NoDb implements FirebaseFirestore {
   @override
@@ -58,10 +59,14 @@ Future<void> _pumpMe(
   double width = 390,
   double textScale = 1,
   ThemeData? theme,
+  bool reduceMotion = false,
+  double statusBar = 0,
+  double height = 5000,
 }) async {
   SharedPreferences.setMockInitialValues({});
-  tester.view.physicalSize = Size(width, 5000);
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
+  tester.view.padding = FakeViewPadding(top: statusBar);
   addTearDown(tester.view.reset);
   final settings = AppSettings();
   await tester.pumpWidget(
@@ -80,9 +85,10 @@ Future<void> _pumpMe(
         theme: theme ?? AppTheme.light,
         builder:
             (context, child) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(textScale),
+                disableAnimations: reduceMotion,
+              ),
               child: AppSettingsScope(settings: settings, child: child!),
             ),
         home: const ProfileScreen(),
@@ -193,6 +199,65 @@ void main() {
       await _pumpMe(tester, width: width, textScale: scale, theme: theme);
       expect(tester.takeException(), isNull);
       expect(find.text('ACCOUNT'), findsOneWidget);
+      final exit = find.byType(QuickExitButton);
+      expect(exit, findsOneWidget);
+      expect(tester.getSize(exit).height, greaterThanOrEqualTo(44));
     });
   }
+
+  group('header: no big title, only Quick exit', () {
+    testWidgets('no visible "Me", but screen readers still hear it', (
+      tester,
+    ) async {
+      await _pumpMe(tester, statusBar: 47);
+      expect(find.text('Me'), findsNothing);
+      expect(find.bySemanticsLabel('Me'), findsOneWidget);
+      // Quick exit is still there, same size, 44 px or more to tap.
+      final exit = find.byType(QuickExitButton);
+      expect(exit, findsOneWidget);
+      expect(tester.getSize(exit).height, greaterThanOrEqualTo(44));
+      expect(tester.getSize(exit).width, greaterThanOrEqualTo(44));
+      // On the right.
+      expect(tester.getRect(exit).right, greaterThan(300));
+    });
+
+    testWidgets('the profile card is first and the list starts higher', (
+      tester,
+    ) async {
+      await _pumpMe(tester, statusBar: 47);
+      final card = tester.getRect(find.byType(CatAvatar).first);
+      final firstSection = tester.getRect(find.byType(GroupedSection).first);
+      // Before (with the big "Me" title): avatar at 123, first section at
+      // 228 on this phone.
+      expect(card.top, lessThan(123 - 30));
+      expect(firstSection.top, lessThan(228 - 30));
+      expect(card.width, 72); // the cat avatar
+      // The alias sits right of the avatar and below the Quick exit pill.
+      final alias = tester.getRect(find.text('Soft Owl'));
+      final pill = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(QuickExitButton),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(alias.left, greaterThan(card.right));
+      expect(alias.top, greaterThanOrEqualTo(pill.bottom));
+    });
+
+    for (final reduce in [false, true]) {
+      testWidgets('scrolled${reduce ? ' (Reduce motion)' : ''}: only the '
+          'blurred bar, never a title', (tester) async {
+        // A normal phone height, so the page can scroll.
+        await _pumpMe(tester, statusBar: 47, reduceMotion: reduce, height: 844);
+        expect(find.byType(BackdropFilter), findsNothing);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+        await tester.pumpAndSettle();
+        expect(find.byType(BackdropFilter), findsOneWidget);
+        expect(find.text('Me'), findsNothing);
+        expect(find.byType(QuickExitButton), findsOneWidget);
+      });
+    }
+  });
 }

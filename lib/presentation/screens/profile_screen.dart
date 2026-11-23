@@ -18,6 +18,7 @@ import '../widgets/adaptive.dart';
 import '../widgets/cat_avatar.dart';
 import '../widgets/ios.dart';
 import '../widgets/looma_card.dart';
+import '../widgets/looma_header.dart';
 import '../widgets/content_width.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/app_lock_gate.dart';
@@ -168,7 +169,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             chatSnapshot.connectionState == ConnectionState.active;
 
         return LargeTitleScaffold(
+          // No big "Me": the profile card is the first thing on the page.
+          // Screen readers still hear "Me".
           title: 'Me',
+          showTitle: false,
           trailing: const QuickExitButton(),
           slivers: [
             SliverToBoxAdapter(
@@ -176,15 +180,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // 8 px under the header row.
-                    const SizedBox(height: AppSpacing.sm),
-
                     // ───────── Chat profile ─────────
                     _Card(
                       child: StreamBuilder<bool>(
                         stream: _founding,
                         builder:
                             (context, founding) => ChatProfileHeader(
+                              textTopInset:
+                                  ChatProfileHeader.insetUnderQuickExit,
                               profile: profile,
                               loading: !loaded && !chatSnapshot.hasError,
                               foundingMember: founding.data ?? false,
@@ -408,7 +411,7 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: LoomaCard(
         color: context.palette.blushTint,
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: child,
       ),
     );
@@ -423,12 +426,22 @@ class ChatProfileHeader extends StatelessWidget {
     required this.onEdit,
     this.foundingMember = false,
     this.loading = false,
+    this.textTopInset = 0,
   });
 
   final ChatProfile? profile;
   final VoidCallback onEdit;
   final bool foundingMember;
   final bool loading;
+
+  /// Space above the alias column, so it starts below the floating Quick
+  /// exit pill on Me (the avatar on the left stays at the top).
+  final double textTopInset;
+
+  /// On Me: the card's content starts 4 px + the card padding below the
+  /// status bar; the alias column clears the pill with 4 px to spare.
+  static double get insetUnderQuickExit =>
+      FloatingQuickBar.pillBottom - LoomaHeader.topGap - AppSpacing.md + 4;
 
   @override
   Widget build(BuildContext context) {
@@ -480,6 +493,7 @@ class ChatProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (textTopInset > 0) SizedBox(height: textTopInset),
                 if (loading)
                   Text('Loading…', style: theme.textTheme.bodyMedium)
                 else if (p == null) ...[

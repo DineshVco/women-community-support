@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/haptics.dart';
 import 'looma_card.dart';
 import 'looma_header.dart';
+import 'quick_exit_button.dart';
 
 // iOS-style building blocks, used on Android too, in Looma's black and
 // white style (Newsreader headings, system font for body text).
@@ -38,7 +39,14 @@ class LargeTitleScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.controller,
     this.onUserScroll,
+    this.showTitle = true,
   });
+
+  /// False (Me): no visible title. Quick exit floats in a thin bar at the
+  /// top right and the page starts right under the status bar; scrolling
+  /// shows only the blurred bar behind it. Screen readers still hear
+  /// [title] as the page heading.
+  final bool showTitle;
 
   final String title;
   final List<Widget> slivers;
@@ -60,7 +68,15 @@ class LargeTitleScaffold extends StatelessWidget {
       ),
       slivers: [
         // Title and Quick exit on one row; collapses while scrolling.
-        LoomaHeader(title: title, leading: leading, trailing: trailing),
+        if (showTitle)
+          LoomaHeader(title: title, leading: leading, trailing: trailing)
+        else
+          // The page starts under the status bar; Quick exit floats above.
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: MediaQuery.paddingOf(context).top + LoomaHeader.topGap,
+            ),
+          ),
         if (onRefresh != null)
           CupertinoSliverRefreshControl(onRefresh: onRefresh),
         ...slivers,
@@ -94,7 +110,144 @@ class LargeTitleScaffold extends StatelessWidget {
                 padding: EdgeInsets.only(bottom: barHeight),
                 child: floatingActionButton,
               ),
-      body: scroll,
+      body:
+          showTitle
+              ? scroll
+              : FloatingQuickBar(
+                title: title,
+                trailing: trailing,
+                child: scroll,
+              ),
+    );
+  }
+}
+
+/// For a page without a visible title (Me): the scrolling page with a thin
+/// bar over its top edge that holds only [trailing] (Quick exit) on the
+/// right, 4 px under the status bar, with its full tap area. Once the page
+/// scrolls, a blurred bar fades in behind it (instantly with Reduce
+/// motion). No title is ever drawn; screen readers hear [title].
+class FloatingQuickBar extends StatefulWidget {
+  const FloatingQuickBar({
+    super.key,
+    required this.title,
+    required this.child,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget child;
+  final Widget? trailing;
+
+  /// How far below the top of the page the bar reaches (under the status
+  /// bar): the 4 px gap and the 48 px Quick exit row.
+  static double heightBelowStatusBar() =>
+      LoomaHeader.topGap + LoomaHeader.minRow;
+
+  /// The visible Quick exit pill ends this far below the status bar; content
+  /// on the right starts lower than this.
+  static double get pillBottom =>
+      LoomaHeader.topGap + (LoomaHeader.minRow + QuickExitButton.height) / 2;
+
+  @override
+  State<FloatingQuickBar> createState() => _FloatingQuickBarState();
+}
+
+class _FloatingQuickBarState extends State<FloatingQuickBar> {
+  bool _scrolled = false;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final scrolled = n.metrics.pixels > 0;
+    if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    final top = MediaQuery.paddingOf(context).top;
+    final height = top + FloatingQuickBar.heightBelowStatusBar();
+    final trailing = widget.trailing;
+
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: widget.child,
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Only the blurred bar, once scrolled. Never a title.
+              IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _scrolled ? 1 : 0,
+                  duration: AppMotion.of(context, AppMotion.fast),
+                  child:
+                      _scrolled
+                          ? ClipRect(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: barColor(context),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: palette.border,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          : const SizedBox.expand(),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.screenHorizontal,
+                  top + LoomaHeader.topGap,
+                  AppSpacing.screenHorizontal - 4,
+                  0,
+                ),
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    // Quick exit drops its label if it would not fit
+                    // (small phone, large text), as in the header.
+                    final scaler = MediaQuery.textScalerOf(context);
+                    final tight =
+                        QuickExitButton.widthFor(scaler) + 48 > box.maxWidth;
+                    final end =
+                        trailing is QuickExitButton
+                            ? QuickExitButton(iconOnly: tight)
+                            : trailing;
+                    return Row(
+                      children: [
+                        // Heard, not seen: the page heading.
+                        Expanded(
+                          child: Semantics(
+                            header: true,
+                            label: widget.title,
+                            child: const SizedBox(height: LoomaHeader.minRow),
+                          ),
+                        ),
+                        if (end != null) end,
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
