@@ -10,7 +10,9 @@ plugins {
 
 android {
     namespace = "com.example.women_community_support"
-    compileSdk = flutter.compileSdkVersion
+    // 36: flutter_secure_storage compiles against Android SDK 36. Compiling
+    // against a newer SDK is backward compatible; targetSdk is unchanged.
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
