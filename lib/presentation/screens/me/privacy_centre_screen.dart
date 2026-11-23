@@ -28,6 +28,15 @@ class PrivacyCentreScreen extends StatefulWidget {
       'private profile, then your login. It also deletes your mood log, '
       'journal and safety plan from this phone. It cannot be undone.';
 
+  /// When the phone's private data could not be deleted.
+  static const String localDeleteFailedTitle =
+      'Some private notes are still on this phone';
+  static const String localDeleteFailedMessage =
+      'Your posts, replies and online profile are deleted. But your mood '
+      'log, journal or safety plan could not be removed from this phone. '
+      'Your login is kept until they are, so nothing is left behind '
+      'without you knowing. Try again?';
+
   /// The summary on the page, above the button.
   static const String deleteSummary =
       'Deletes your posts, replies, saved posts, chat profile and private '
@@ -144,9 +153,26 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     try {
       await chat.deleteMine();
       await posts.deleteMyContent();
-      // Also on this phone: mood log, journal and safety plan.
-      await local.deleteAll();
-      await posts.deleteLogin();
+      // Also on this phone: mood log, journal and safety plan. Only when
+      // that worked is the login deleted.
+      final outcome = await AccountDeletion.finish(
+        deleteLocal: local.deleteAll,
+        deleteLogin: posts.deleteLogin,
+        askRetry: _askRetryLocalDelete,
+      );
+      if (outcome == DeletionOutcome.loginKept) {
+        if (!mounted) return;
+        setState(() => _deleting = false);
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Your account is kept until the private notes on this phone '
+              'are deleted. Open "Delete my account" again to finish.',
+            ),
+          ),
+        );
+        return;
+      }
       // Signed out now: go back to the start (the sign-in screens).
       navigator.popUntil((route) => route.isFirst);
     } catch (_) {
@@ -170,6 +196,18 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Said plainly when the phone's private data could not be deleted.
+  Future<bool> _askRetryLocalDelete() async {
+    if (!mounted) return false;
+    return showConfirmDialog(
+      context,
+      title: PrivacyCentreScreen.localDeleteFailedTitle,
+      message: PrivacyCentreScreen.localDeleteFailedMessage,
+      confirmLabel: 'Try again',
+      cancelLabel: 'Not now',
+    );
   }
 
   Future<String?> _askPassword() => showTextDialog(

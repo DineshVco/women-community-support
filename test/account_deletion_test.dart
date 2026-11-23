@@ -73,6 +73,75 @@ void main() {
       expect((await local.safetyPlan.load()).isEmpty, isTrue);
     });
 
+    test('the login is deleted only after the phone data is gone', () async {
+      final steps = <String>[];
+      final outcome = await AccountDeletion.finish(
+        deleteLocal: () async {
+          steps.add('local');
+          return true;
+        },
+        deleteLogin: () async => steps.add('login'),
+        askRetry: () async => fail('no need to ask'),
+      );
+      expect(outcome, DeletionOutcome.done);
+      expect(steps, ['local', 'login']);
+    });
+
+    test('phone data fails: asks, retries, then deletes the login', () async {
+      var attempts = 0;
+      var asked = 0;
+      var loginDeleted = false;
+      final outcome = await AccountDeletion.finish(
+        deleteLocal: () async => ++attempts >= 3, // fails twice
+        deleteLogin: () async => loginDeleted = true,
+        askRetry: () async {
+          asked++;
+          expect(loginDeleted, isFalse); // never before the data is gone
+          return true;
+        },
+      );
+      expect(outcome, DeletionOutcome.done);
+      expect(asked, 2);
+      expect(loginDeleted, isTrue);
+    });
+
+    test(
+      'phone data fails and she says "Not now": the login is kept',
+      () async {
+        var loginDeleted = false;
+        final outcome = await AccountDeletion.finish(
+          deleteLocal: () async => false,
+          deleteLogin: () async => loginDeleted = true,
+          askRetry: () async => false,
+        );
+        expect(outcome, DeletionOutcome.loginKept);
+        expect(loginDeleted, isFalse);
+      },
+    );
+
+    test(
+      'with a phone that refuses, the real data reports the failure',
+      () async {
+        final secure = StubbornStore('looma.mood.data');
+        final local = await _filled(secure);
+        var loginDeleted = false;
+        final outcome = await AccountDeletion.finish(
+          deleteLocal: local.deleteAll,
+          deleteLogin: () async => loginDeleted = true,
+          askRetry: () async => false,
+        );
+        expect(outcome, DeletionOutcome.loginKept);
+        expect(loginDeleted, isFalse);
+      },
+    );
+
+    test('the failure message is plain and honest', () {
+      expect(
+        PrivacyCentreScreen.localDeleteFailedMessage,
+        allOf(contains('could not be removed'), contains('login is kept')),
+      );
+    });
+
     test('the confirmation says the phone data goes too', () {
       for (final text in [
         PrivacyCentreScreen.deleteConfirmMessage,

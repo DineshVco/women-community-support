@@ -207,8 +207,10 @@ class PostRepository {
 
     await _deleteAll(refs);
 
-    // Last: the private profile (women-only answer, birth year).
-    await _me().delete();
+    // Last: the private profile (women-only answer, birth year). It may
+    // already be gone if she is finishing a deletion she started before.
+    final me = await _me().get();
+    if (me.exists) await me.reference.delete();
   }
 
   /// Deletes the login itself, then signs out of Google too.
