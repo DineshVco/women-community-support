@@ -24,6 +24,7 @@ import '../widgets/ios.dart';
 import '../widgets/post_actions.dart';
 import '../widgets/looma_card.dart';
 import '../widgets/post_card.dart';
+import '../widgets/team_badge.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/heart_burst.dart';
 import '../widgets/posted_confirmation.dart';
@@ -36,6 +37,13 @@ import '../../core/theme/app_icons.dart';
 /// The discussion feed: search, category filter, newest first.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  /// Shown only when there are no discussions (these used to sit on the
+  /// hero card).
+  static const String emptyMessage =
+      'No new discussions today yet. Yours could be the first.\n'
+      '${LoomaTeam.starterLine}\n'
+      'You will post under a random alias.';
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -226,12 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverList(
               delegate: SliverChildListDelegate([
-                wide(
-                  FeedGreeting(
-                    posts: snapshot.data,
-                    onWrite: () => _openCompose(),
-                  ),
-                ),
+                wide(const FeedGreeting()),
                 if (_themedWeek != null)
                   wide(ThemedWeekBanner(week: _themedWeek!)),
                 if (_smallWins != null)
@@ -247,50 +250,67 @@ class _HomeScreenState extends State<HomeScreen> {
                         (question) => _openCompose(initialTitle: question),
                   ),
                 ),
-                wide(
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenHorizontal,
-                      AppSpacing.md,
-                      AppSpacing.screenHorizontal,
-                      AppSpacing.md,
+              ]),
+            ),
+            // Search and filters stay pinned under the header while the
+            // hero and the question card scroll away.
+            PinnedHeaderSliver(
+              child: ColoredBox(
+                key: const ValueKey('discuss-filters'),
+                color: palette.background,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    wide(
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.screenHorizontal,
+                          6,
+                          AppSpacing.screenHorizontal,
+                          6,
+                        ),
+                        child: CupertinoSearchTextField(
+                          placeholder: 'Search discussions',
+                          onChanged: (value) => setState(() => _query = value),
+                          style: TextStyle(color: palette.text),
+                          backgroundColor: palette.softFill,
+                        ),
+                      ),
                     ),
-                    child: CupertinoSearchTextField(
-                      placeholder: 'Search discussions',
-                      onChanged: (value) => setState(() => _query = value),
-                      style: TextStyle(color: palette.text),
-                      backgroundColor: palette.softFill,
+                    wide(
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.screenHorizontal,
+                        ),
+                        child: Row(
+                          children: [
+                            for (final (id, label) in [
+                              (null, 'All'),
+                              for (final c in AppCategories.all)
+                                (c.id, c.shortName),
+                            ])
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: AppSpacing.sm,
+                                ),
+                                child: Pill(
+                                  label: label,
+                                  selected: _categoryId == id,
+                                  onTap: () => setState(() => _categoryId = id),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                  ],
                 ),
-                wide(
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenHorizontal,
-                    ),
-                    child: Row(
-                      children: [
-                        for (final (id, label) in [
-                          (null, 'All'),
-                          for (final c in AppCategories.all)
-                            (c.id, c.shortName),
-                        ])
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              right: AppSpacing.sm,
-                            ),
-                            child: Pill(
-                              label: label,
-                              selected: _categoryId == id,
-                              onTap: () => setState(() => _categoryId = id),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildListDelegate([
                 for (final child in _buildBody(context, snapshot, theme))
                   wide(child),
                 // Room for the "Write a post" pill, so it never covers the
@@ -337,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
         EmptyState(
           illustration: LoomaCats.heart,
           title: 'No discussions yet',
-          message: 'Start the first one. You will post under a random alias.',
+          message: HomeScreen.emptyMessage,
           actionLabel: 'Write a post',
           onAction: _openCompose,
         ),

@@ -300,7 +300,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: const Scaffold(body: FeedGreeting(posts: [])),
+          home: const Scaffold(body: FeedGreeting()),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));

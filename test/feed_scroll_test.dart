@@ -12,6 +12,10 @@ import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/screens/home_screen.dart';
 import 'package:women_community_support/presentation/widgets/fade_slide_in.dart';
+import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
+
+import 'support/real_fonts.dart';
+import 'package:women_community_support/presentation/widgets/looma_header.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
 import 'package:women_community_support/presentation/widgets/looma_card.dart';
 import 'package:women_community_support/presentation/widgets/post_card.dart';
@@ -78,15 +82,35 @@ List<Post> _posts({int votes = 0}) => [
     ),
 ];
 
-Future<_FakeRepo> _pumpHome(WidgetTester tester) async {
+Future<_FakeRepo> _pumpHome(
+  WidgetTester tester, {
+  List<Post>? posts,
+  bool sixInchPhone = false,
+  bool reduceMotion = false,
+}) async {
   tester.view.physicalSize = const Size(1170, 2532);
   tester.view.devicePixelRatio = 3;
+  if (sixInchPhone) {
+    // A 6-inch phone: 390 x 844 points, 47 pt status bar, 34 pt home bar.
+    tester.view.padding = const FakeViewPadding(top: 141, bottom: 102);
+  }
   addTearDown(tester.view.reset);
   final repo = _FakeRepo();
+  if (posts != null) repo.posts = posts;
   await tester.pumpWidget(
     Provider<PostRepository>.value(
       value: repo,
-      child: MaterialApp(theme: AppTheme.light, home: const HomeScreen()),
+      child: MaterialApp(
+        theme: AppTheme.light,
+        builder:
+            (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(disableAnimations: reduceMotion),
+              child: child!,
+            ),
+        home: const HomeScreen(),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -99,6 +123,8 @@ double _offset(WidgetTester tester) =>
     tester.state<ScrollableState>(_feed).position.pixels;
 
 void main() {
+  setUpAll(loadRealFonts);
+
   for (final restMs in [150, 300, 450]) {
     testWidgets('finger rests ${restMs}ms on a post, then flings: the feed '
         'still scrolls from that spot', (tester) async {
@@ -185,15 +211,114 @@ void main() {
     expect(lastBottom, lessThanOrEqualTo(pill.top));
   });
 
-  testWidgets('the starter line sits inside the hero card', (tester) async {
-    await _pumpHome(tester);
-    expect(
-      find.descendant(
+  group('design pass 3: a shorter top', () {
+    /// Ordinary posts (no polls), as most of the feed is.
+    List<Post> plain() => [
+      for (var i = 0; i < 10; i++)
+        Post(
+          id: 'q$i',
+          alias: 'Quiet Fox',
+          categoryId: 'education',
+          title: 'Scholarship tips for first-year students?',
+          content: 'Any advice for the first application? ' * 3,
+          timestamp: DateTime(2026, 11, 23).subtract(Duration(hours: i)),
+          meTooCount: 2,
+          commentCount: 1,
+        ),
+    ];
+
+    testWidgets('at least 1.5 posts show on a 6-inch phone', (tester) async {
+      await _pumpHome(tester, posts: plain(), sixInchPhone: true);
+      // What she sees: above the tab bar (56 pt) and the home bar.
+      const visibleBottom = 844.0 - 34 - 56;
+      final cards = [
+        for (final e in find.byType(PostCard).evaluate())
+          tester.getRect(find.byWidget(e.widget)),
+      ]..sort((a, b) => a.top.compareTo(b.top));
+      final first = cards[0];
+      final second = cards[1];
+      expect(first.bottom, lessThanOrEqualTo(visibleBottom));
+      final shown = (visibleBottom - second.top) / second.height;
+      expect(shown, greaterThanOrEqualTo(0.5));
+    });
+
+    testWidgets('the hero is about 120 px with the greeting and one line', (
+      tester,
+    ) async {
+      await _pumpHome(tester);
+      final hero = tester.getSize(find.byType(HeroCard));
+      expect(hero.height, inInclusiveRange(118, 130));
+      final texts = find.descendant(
         of: find.byType(HeroCard),
-        matching: find.text(LoomaTeam.starterLine),
-      ),
-      findsOneWidget,
-    );
+        matching: find.byType(Text),
+      );
+      expect(texts, findsNWidgets(2)); // greeting + one short line
+      expect(
+        find.textContaining('new discussion'),
+        findsNothing,
+      ); // the count left the hero
+      expect(find.text(LoomaTeam.starterLine), findsNothing);
+    });
+
+    testWidgets('only the empty feed shows those lines', (tester) async {
+      // Reduce motion: the empty-state cat would otherwise float forever.
+      await _pumpHome(tester, posts: const [], reduceMotion: true);
+      expect(
+        find.textContaining('No new discussions today yet'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(LoomaTeam.starterLine), findsOneWidget);
+    });
+
+    testWidgets('hero and question scroll away; search and filters stay', (
+      tester,
+    ) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      await tester.drag(_feed, const Offset(0, -900));
+      await tester.pumpAndSettle();
+      final filters = tester.getRect(
+        find.byKey(const ValueKey('discuss-filters')),
+      );
+      // Pinned right under the collapsed header (status bar + its 48 px
+      // row), still on screen.
+      expect(filters.top, closeTo(47 + LoomaHeader.minRow, 1));
+      expect(find.text('Search discussions'), findsOneWidget);
+      expect(find.text('All'), findsOneWidget);
+      // The hero and the question card have scrolled away.
+      expect(find.byType(HeroCard).hitTestable(), findsNothing);
+      expect(find.text('Question of the day').hitTestable(), findsNothing);
+    });
+
+    testWidgets('a cat peeks in at the hero\'s right edge', (tester) async {
+      await _pumpHome(tester);
+      final hero = tester.getRect(find.byType(HeroCard));
+      final cat = tester.getRect(find.byType(PeekingCat));
+      // Over the painting a little, and a little outside it.
+      expect(cat.left, lessThan(hero.right));
+      expect(cat.right, greaterThan(hero.right));
+      expect(cat.center.dy, greaterThan(hero.center.dy));
+      // Decorative: screen readers skip it.
+      expect(
+        find.descendant(
+          of: find.byType(PeekingCat),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Reduce motion: the cat is simply there', (tester) async {
+      await _pumpHome(tester, reduceMotion: true);
+      final fade = tester.widget<FadeTransition>(
+        find
+            .descendant(
+              of: find.byType(PeekingCat),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      );
+      expect(fade.opacity.value, 1);
+    });
   });
 
   testWidgets('cards fade up with a short stagger; Reduce motion: none', (

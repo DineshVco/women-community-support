@@ -82,6 +82,6 @@ void main() {
   });
 
   testWidgets('home greeting is still', (tester) async {
-    await expectStill(tester, const Scaffold(body: FeedGreeting(posts: [])));
+    await expectStill(tester, const Scaffold(body: FeedGreeting()));
   });
 }

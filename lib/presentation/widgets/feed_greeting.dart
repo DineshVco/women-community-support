@@ -1,51 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
-import '../../data/models/post.dart';
-import '../providers/app_settings.dart';
+import 'fade_slide_in.dart';
+import 'floating_illustration.dart';
 import 'hero_card.dart';
-import 'team_badge.dart';
 
-/// A painted card (by time of day) with "Good evening" and how many
-/// discussions started in the last 24 hours.
-/// Inside it, a note while the Looma Team starter posts are in the feed.
-/// [posts] comes from the live feed, so the count updates by itself.
+/// The top of Discuss: a short painted card (by time of day, about 120 px)
+/// with the greeting and one short line, and a small Looma cat peeking in
+/// at its right edge. Counts and the starter-posts note live in the empty
+/// state, not here.
 class FeedGreeting extends StatelessWidget {
-  const FeedGreeting({super.key, required this.posts, this.onWrite});
+  const FeedGreeting({super.key, this.now});
 
-  /// Null while the feed is still loading.
-  final List<Post>? posts;
+  /// For tests; defaults to the phone's local time.
+  final DateTime? now;
 
-  /// Tapping the painted card opens "Write a post".
-  final VoidCallback? onWrite;
+  static const double heroHeight = 120;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.palette;
+    final time = now ?? DateTime.now();
 
-    final String subline;
-    final list = posts;
-    if (AppSettings.gentleOf(context)) {
-      // Gentle mode: no counting.
-      subline = 'Take your time. Read, share, or just rest here.';
-    } else if (list == null) {
-      subline = 'Catching up on the latest…';
-    } else {
-      final count = countRecent(list.map((p) => p.timestamp));
-      subline = switch (count) {
-        0 => 'No new discussions today yet. Yours could be the first.',
-        1 => '1 new discussion in the last 24 hours.',
-        _ => '$count new discussions in the last 24 hours.',
-      };
-    }
-
-    final now = DateTime.now();
-    final starters = list != null && list.any((p) => LoomaTeam.isTeam(p.alias));
     return Padding(
       // 8 px under the header row.
       padding: const EdgeInsets.fromLTRB(
@@ -54,18 +34,16 @@ class FeedGreeting extends StatelessWidget {
         AppSpacing.screenHorizontal,
         0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // The painted card changes with the time of day.
           HeroCard(
-            scene: HeroScene.forTime(now),
-            actionLabel: 'Write a post',
-            onTap: onWrite,
+            scene: HeroScene.forTime(time),
+            minHeight: heroHeight,
             children: [
               // Handwritten (Caveat): one of only two places it is used.
               Text(
-                greetingFor(now),
+                greetingFor(time),
                 style: AppTypography.script(32, palette.text),
               ),
               const SizedBox(height: 2),
@@ -75,41 +53,45 @@ class FeedGreeting extends StatelessWidget {
                   color: palette.text,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              // Fades between messages when the live count changes.
-              AnimatedSwitcher(
-                duration: AppMotion.of(context, AppMotion.medium),
-                switchInCurve: AppMotion.enter,
-                switchOutCurve: AppMotion.exit,
-                layoutBuilder:
-                    (current, previous) => Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [...previous, if (current != null) current],
-                    ),
-                child: Semantics(
-                  liveRegion: true,
-                  key: ValueKey(subline),
-                  child: Text(
-                    subline,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: palette.text,
-                    ),
-                  ),
-                ),
-              ),
-              // Only while the Looma Team starter posts are in the feed.
-              if (starters) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  LoomaTeam.starterLine,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: palette.text,
-                  ),
-                ),
-              ],
             ],
           ),
+          // Peeks in at the right edge, over the painting a little.
+          const Positioned(right: -10, bottom: -8, child: PeekingCat()),
         ],
+      ),
+    );
+  }
+}
+
+/// A small Looma cat on a cream circle (dark lines on cream pass AA in
+/// light and dark mode). Decorative: screen readers skip it. It fades up
+/// once when it appears; with Reduce motion it is simply there.
+class PeekingCat extends StatelessWidget {
+  const PeekingCat({super.key});
+
+  static const double size = 60;
+
+  /// The circle behind the drawing, the same in light and dark mode.
+  static const Color halo = Color(0xFFFBF7F3);
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return ExcludeSemantics(
+      child: FadeSlideIn(
+        distance: 6,
+        child: Container(
+          key: const ValueKey('peeking-cat'),
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: halo,
+            shape: BoxShape.circle,
+            border: Border.all(color: palette.border),
+          ),
+          child: Image.asset(LoomaCats.browse, fit: BoxFit.contain),
+        ),
       ),
     );
   }

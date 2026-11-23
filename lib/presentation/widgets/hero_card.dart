@@ -83,9 +83,13 @@ class HeroCard extends StatelessWidget {
     required this.children,
     this.actionLabel,
     this.onTap,
+    this.minHeight = 176,
   });
 
   final HeroScene scene;
+
+  /// Discuss uses a short hero (120) so posts show sooner.
+  final double minHeight;
 
   /// The text, top to bottom, on the left of the card.
   final List<Widget> children;
@@ -148,8 +152,8 @@ class HeroCard extends StatelessWidget {
       borderRadius: radius,
       child: ConstrainedBox(
         // Full width; as tall as the text needs (large text grows it).
-        constraints: const BoxConstraints(
-          minHeight: 176,
+        constraints: BoxConstraints(
+          minHeight: minHeight,
           minWidth: double.infinity,
         ),
         child: Stack(

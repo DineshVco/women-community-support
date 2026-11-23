@@ -41,13 +41,13 @@ class QuestionOfTheDay extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenHorizontal,
-        LoomaCard.gap,
+        AppSpacing.sm,
         AppSpacing.screenHorizontal,
         0,
       ),
       child: LoomaCard(
         onTap: () => onAnswer(question),
-        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
+        padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -62,12 +62,12 @@ class QuestionOfTheDay extends StatelessWidget {
                 Icon(AppIcons.chevronRight, size: 14, color: palette.text),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               question,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.heading(19, palette.text, height: 1.25),
+              style: AppTypography.heading(17, palette.text, height: 1.25),
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/models/comment.dart';
 import 'package:women_community_support/data/models/post.dart';
+import 'package:women_community_support/presentation/screens/home_screen.dart';
 import 'package:women_community_support/presentation/widgets/comment_tile.dart';
 import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
 import 'package:women_community_support/presentation/widgets/post_card.dart';
@@ -88,20 +89,12 @@ void main() {
     expect(find.text(' · 3h'), findsOneWidget);
   });
 
-  testWidgets('Home shows the starter line only while team posts are there', (
+  testWidgets('the starter line is not on the hero (empty state only)', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _app(FeedGreeting(posts: [_post('Looma Team'), _post('Quiet Fox')])),
-    );
-    await tester.pump(const Duration(seconds: 1));
-    expect(
-      find.text('Starter posts to begin the conversation. Add yours.'),
-      findsOneWidget,
-    );
-
-    await tester.pumpWidget(_app(FeedGreeting(posts: [_post('Quiet Fox')])));
+    await tester.pumpWidget(_app(const FeedGreeting()));
     await tester.pump(const Duration(seconds: 1));
     expect(find.text(LoomaTeam.starterLine), findsNothing);
+    expect(HomeScreen.emptyMessage, contains(LoomaTeam.starterLine));
   });
 }

@@ -42,11 +42,12 @@ class PostCard extends StatelessWidget {
       ),
       child: LoomaCard(
         onTap: onTap,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CategoryLabel(categoryId: post.categoryId),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 10),
             PostTitleHero(
               postId: post.id,
               title: post.title,
@@ -69,7 +70,7 @@ class PostCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               LivePoll(post: post),
             ],
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 10),
             Row(
               children: [
                 AliasAvatar(alias: post.alias),
