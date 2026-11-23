@@ -24,7 +24,12 @@ class OnboardingScreen extends StatefulWidget {
     super.key,
     required this.onGetStarted,
     required this.onSignIn,
+    this.viewOnly = false,
   });
+
+  /// "View introduction" from Me: one "Done" button instead of the sign-up
+  /// buttons ([onGetStarted] is called).
+  final bool viewOnly;
 
   /// "Get Started" → sign up.
   final VoidCallback onGetStarted;
@@ -169,19 +174,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       delay: buttonDelay + Entrance.gap,
                       distance: 0,
                       child: LoomaButton.primary(
-                        label: 'Get Started',
+                        label: widget.viewOnly ? 'Done' : 'Get Started',
                         onPressed: widget.onGetStarted,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    FadeSlideIn(
-                      delay: buttonDelay + Entrance.gap * 2,
-                      distance: 0,
-                      child: LoomaButton.outline(
-                        label: 'I already have an account',
-                        onPressed: widget.onSignIn,
+                    if (!widget.viewOnly) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      FadeSlideIn(
+                        delay: buttonDelay + Entrance.gap * 2,
+                        distance: 0,
+                        child: LoomaButton.outline(
+                          label: 'I already have an account',
+                          onPressed: widget.onSignIn,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

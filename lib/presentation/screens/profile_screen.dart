@@ -32,6 +32,7 @@ import 'me/post_list_screen.dart';
 import 'me/privacy_centre_screen.dart';
 import 'me/safety_plan_screen.dart' show openSafetyPlan;
 import 'moderator_screen.dart';
+import 'onboarding_screen.dart';
 import '../../core/theme/app_icons.dart';
 
 /// The "Me" tab, top to bottom:
@@ -365,6 +366,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GroupedSection(
                       header: 'Account',
                       children: [
+                        GroupedRow(
+                          icon: AppIcons.guides,
+                          title: 'View introduction',
+                          onTap:
+                              () => _push(
+                                OnboardingScreen(
+                                  viewOnly: true,
+                                  onGetStarted:
+                                      () => Navigator.of(context).pop(),
+                                  onSignIn: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                        ),
                         GroupedRow(
                           icon: AppIcons.signOut,
                           title: 'Sign out',

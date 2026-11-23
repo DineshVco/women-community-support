@@ -370,4 +370,16 @@ void main() {
       expect(toggle.value, isFalse);
     });
   });
+
+  testWidgets('Me has "View introduction", which opens it', (tester) async {
+    await _pumpMe(tester, height: 3000);
+    final row = find.text('View introduction');
+    expect(row, findsOneWidget);
+    await tester.ensureVisible(row);
+    await tester.tap(row);
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Done'), findsOneWidget);
+  });
 }
