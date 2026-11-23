@@ -85,6 +85,13 @@ class AppIcons {
   static const weather = PhosphorIconsRegular.cloudSun;
   static const heart = PhosphorIconsRegular.heart;
 
+  // Check-in faces, hardest to best
+  static const faceRough = PhosphorIconsRegular.smileyNervous;
+  static const faceLow = PhosphorIconsRegular.smileySad;
+  static const faceOkay = PhosphorIconsRegular.smileyMeh;
+  static const faceGood = PhosphorIconsRegular.smiley;
+  static const faceGreat = PhosphorIconsRegular.smileyWink;
+
   // Line-art avatars (picked from the alias)
   static const avatarFlower = PhosphorIconsRegular.flower;
   static const avatarLeaf = PhosphorIconsRegular.leaf;

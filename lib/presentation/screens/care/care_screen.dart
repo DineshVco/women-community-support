@@ -6,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../data/encrypted_box.dart';
 import '../../../data/models/category.dart';
 import '../../widgets/app_lock_gate.dart';
+import '../../widgets/check_in_row.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/hero_card.dart';
@@ -66,6 +67,18 @@ class CareScreen extends StatelessWidget {
     );
   }
 
+  /// The next step offered after a check-in.
+  void _openStep(BuildContext context, CheckInStep step) {
+    switch (step) {
+      case CheckInStep.breathe:
+        _push(context, const BreatheScreen());
+      case CheckInStep.ground:
+        _push(context, const GroundScreen());
+      case CheckInStep.journal:
+        openJournal(context);
+    }
+  }
+
   void _push(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
@@ -119,7 +132,17 @@ class CareScreen extends StatelessWidget {
 
                 // ───────── 1. In danger ─────────
                 const Padding(padding: side, child: EmergencyCard()),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ───────── 2. How are you today? (private, not on web) ─────────
+                if (private)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: CheckInRow(
+                      onStep: (step) => _openStep(context, step),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.sm),
 
                 // ───────── 2. Tools ─────────
                 GroupedSection(
