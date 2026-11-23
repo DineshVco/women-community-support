@@ -7,11 +7,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:women_community_support/core/theme/app_colors.dart';
+import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/models/post.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/screens/home_screen.dart';
 import 'package:women_community_support/presentation/widgets/alias_avatar.dart';
+import 'package:women_community_support/presentation/widgets/cat_avatar.dart';
 import 'package:women_community_support/presentation/widgets/category_label.dart';
 import 'package:women_community_support/presentation/widgets/looma_card.dart';
 import 'package:women_community_support/presentation/widgets/post_card.dart';
@@ -245,9 +247,40 @@ void main() {
       expect(drawings.length, greaterThan(1)); // not all the same
     });
 
-    testWidgets('next to the alias on every post', (tester) async {
+    testWidgets('32 px line art in a soft circle, next to the alias', (
+      tester,
+    ) async {
       await tester.pumpWidget(_app(PostCard(post: _post('p1'))));
       expect(find.byType(AliasAvatar), findsOneWidget);
+      expect(tester.getSize(find.byType(AliasAvatar)), const Size(32, 32));
+      final circle = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(AliasAvatar),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final fill = (circle.decoration! as BoxDecoration).color!;
+      expect(AppPalette.light.softTints, contains(fill)); // soft, not black
+      expect(find.byType(CatAvatar), findsNothing);
+    });
+
+    testWidgets('Looma Team posts use the cat avatar', (tester) async {
+      await tester.pumpWidget(
+        _app(PostCard(post: _post('p2', alias: 'Looma Team'))),
+      );
+      expect(find.byType(CatAvatar), findsOneWidget);
+      expect(
+        tester.getSize(
+          find.descendant(
+            of: find.byType(AliasAvatar),
+            matching: find.byType(CatAvatar),
+          ),
+        ),
+        const Size(32, 32),
+      );
+      expect(find.byIcon(AppIcons.heartFilled), findsNothing);
     });
   });
 

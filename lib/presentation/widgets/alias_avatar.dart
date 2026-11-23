@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_icons.dart';
+import 'cat_avatar.dart';
 import 'team_badge.dart';
 
 /// A small line-art avatar for an alias: a flower, leaf, moon, bird... in a
 /// soft circle. Picked from the alias text only, so the same alias always
 /// looks the same and nothing about the person is used. The Looma team
-/// gets a black circle with a heart.
+/// gets the Looma cat.
 class AliasAvatar extends StatelessWidget {
-  const AliasAvatar({super.key, required this.alias, this.size = 28});
+  const AliasAvatar({super.key, required this.alias, this.size = 32});
 
   final String alias;
   final double size;
@@ -39,7 +40,11 @@ class AliasAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final team = LoomaTeam.isTeam(alias);
+    if (LoomaTeam.isTeam(alias)) {
+      return ExcludeSemantics(
+        child: ClipOval(child: CatAvatar(id: CatAvatars.fallback, size: size)),
+      );
+    }
     final i = indexFor(alias);
     final tints = palette.softTints;
     return ExcludeSemantics(
@@ -47,13 +52,13 @@ class AliasAvatar extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: team ? palette.primary : tints[i % tints.length],
+          color: tints[i % tints.length],
           shape: BoxShape.circle,
         ),
         child: Icon(
-          team ? AppIcons.heartFilled : drawings[i % drawings.length],
-          size: size * 0.58,
-          color: team ? palette.onPrimary : palette.text,
+          drawings[i % drawings.length],
+          size: size * 0.56,
+          color: palette.text,
         ),
       ),
     );
