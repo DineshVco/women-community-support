@@ -293,6 +293,8 @@ class GroupedRow extends StatelessWidget {
     // under it instead (no overflow at any text size).
     final largeText = MediaQuery.textScalerOf(context).scale(10) > 13;
     final valueBeside = value != null && !largeText;
+    // A "Coming soon" tag also goes under the title with large text.
+    final tagBelow = largeText && trailing is ComingSoonTag;
     final lines = [
       if (subtitle != null) subtitle!,
       if (value != null && !valueBeside) value!,
@@ -330,12 +332,27 @@ class GroupedRow extends StatelessWidget {
           ),
         ),
         subtitle:
-            lines.isEmpty
+            lines.isEmpty && !tagBelow
                 ? null
-                : Text(
-                  lines.join('\n'),
-                  maxLines: 4,
-                  style: TextStyle(fontSize: 13, color: palette.textSecondary),
+                : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (lines.isNotEmpty)
+                      Text(
+                        lines.join('\n'),
+                        maxLines: 4,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: palette.textSecondary,
+                        ),
+                      ),
+                    if (tagBelow)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: trailing,
+                      ),
+                  ],
                 ),
         additionalInfo:
             !valueBeside
@@ -350,10 +367,12 @@ class GroupedRow extends StatelessWidget {
                   ),
                 ),
         trailing:
-            trailing ??
-            (onTap != null && enabled && !destructive
-                ? const CupertinoListTileChevron()
-                : null),
+            tagBelow
+                ? null
+                : trailing ??
+                    (onTap != null && enabled && !destructive
+                        ? const CupertinoListTileChevron()
+                        : null),
         onTap:
             enabled && onTap != null
                 ? () {

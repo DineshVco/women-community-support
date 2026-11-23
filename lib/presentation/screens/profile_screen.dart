@@ -21,12 +21,15 @@ import '../widgets/looma_card.dart';
 import '../widgets/content_width.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/app_lock_gate.dart';
+import '../../data/encrypted_box.dart';
+import 'care/care_screen.dart' show openJournal;
 import 'me/app_lock_settings_screen.dart';
 import 'me/chat_profile_editor.dart';
 import 'me/my_reports_screen.dart';
 import 'me/open_to_chat_tile.dart';
 import 'me/post_list_screen.dart';
 import 'me/privacy_centre_screen.dart';
+import 'me/safety_plan_screen.dart' show openSafetyPlan;
 import 'moderator_screen.dart';
 import '../../core/theme/app_icons.dart';
 
@@ -35,6 +38,9 @@ import '../../core/theme/app_icons.dart';
 ///  my space · moderation (moderators only) · privacy centre · settings.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  /// Easy to find, at the end of Me under "Account".
+  static const String deleteLabel = 'Delete my account and data';
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -121,6 +127,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await _repo.signOut();
   }
 
+  Future<void> _chooseDisguise(AppSettings settings) async {
+    final picked = await showOptionsSheet<QuickExitScreen>(
+      context,
+      title: 'Quick exit disguise',
+      message: 'What Quick exit shows instead of Looma.',
+      options: [
+        for (final s in QuickExitScreen.values)
+          SheetOption(
+            value: s,
+            label: s.label,
+            isDefault: s == settings.quickExitScreen,
+          ),
+      ],
+    );
+    if (picked != null) await settings.setQuickExitScreen(picked);
+  }
+
+  Future<void> _editCity(AppSettings settings) async {
+    final city = await showTextDialog(
+      context,
+      title: 'Weather city',
+      initial: settings.weatherCity,
+      placeholder: AppSettings.defaultCity,
+    );
+    if (city != null) await settings.setWeatherCity(city);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
@@ -161,18 +194,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
 
-                    // ───────── Open to chat ─────────
-                    StreamBuilder<UserProfile>(
-                      stream: _account,
-                      builder:
-                          (context, account) => OpenToChatTile(
-                            profile: profile,
-                            joinedAt: account.data?.createdAt,
-                            busy: _switching,
-                            onChanged: _setOpen,
-                          ),
-                    ),
-
                     // ───────── Interests ─────────
                     GroupedSection(
                       header: 'Interests and looking for',
@@ -184,9 +205,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
 
-                    // ───────── My space ─────────
+                    // ───────── Your space ─────────
                     GroupedSection(
-                      header: 'My space',
+                      header: 'Your space',
                       children: [
                         GroupedRow(
                           icon: AppIcons.myPosts,
@@ -224,21 +245,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                         ),
                         GroupedRow(
-                          icon: AppIcons.flag,
-                          title: 'My reports',
-                          onTap: () => _push(const MyReportsScreen()),
+                          icon: AppIcons.safety,
+                          title: 'Safety plan',
+                          subtitle:
+                              EncryptedBox.supported
+                                  ? 'Contacts, a safe place, a code word'
+                                  : EncryptedBox.webNote,
+                          enabled: EncryptedBox.supported,
+                          onTap: () => openSafetyPlan(context),
                         ),
-                        // Readable, with a tag (not greyed out).
-                        const GroupedRow(
-                          icon: AppIcons.envelope,
-                          title: 'My requests',
-                          trailing: ComingSoonTag(),
-                        ),
-                        const GroupedRow(
-                          icon: AppIcons.blocked,
-                          title: 'Blocked list',
-                          trailing: ComingSoonTag(),
-                        ),
+                        if (EncryptedBox.supported)
+                          GroupedRow(
+                            icon: AppIcons.book,
+                            title: 'My journal',
+                            subtitle: 'Private notes, only on this phone',
+                            onTap: () => openJournal(context),
+                          ),
                       ],
                     ),
 
@@ -262,41 +284,101 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                     ),
 
-                    // ───────── Privacy centre ─────────
-                    GroupedSection(
-                      header: 'Privacy centre',
-                      children: [
-                        GroupedRow(
-                          icon: AppIcons.lock,
-                          title: 'App lock',
-                          value: (lock?.enabled ?? false) ? 'On' : 'Off',
-                          onTap: () => _push(const AppLockSettingsScreen()),
-                        ),
-                        GroupedRow(
-                          icon: AppIcons.eye,
-                          title: 'Who can see what',
-                          onTap: () => _push(const PrivacyCentreScreen()),
-                        ),
-                        GroupedRow(
-                          icon: AppIcons.delete,
-                          title: 'Delete my account and data',
-                          destructive: true,
-                          onTap: () => _push(const PrivacyCentreScreen()),
-                        ),
-                      ],
+                    // ───────── Privacy and safety ─────────
+                    StreamBuilder<UserProfile>(
+                      stream: _account,
+                      builder: (context, account) {
+                        final joinedAt = account.data?.createdAt;
+                        return GroupedSection(
+                          header: 'Privacy and safety',
+                          children: [
+                            OpenToChatTile.rowFor(
+                              profile: profile,
+                              joinedAt: joinedAt,
+                              busy: _switching,
+                              onChanged: _setOpen,
+                              subtitle:
+                                  OpenToChatTile.noteFor(
+                                    profile: profile,
+                                    joinedAt: joinedAt,
+                                  ) ??
+                                  'Others see your chat alias and avatar, '
+                                      'never your posts.',
+                            ),
+                            const GroupedRow(
+                              icon: AppIcons.blocked,
+                              title: 'Blocked list',
+                              trailing: ComingSoonTag(),
+                            ),
+                            GroupedRow(
+                              icon: AppIcons.flag,
+                              title: 'My reports',
+                              onTap: () => _push(const MyReportsScreen()),
+                            ),
+                            // Readable, with a tag (not greyed out).
+                            const GroupedRow(
+                              icon: AppIcons.envelope,
+                              title: 'My requests',
+                              trailing: ComingSoonTag(),
+                            ),
+                            GroupedRow(
+                              icon: AppIcons.lock,
+                              title: 'App lock',
+                              value: (lock?.enabled ?? false) ? 'On' : 'Off',
+                              onTap: () => _push(const AppLockSettingsScreen()),
+                            ),
+                            GroupedRow(
+                              icon: AppIcons.eyeSlash,
+                              title: 'Quick exit disguise',
+                              value: settings.quickExitScreen.label,
+                              onTap: () => _chooseDisguise(settings),
+                            ),
+                            if (settings.quickExitScreen ==
+                                QuickExitScreen.weather)
+                              GroupedRow(
+                                icon: AppIcons.weather,
+                                title: 'Weather city',
+                                value: settings.weatherCity,
+                                onTap: () => _editCity(settings),
+                              ),
+                            GroupedRow(
+                              icon: AppIcons.shieldCheck,
+                              title: 'Practice Quick exit',
+                              onTap: () => QuickExit.practice(context),
+                            ),
+                            GroupedRow(
+                              icon: AppIcons.eye,
+                              title: 'Who can see what',
+                              onTap: () => _push(const PrivacyCentreScreen()),
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
-                    // ───────── Settings ─────────
+                    // ───────── Appearance ─────────
                     SettingsSection(settings: settings),
 
-                    // ───────── Sign out ─────────
+                    // ───────── Account ─────────
                     GroupedSection(
+                      header: 'Account',
                       children: [
                         GroupedRow(
                           icon: AppIcons.signOut,
                           title: 'Sign out',
-                          destructive: true,
                           onTap: _signOut,
+                        ),
+                        GroupedRow(
+                          icon: AppIcons.delete,
+                          title: ProfileScreen.deleteLabel,
+                          subtitle:
+                              'Deletes your posts, chats and private data. '
+                              'You confirm first.',
+                          destructive: true,
+                          onTap:
+                              () => _push(
+                                const PrivacyCentreScreen(deleteFirst: true),
+                              ),
                         ),
                       ],
                     ),
@@ -546,41 +628,7 @@ class SettingsSection extends StatelessWidget {
             ),
           ],
         ),
-        GroupedSection(
-          header: 'Quick exit',
-          children: [
-            Padding(
-              padding: padding,
-              child: LoomaSegmented<QuickExitScreen>(
-                value: settings.quickExitScreen,
-                options: {for (final s in QuickExitScreen.values) s: s.label},
-                onChanged: settings.setQuickExitScreen,
-              ),
-            ),
-            GroupedRow(
-              icon: AppIcons.weather,
-              title: 'Weather city',
-              value: settings.weatherCity,
-              onTap: () => _editCity(context),
-            ),
-            GroupedRow(
-              icon: AppIcons.eyeSlash,
-              title: 'Practice Quick exit',
-              onTap: () => QuickExit.practice(context),
-            ),
-          ],
-        ),
       ],
     );
-  }
-
-  Future<void> _editCity(BuildContext context) async {
-    final city = await showTextDialog(
-      context,
-      title: 'Weather city',
-      initial: settings.weatherCity,
-      placeholder: AppSettings.defaultCity,
-    );
-    if (city != null) await settings.setWeatherCity(city);
   }
 }

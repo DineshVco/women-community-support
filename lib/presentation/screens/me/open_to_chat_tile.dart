@@ -35,39 +35,66 @@ class OpenToChatTile extends StatelessWidget {
       'Other women can see your alias, avatar, interests and bio. Never '
       'your name, email or posts.';
 
-  @override
-  Widget build(BuildContext context) {
+  /// The waiting note, or null when there is nothing to wait for.
+  static String? noteFor({
+    required ChatProfile? profile,
+    required DateTime? joinedAt,
+    DateTime? now,
+  }) {
+    final isOpen = profile?.open ?? false;
+    final readyAt = joinedAt?.add(ConnectOptions.openCooldown);
+    final current = now ?? DateTime.now();
+    final waiting = readyAt == null || current.isBefore(readyAt);
+    if (profile == null) return 'Set up your chat profile first.';
+    if (!isOpen && waiting) {
+      if (readyAt == null) {
+        return 'Getting your account ready. Try again in a moment.';
+      }
+      final hours = (readyAt.difference(current).inMinutes / 60).ceil();
+      return 'New accounts wait a day before opening, to keep Connect safe. '
+          'You can turn this on in about $hours '
+          '${hours == 1 ? 'hour' : 'hours'}.';
+    }
+    return null;
+  }
+
+  /// The "Open to chat" row with its switch.
+  static GroupedRow rowFor({
+    required ChatProfile? profile,
+    required DateTime? joinedAt,
+    required ValueChanged<bool> onChanged,
+    bool busy = false,
+    DateTime? now,
+    String? subtitle,
+  }) {
     final isOpen = profile?.open ?? false;
     final readyAt = joinedAt?.add(ConnectOptions.openCooldown);
     final current = now ?? DateTime.now();
     final waiting = readyAt == null || current.isBefore(readyAt);
     final canChange = profile != null && !busy && (isOpen || !waiting);
+    return GroupedRow(
+      icon: AppIcons.chat,
+      title: 'Open to chat',
+      subtitle: subtitle,
+      trailing: LoomaSwitch(
+        value: isOpen,
+        onChanged: canChange ? onChanged : null,
+      ),
+    );
+  }
 
-    String? note;
-    if (profile == null) {
-      note = 'Set up your chat profile first.';
-    } else if (!isOpen && waiting) {
-      if (readyAt == null) {
-        note = 'Getting your account ready. Try again in a moment.';
-      } else {
-        final hours = (readyAt.difference(current).inMinutes / 60).ceil();
-        note =
-            'New accounts wait a day before opening, to keep Connect safe. '
-            'You can turn this on in about $hours '
-            '${hours == 1 ? 'hour' : 'hours'}.';
-      }
-    }
-
+  @override
+  Widget build(BuildContext context) {
+    final note = noteFor(profile: profile, joinedAt: joinedAt, now: now);
     return GroupedSection(
       footer: note == null ? explanation : '$explanation\n\n$note',
       children: [
-        GroupedRow(
-          icon: AppIcons.chat,
-          title: 'Open to chat',
-          trailing: LoomaSwitch(
-            value: isOpen,
-            onChanged: canChange ? onChanged : null,
-          ),
+        rowFor(
+          profile: profile,
+          joinedAt: joinedAt,
+          onChanged: onChanged,
+          busy: busy,
+          now: now,
         ),
       ],
     );

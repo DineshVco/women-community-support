@@ -16,7 +16,11 @@ import '../../widgets/quick_exit_button.dart';
 
 /// Plain words on who can see what, and "Delete my account and data".
 class PrivacyCentreScreen extends StatefulWidget {
-  const PrivacyCentreScreen({super.key});
+  const PrivacyCentreScreen({super.key, this.deleteFirst = false});
+
+  /// Opened from "Delete my account and data" on Me: the delete card is
+  /// at the top (same confirmation as always).
+  final bool deleteFirst;
 
   /// The confirmation before deleting everything.
   static const String deleteConfirmMessage =
@@ -159,6 +163,15 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     }
   }
 
+  /// Her email for the "Signed in as" line; nothing if it cannot be read.
+  static String? _signedInEmail() {
+    try {
+      return FirebaseAuth.instance.currentUser?.email;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> _askPassword() => showTextDialog(
     context,
     title: 'Confirm it is you',
@@ -172,7 +185,35 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = context.palette;
-    final email = FirebaseAuth.instance.currentUser?.email;
+    final email = _signedInEmail();
+
+    final deleteCard = Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.dangerSoft,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Delete my account and data',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            PrivacyCentreScreen.deleteSummary,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          LoomaButton.outline(
+            label: _deleting ? 'Deleting…' : 'Delete my account',
+            loading: _deleting,
+            onPressed: _deleteAccount,
+          ),
+        ],
+      ),
+    );
 
     return Scaffold(
       appBar: loomaNavBar(context, title: 'Privacy centre'),
@@ -189,6 +230,10 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
                 AppSpacing.xxl,
               ),
               children: [
+                if (widget.deleteFirst) ...[
+                  deleteCard,
+                  const SizedBox(height: AppSpacing.xl),
+                ],
                 if (email != null) ...[
                   Text(
                     'Signed in as $email',
@@ -224,33 +269,7 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
                   onPressed: () => QuickExit.practice(context),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: palette.dangerSoft,
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Delete my account and data',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        PrivacyCentreScreen.deleteSummary,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      LoomaButton.outline(
-                        label: _deleting ? 'Deleting…' : 'Delete my account',
-                        loading: _deleting,
-                        onPressed: _deleteAccount,
-                      ),
-                    ],
-                  ),
-                ),
+                if (!widget.deleteFirst) deleteCard,
               ],
             ),
           ),
