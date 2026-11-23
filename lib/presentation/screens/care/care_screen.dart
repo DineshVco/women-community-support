@@ -47,6 +47,9 @@ Future<void> openJournal(BuildContext context) async {
 class CareScreen extends StatefulWidget {
   const CareScreen({super.key});
 
+  /// How much bigger the flower vase is drawn on the hero.
+  static const double vaseScale = 1.15;
+
   /// The hero's link: it scrolls down to the Tools list.
   static const String heroAction = 'See all tools';
 
@@ -177,6 +180,8 @@ class _CareScreenState extends State<CareScreen> {
                   ),
                   child: HeroCard(
                     scene: HeroScene.flowers,
+                    // The flower vase a little bigger.
+                    paintingScale: CareScreen.vaseScale,
                     actionLabel: CareScreen.heroAction,
                     onTap: _showTools,
                     children: [

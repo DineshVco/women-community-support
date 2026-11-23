@@ -7,6 +7,7 @@ import '../../core/theme/app_typography.dart';
 import '../../data/content_library.dart';
 import '../../data/help_lines.dart';
 import '../../data/today_for_you.dart';
+import 'card_picture.dart';
 import 'looma_card.dart';
 
 /// "Today for you" on Care: one suggestion that fits the time of day (from
@@ -33,6 +34,12 @@ class TodayForYouCard extends StatelessWidget {
   final bool? includeDrafts;
 
   static const String heading = 'Today for you';
+
+  /// The cat-in-the-grass picture takes the right 40%.
+  static const double pictureWidth = 0.4;
+
+  static double textRightInset(double cardWidth) =>
+      cardWidth * pictureWidth * (1 - CardPicture.clearUntil);
 
   static IconData iconFor(TodaySlot slot) => switch (slot) {
     TodaySlot.morning => AppIcons.morning,
@@ -72,70 +79,110 @@ class TodayForYouCard extends StatelessWidget {
         // Late at night: a plain soft card, no colour.
         color: night ? palette.softFill : null,
         onTap: () => onOpen(suggestion),
-        padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: EdgeInsets.zero,
+        child: Stack(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
-              child: Icon(iconFor(slot), size: 20, color: palette.text),
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: TodayForYouCard.pictureWidth,
+                  heightFactor: 1,
+                  child: CardPicture(
+                    key: const ValueKey('today-picture'),
+                    asset: CardPictures.catGrass,
+                    fallback: [
+                      night ? palette.softFill : palette.surface,
+                      tint,
+                    ],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$heading · ${slot.label}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: palette.textSecondary,
+            LayoutBuilder(
+              builder:
+                  (context, box) => Padding(
+                    // Text stops where the picture starts to show.
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      14,
+                      TodayForYouCard.textRightInset(box.maxWidth),
+                      14,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    suggestion.title,
-                    style: AppTypography.heading(
-                      19,
-                      palette.text,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    suggestion.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
-                      color: palette.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          suggestion.actionLabel,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: tint,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            iconFor(slot),
+                            size: 20,
                             color: palette.text,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        AppIcons.chevronRight,
-                        size: 14,
-                        color: palette.text,
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '$heading · ${slot.label}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                suggestion.title,
+                                style: AppTypography.heading(
+                                  19,
+                                  palette.text,
+                                  height: 1.25,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                suggestion.text,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  height: 1.4,
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      suggestion.actionLabel,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: palette.text,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    AppIcons.chevronRight,
+                                    size: 14,
+                                    color: palette.text,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
             ),
           ],
         ),

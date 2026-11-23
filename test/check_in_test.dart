@@ -247,4 +247,22 @@ void main() {
     expect(tools.top, greaterThan(40)); // not under the header row
     expect(tools.top, lessThan(844 / 2)); // brought up into view
   });
+
+  testWidgets('Care hero: the flower vase is drawn a little bigger', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      Provider<MoodStore>.value(
+        value: MoodStore(MemorySecureStore()),
+        child: MaterialApp(theme: AppTheme.light, home: const CareScreen()),
+      ),
+    );
+    await _settle(tester);
+    final painting = tester.widget<Transform>(
+      find.byKey(const ValueKey('hero-painting')),
+    );
+    expect(CareScreen.vaseScale, greaterThan(1));
+    expect(painting.transform.getMaxScaleOnAxis(), CareScreen.vaseScale);
+  });
 }

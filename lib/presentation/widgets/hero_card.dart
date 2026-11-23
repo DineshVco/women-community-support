@@ -86,12 +86,16 @@ class HeroCard extends StatelessWidget {
     this.actionLabel,
     this.onTap,
     this.minHeight = 176,
+    this.paintingScale = 1,
   });
 
   final HeroScene scene;
 
   /// Discuss uses a short hero (120) so posts show sooner.
   final double minHeight;
+
+  /// Enlarges the painting from its right side (Care's flower vase).
+  final double paintingScale;
 
   /// The text, top to bottom, on the left of the card.
   final List<Widget> children;
@@ -160,7 +164,14 @@ class HeroCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            Positioned.fill(child: _Painting(scene: scene)),
+            Positioned.fill(
+              child: Transform.scale(
+                key: const ValueKey('hero-painting'),
+                scale: paintingScale,
+                alignment: Alignment.centerRight,
+                child: _Painting(scene: scene),
+              ),
+            ),
             // The veil: strong on the left, under the text.
             Positioned.fill(
               child: DecoratedBox(

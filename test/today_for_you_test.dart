@@ -172,6 +172,42 @@ void main() {
       });
     }
 
+    testWidgets('a cat-in-the-grass picture on the right; text stays left', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final suggestion = _real.pick(_at(9), includeDrafts: true)!;
+      await tester.pumpWidget(
+        _app(
+          TodayForYouCard(
+            onOpen: (_) {},
+            now: _at(9),
+            library: _library(),
+            includeDrafts: true,
+          ),
+        ),
+      );
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('today-picture')), findsOneWidget);
+      // Not in the project yet: a soft gradient instead.
+      expect(
+        find.byKey(const ValueKey('card-picture-fallback')),
+        findsOneWidget,
+      );
+      final card = tester.getRect(find.byType(LoomaCard));
+      final pictureStarts =
+          card.right - TodayForYouCard.textRightInset(card.width);
+      for (final text in [suggestion.title, suggestion.text]) {
+        expect(
+          tester.getRect(find.text(text)).right,
+          lessThanOrEqualTo(pictureStarts + 0.5),
+        );
+      }
+    });
+
     testWidgets('late night is quieter: a plain soft card', (tester) async {
       Future<Color?> colourAt(DateTime time) async {
         await tester.pumpWidget(
