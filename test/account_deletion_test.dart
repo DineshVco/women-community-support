@@ -158,4 +158,17 @@ void main() {
       );
     });
   });
+
+  test(
+    'Privacy centre says the Weather disguise sends the city to Open-Meteo',
+    () {
+      final weather = PrivacyCentreScreen.sections.firstWhere(
+        (s) => s.$1 == 'The Weather disguise',
+      );
+      expect(weather.$2, contains('Open-Meteo'));
+      expect(weather.$2, contains('city'));
+      expect(weather.$2, contains('internet address'));
+      expect(weather.$2, contains('Nothing else'));
+    },
+  );
 }

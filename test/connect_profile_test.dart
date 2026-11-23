@@ -255,15 +255,16 @@ void main() {
       return tester.widget<CupertinoSwitch>(find.byType(CupertinoSwitch));
     }
 
-    testWidgets('explains exactly what others can see', (tester) async {
+    testWidgets('promises nothing before Connect exists', (tester) async {
       await pumpTile(tester, profile: profile);
       expect(
         find.textContaining(
-          'Other women can see your alias, avatar, interests and bio. '
-          'Never your name, email or posts.',
+          'When Connect arrives, other women will see your chat alias and '
+          'avatar, never your posts.',
         ),
         findsOneWidget,
       );
+      expect(find.textContaining('can see your alias'), findsNothing);
     });
 
     testWidgets('off without a chat profile', (tester) async {

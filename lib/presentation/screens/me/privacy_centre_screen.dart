@@ -80,6 +80,14 @@ class PrivacyCentreScreen extends StatefulWidget {
           'Dark mode, Gentle mode and Reduce motion. These never leave your '
           'phone.',
     ),
+    (
+      'The Weather disguise',
+      'To show a real forecast, the Weather disguise sends the city you '
+          'chose to Open-Meteo, a free weather service (first the city name, '
+          "then that city's place on the map). Nothing else: not your "
+          'account, your posts or anything you wrote. Like any website, '
+          "Open-Meteo can see your phone's internet address.",
+    ),
   ];
 
   @override

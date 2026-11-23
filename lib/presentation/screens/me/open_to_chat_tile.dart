@@ -31,9 +31,11 @@ class OpenToChatTile extends StatelessWidget {
   /// For tests. Defaults to the current time.
   final DateTime? now;
 
+  /// Connect is not built yet, so this promises nothing more than what will
+  /// happen when it arrives. "Open to chat" stays off by default.
   static const String explanation =
-      'Other women can see your alias, avatar, interests and bio. Never '
-      'your name, email or posts.';
+      'When Connect arrives, other women will see your chat alias and '
+      'avatar, never your posts.';
 
   /// The waiting note, or null when there is nothing to wait for.
   static String? noteFor({

@@ -305,8 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     profile: profile,
                                     joinedAt: joinedAt,
                                   ) ??
-                                  'Others see your chat alias and avatar, '
-                                      'never your posts.',
+                                  OpenToChatTile.explanation,
                             ),
                             const GroupedRow(
                               icon: AppIcons.blocked,
