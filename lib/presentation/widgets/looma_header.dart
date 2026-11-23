@@ -11,8 +11,9 @@ import 'quick_exit_button.dart';
 
 /// The header of Discuss, Care and Me (and Get help): ONE row with the
 /// title on the left and Quick exit on the right, 4 px under the status
-/// bar. While scrolling, the title shrinks from 34 to 20 px and a blurred
-/// bar fades in behind it. With Reduce motion it switches in one step.
+/// bar. While scrolling, the title shrinks and fades out completely while a
+/// blurred bar fades in behind Quick exit. With Reduce motion it switches
+/// in one step.
 ///
 /// If the title and the Quick exit label do not both fit (small phone,
 /// large text), Quick exit shows just its icon, so nothing overlaps.
@@ -96,6 +97,9 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
     // Reduce motion: large or small, nothing in between.
     if (reduceMotion) t = t < 0.5 ? 0 : 1;
     final size = lerpDouble(LoomaHeader.largeSize, LoomaHeader.smallSize, t)!;
+    // 1 at rest, 0 once 80% collapsed (and exactly 0 or 1 with Reduce
+    // motion, because t is).
+    final titleOpacity = (1 - t / 0.8).clamp(0.0, 1.0);
     final scaler = MediaQuery.textScalerOf(context);
 
     return Stack(
@@ -146,21 +150,29 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                 children: [
                   if (leading != null) leading!,
                   Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
+                    // Fully visible at rest at the top; fades out completely
+                    // as the bar collapses (gone before it is fully small).
+                    // Screen readers still have the page title.
+                    child: Opacity(
+                      key: const ValueKey('header-title'),
+                      opacity: titleOpacity,
+                      alwaysIncludeSemantics: true,
+                      child: Semantics(
+                        header: true,
+                        child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            style: AppTypography.heading(
-                              size,
-                              palette.text,
-                              height: 1.1,
-                              letterSpacing: -0.5 * (1 - t),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              style: AppTypography.heading(
+                                size,
+                                palette.text,
+                                height: 1.1,
+                                letterSpacing: -0.5 * (1 - t),
+                              ),
                             ),
                           ),
                         ),

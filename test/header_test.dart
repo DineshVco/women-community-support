@@ -121,33 +121,59 @@ void main() {
     });
   }
 
-  testWidgets('scrolled: the title shrinks into a blurred bar', (tester) async {
-    _phone(tester);
-    await tester.pumpWidget(_app(_tab('Discuss')));
-    final big = tester.getSize(find.text('Discuss')).height;
-    expect(find.byType(BackdropFilter), findsNothing); // clear at the top
+  double titleOpacity(WidgetTester tester) =>
+      tester
+          .widget<Opacity>(find.byKey(const ValueKey('header-title')))
+          .opacity;
 
-    await tester.drag(find.text('Row 2'), const Offset(0, -400));
-    await tester.pumpAndSettle();
-    expect(tester.getSize(find.text('Discuss')).height, lessThan(big));
-    expect(find.byType(BackdropFilter), findsOneWidget);
-    expect(_quickExit, findsOneWidget); // still on the same row
-  });
+  for (final title in ['Discuss', 'Care']) {
+    testWidgets('$title at rest at the top: title fully visible, no ghost', (
+      tester,
+    ) async {
+      _phone(tester);
+      await tester.pumpWidget(_app(_tab(title)));
+      await tester.pumpAndSettle();
+      expect(titleOpacity(tester), 1);
+      // No blurred bar or second copy behind it.
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.text(title), findsOneWidget);
+      // Pulled down a little and let go: back to fully visible.
+      await tester.drag(find.text('Row 2'), const Offset(0, 120));
+      await tester.pumpAndSettle();
+      expect(titleOpacity(tester), 1);
+      expect(find.byType(BackdropFilter), findsNothing);
+    });
 
-  testWidgets('Reduce motion: large or small, never in between', (
-    tester,
-  ) async {
+    testWidgets('$title after scrolling: the title fades fully out', (
+      tester,
+    ) async {
+      _phone(tester);
+      await tester.pumpWidget(_app(_tab(title)));
+      await tester.drag(find.text('Row 2'), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(titleOpacity(tester), 0);
+      expect(find.byType(BackdropFilter), findsOneWidget); // the bar
+      expect(_quickExit, findsOneWidget); // still there
+      // Screen readers keep the page title.
+      expect(find.bySemanticsLabel(title), findsOneWidget);
+      // Scrolling back to the very top brings it back fully.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      expect(titleOpacity(tester), 1);
+      expect(find.byType(BackdropFilter), findsNothing);
+    });
+  }
+
+  testWidgets('Reduce motion: shown or gone, never in between', (tester) async {
     _phone(tester);
     await tester.pumpWidget(_app(_tab('Discuss'), reduceMotion: true));
-    final big = tester.getSize(find.text('Discuss')).height;
-    // A small scroll (less than half the shrink) keeps it large.
+    // A small scroll (less than half the collapse) keeps it fully shown.
     await tester.drag(find.text('Row 2'), const Offset(0, -10));
     await tester.pump();
-    expect(tester.getSize(find.text('Discuss')).height, big);
+    expect(titleOpacity(tester), 1);
     await tester.drag(find.text('Row 2'), const Offset(0, -300));
     await tester.pumpAndSettle();
-    final small = tester.getSize(find.text('Discuss')).height;
-    expect(small, lessThan(big));
+    expect(titleOpacity(tester), 0);
     // And nothing keeps animating.
     expect(tester.binding.hasScheduledFrame, isFalse);
   });

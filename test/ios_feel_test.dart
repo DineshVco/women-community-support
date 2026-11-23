@@ -69,10 +69,12 @@ void main() {
 
     await tester.drag(find.text('Row 2'), const Offset(0, -300));
     await tester.pumpAndSettle();
-    // The large title has scrolled away; a small title stays in the bar.
-    final visible = find.text('Discuss').hitTestable();
-    expect(visible, findsOneWidget);
-    expect(tester.getSize(visible).height, lessThan(bigBefore));
+    // The title has shrunk and faded out; the blurred bar stays.
+    expect(tester.getSize(find.text('Discuss')).height, lessThan(bigBefore));
+    final title = tester.widget<Opacity>(
+      find.byKey(const ValueKey('header-title')),
+    );
+    expect(title.opacity, 0);
   });
 
   testWidgets('pull to refresh uses the iOS spinner', (tester) async {
