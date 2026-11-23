@@ -16,6 +16,7 @@ import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/quick_exit_button.dart';
 import '../help_screen.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Loads the bundled library once per app run.
 Future<ContentLibrary> _library() => _cached ??= ContentLibrary.load();
@@ -253,11 +254,7 @@ class _GuideRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (saved)
-              Icon(
-                CupertinoIcons.bookmark_fill,
-                size: 16,
-                color: palette.textSecondary,
-              ),
+              Icon(AppIcons.bookmarkOn, size: 16, color: palette.textSecondary),
             const SizedBox(width: 4),
             const CupertinoListTileChevron(),
           ],
@@ -321,7 +318,7 @@ class _GuideDetailScreenState extends State<GuideDetailScreen> {
               minSize: 44,
               onPressed: _toggle,
               child: Icon(
-                _saved ? CupertinoIcons.bookmark_fill : CupertinoIcons.bookmark,
+                _saved ? AppIcons.bookmarkOn : AppIcons.bookmark,
                 color: palette.text,
                 semanticLabel: _saved ? 'Remove bookmark' : 'Bookmark',
               ),
@@ -471,7 +468,7 @@ class _CallCard extends StatelessWidget {
               shape: const StadiumBorder(),
             ),
             onPressed: () => HelpScreen.call(context, Helplines.emergency),
-            icon: const Icon(CupertinoIcons.phone, size: 18),
+            icon: const Icon(AppIcons.phone, size: 18),
             label: const Text('Call 999'),
           ),
         ],

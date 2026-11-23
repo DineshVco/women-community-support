@@ -15,6 +15,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/looma_character.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// The two steps after creating a login, shown once per account:
 ///  1. Women only confirmation   2. Birthday (age check)
@@ -99,7 +100,7 @@ class _StepScaffold extends StatelessWidget {
                     IconButton(
                       onPressed: onBack,
                       tooltip: 'Back',
-                      icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      icon: const Icon(AppIcons.back, size: 20),
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
@@ -494,7 +495,7 @@ class _BirthdayStepState extends State<_BirthdayStep>
             child: InputDecorator(
               decoration: const InputDecoration(
                 labelText: 'Birthday',
-                suffixIcon: Icon(Icons.calendar_today_outlined),
+                suffixIcon: Icon(AppIcons.calendar),
               ),
               isEmpty: birthday == null,
               child: Text(
@@ -516,7 +517,7 @@ class _BirthdayStepState extends State<_BirthdayStep>
         const SizedBox(height: AppSpacing.lg),
         Row(
           children: [
-            Icon(Icons.lock_outline, size: 16, color: palette.textSecondary),
+            Icon(AppIcons.lock, size: 16, color: palette.textSecondary),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(

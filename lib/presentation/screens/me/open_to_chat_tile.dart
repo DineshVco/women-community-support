@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../../core/constants/connect.dart';
 import '../../../data/models/chat_profile.dart';
 import '../../widgets/ios.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// The "Open to chat" switch with its plain-words explanation.
 ///
@@ -61,7 +62,7 @@ class OpenToChatTile extends StatelessWidget {
       footer: note == null ? explanation : '$explanation\n\n$note',
       children: [
         GroupedRow(
-          icon: CupertinoIcons.chat_bubble,
+          icon: AppIcons.chat,
           title: 'Open to chat',
           trailing: LoomaSwitch(
             value: isOpen,

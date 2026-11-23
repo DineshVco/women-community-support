@@ -53,6 +53,20 @@ void main() {
     });
   });
 
+  test('one icon set: Phosphor via AppIcons (disguises excepted)', () {
+    final stock = RegExp(r'(?<![A-Za-z_.])(Cupertino)?Icons\.[a-z_]+');
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      final path = file.path.replaceAll('\\', '/');
+      // The weather and calculator disguises copy stock phone apps.
+      if (path.contains('decoy_screen') || path.endsWith('data/weather.dart')) {
+        continue;
+      }
+      final hits = stock.allMatches(file.readAsStringSync()).map((m) => m[0]);
+      expect(hits, isEmpty, reason: path);
+    }
+  });
+
   group('grey text passes AA (4.5:1)', () {
     for (final (name, p) in [
       ('light', AppPalette.light),

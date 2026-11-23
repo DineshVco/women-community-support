@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import 'press_scale.dart';
+import '../../core/theme/app_icons.dart';
 
 /// Reply box pinned to the bottom of the discussion screen.
 class CommentComposer extends StatelessWidget {
@@ -63,7 +64,7 @@ class CommentComposer extends StatelessWidget {
                     IconButton(
                       onPressed: onCancelReply,
                       tooltip: 'Cancel reply',
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(AppIcons.close),
                     ),
                   ],
                 ),
@@ -116,7 +117,7 @@ class CommentComposer extends StatelessWidget {
                                   color: palette.textMuted,
                                 ),
                               )
-                              : const Icon(Icons.arrow_upward),
+                              : const Icon(AppIcons.arrowUp),
                     ),
                   ),
                 ],

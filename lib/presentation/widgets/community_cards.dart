@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +10,7 @@ import '../../data/help_lines.dart';
 import '../../data/models/community.dart';
 import '../screens/care/guides_screen.dart';
 import 'adaptive.dart';
+import '../../core/theme/app_icons.dart';
 
 /// The soft colours of the spec, used only for small dots and labels.
 Color themeDotColor(String colorKey) => switch (colorKey) {
@@ -65,11 +65,7 @@ class SmallWinsCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      CupertinoIcons.pin_fill,
-                      size: 14,
-                      color: palette.textSecondary,
-                    ),
+                    Icon(AppIcons.pin, size: 14, color: palette.textSecondary),
                     const SizedBox(width: 6),
                     Text(
                       'SMALL WINS · THIS WEEK',
@@ -100,7 +96,7 @@ class SmallWinsCard extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: onOpen,
                     iconAlignment: IconAlignment.end,
-                    icon: const Icon(CupertinoIcons.chevron_right, size: 16),
+                    icon: const Icon(AppIcons.chevronRight, size: 16),
                     label: const Text('Share a small win'),
                   ),
                 ),
@@ -194,11 +190,7 @@ class ThemedWeekBanner extends StatelessWidget {
               ),
             ),
             if (guides.isNotEmpty)
-              Icon(
-                CupertinoIcons.chevron_right,
-                size: 16,
-                color: palette.textMuted,
-              ),
+              Icon(AppIcons.chevronRight, size: 16, color: palette.textMuted),
           ],
         );
         return Padding(

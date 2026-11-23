@@ -5,6 +5,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/utils/haptics.dart';
 import 'press_scale.dart';
+import '../../core/theme/app_icons.dart';
 
 /// An option card. Selected: 1.8 px black border and a filled black circle
 /// with a white tick on the right. Not selected: 1 px grey border and an
@@ -74,7 +75,7 @@ class ChoiceCard extends StatelessWidget {
                     child:
                         selected
                             ? Icon(
-                              Icons.check,
+                              AppIcons.check,
                               size: 16,
                               color: palette.onPrimary,
                             )

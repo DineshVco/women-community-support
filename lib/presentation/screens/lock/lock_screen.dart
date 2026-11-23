@@ -13,6 +13,7 @@ import '../../../core/utils/haptics.dart';
 import '../../widgets/brand_mark.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/ios.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Six dots and a number pad. Used by the lock screen and "Set PIN".
 class PinPad extends StatelessWidget {
@@ -99,7 +100,7 @@ class PinPad extends StatelessWidget {
             SizedBox(width: 88, height: 80, child: extraKey),
             digitKey('0'),
             _Key(
-              icon: Icons.backspace_outlined,
+              icon: AppIcons.backspace,
               semantics: 'Delete',
               onTap:
                   enabled && filled > 0
@@ -342,7 +343,7 @@ class _LockScreenState extends State<LockScreen>
                               child: IconButton(
                                 iconSize: 30,
                                 onPressed: waiting ? null : _biometrics,
-                                icon: const Icon(Icons.fingerprint),
+                                icon: const Icon(AppIcons.fingerprint),
                                 tooltip: null,
                               ),
                             )

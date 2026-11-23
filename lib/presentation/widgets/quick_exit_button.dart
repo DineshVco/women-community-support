@@ -11,6 +11,7 @@ import 'app_lock_gate.dart';
 import 'ios.dart';
 import 'transient_overlays.dart';
 import 'looma_button.dart';
+import '../../core/theme/app_icons.dart';
 
 /// Quick exit: one tap hides Looma behind an ordinary-looking screen
 /// (weather or calculator, chosen in Settings).
@@ -166,7 +167,7 @@ class QuickExitButton extends StatelessWidget {
         ).textTheme.labelMedium?.copyWith(fontSize: 13, color: palette.text),
         tapTargetSize: MaterialTapTargetSize.padded,
       ),
-      icon: const Icon(Icons.visibility_off_outlined, size: 16),
+      icon: const Icon(AppIcons.eyeSlash, size: 16),
       label: const Text('Quick exit'),
     );
   }
@@ -194,7 +195,7 @@ class _IntroSheet extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.visibility_off_outlined, color: palette.text),
+                Icon(AppIcons.eyeSlash, color: palette.text),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Quick exit',

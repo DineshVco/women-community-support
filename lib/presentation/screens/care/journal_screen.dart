@@ -11,6 +11,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// My journal: private notes, only on this phone (encrypted). List, write,
 /// edit, delete. Optional prompts to start from.
@@ -92,7 +93,7 @@ class _JournalScreenState extends State<JournalScreen> {
           minSize: 44,
           onPressed: _write,
           child: Icon(
-            CupertinoIcons.square_pencil,
+            AppIcons.journal,
             color: palette.text,
             semanticLabel: 'New note',
           ),
@@ -230,7 +231,7 @@ class _JournalEditorState extends State<JournalEditor> {
                   minSize: 44,
                   onPressed: _delete,
                   child: Icon(
-                    CupertinoIcons.delete,
+                    AppIcons.delete,
                     color: CupertinoColors.destructiveRed.resolveFrom(context),
                     semanticLabel: 'Delete note',
                   ),

@@ -16,6 +16,7 @@ import '../../widgets/looma_button.dart';
 import '../../widgets/quick_exit_button.dart';
 import '../../widgets/ios.dart';
 import 'app_lock_settings_screen.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Opens the safety plan. With App lock on, she types her PIN (or uses her
 /// fingerprint / face) first, every time.
@@ -248,7 +249,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
                           style: TextButton.styleFrom(
                             foregroundColor: palette.text,
                           ),
-                          icon: const Icon(Icons.person_add_outlined),
+                          icon: const Icon(AppIcons.personAdd),
                           label: const Text('Add a contact'),
                         ),
                       ),
@@ -356,7 +357,7 @@ class _OnlyOnPhoneCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.phone_iphone_outlined, color: palette.text),
+              Icon(AppIcons.mobile, color: palette.text),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -415,7 +416,7 @@ class _ContactRow extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: palette.softFill,
         foregroundColor: palette.text,
-        child: const Icon(Icons.person_outline),
+        child: const Icon(AppIcons.person),
       ),
       title: Text(contact.name),
       subtitle: Text(
@@ -427,7 +428,7 @@ class _ContactRow extends StatelessWidget {
       onTap: onEdit,
       trailing: IconButton(
         tooltip: 'Remove ${contact.name}',
-        icon: const Icon(Icons.close),
+        icon: const Icon(AppIcons.close),
         onPressed: onRemove,
       ),
     );

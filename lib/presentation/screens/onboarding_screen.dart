@@ -11,6 +11,7 @@ import '../widgets/fade_slide_in.dart';
 import '../widgets/floating_illustration.dart';
 import '../widgets/looma_button.dart';
 import '../widgets/looma_character.dart';
+import '../../core/theme/app_icons.dart';
 
 /// First screen: four swipeable pages (Looma polish step 4).
 ///  1. The welcome page (wordmark, character, welcome line, four features).
@@ -199,22 +200,22 @@ class _WelcomePage extends StatelessWidget {
 
   static const _features = [
     (
-      icon: Icons.chat_bubble_outline,
+      icon: AppIcons.chat,
       title: 'Share Anonymously',
       text: 'Speak freely in a safe and respectful space',
     ),
     (
-      icon: Icons.menu_book_outlined,
+      icon: AppIcons.guides,
       title: 'Browse by Category',
       text: 'Explore discussions on topics that matter to you',
     ),
     (
-      icon: Icons.groups_outlined,
+      icon: AppIcons.people,
       title: 'Be Part of a Community',
       text: 'Connect with women who understand',
     ),
     (
-      icon: Icons.shield_outlined,
+      icon: AppIcons.safety,
       title: 'Stay Safe & Protected',
       text: 'Report harmful content, moderators keep the community respectful',
     ),

@@ -13,6 +13,7 @@ import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/mood_face.dart';
 import '../help_screen.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// How are you feeling: tap a cat face, add a line if you like, saved only
 /// on this phone. A month calendar with small coloured dots and a gentle
@@ -358,7 +359,7 @@ class _MonthView extends StatelessWidget {
                 minSize: 44,
                 onPressed: onPrevious,
                 child: Icon(
-                  CupertinoIcons.chevron_left,
+                  AppIcons.chevronLeft,
                   color: palette.text,
                   semanticLabel: 'Previous month',
                 ),
@@ -379,7 +380,7 @@ class _MonthView extends StatelessWidget {
                 minSize: 44,
                 onPressed: onNext,
                 child: Icon(
-                  CupertinoIcons.chevron_right,
+                  AppIcons.chevronRight,
                   color: onNext == null ? palette.border : palette.text,
                   semanticLabel: 'Next month',
                 ),

@@ -7,6 +7,7 @@ import '../widgets/ios.dart';
 import 'care/care_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
+import '../../core/theme/app_icons.dart';
 
 /// The signed-in app: Discuss, Care and Me under an iOS-style tab bar that
 /// is translucent and blurred (content scrolls under it). Connect joins
@@ -61,18 +62,18 @@ class _AppShellState extends State<AppShell> {
         },
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.chat_bubble_2),
-            activeIcon: Icon(CupertinoIcons.chat_bubble_2_fill),
+            icon: Icon(AppIcons.discuss),
+            activeIcon: Icon(AppIcons.discussActive),
             label: 'Discuss',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.heart),
-            activeIcon: Icon(CupertinoIcons.heart_fill),
+            icon: Icon(AppIcons.care),
+            activeIcon: Icon(AppIcons.careActive),
             label: 'Care',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.person_crop_circle),
-            activeIcon: Icon(CupertinoIcons.person_crop_circle_fill),
+            icon: Icon(AppIcons.me),
+            activeIcon: Icon(AppIcons.meActive),
             label: 'Me',
           ),
         ],

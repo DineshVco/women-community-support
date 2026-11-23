@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/presentation/widgets/looma_button.dart';
 import 'package:women_community_support/presentation/widgets/press_scale.dart';
@@ -51,7 +52,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(AppIcons.check), findsOneWidget);
     expect(find.text('Continue'), findsNothing);
 
     await tester.tap(find.byType(LoomaButton), warnIfMissed: false);

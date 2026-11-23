@@ -14,6 +14,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/quick_exit_button.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Directory: organisations and help lines from content/directory.json
 /// ONLY. Call, open the website, or copy. Hours only when checked, and a
@@ -192,7 +193,7 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => ContactActions.call(context, entry.number!),
-                  icon: const Icon(CupertinoIcons.phone, size: 18),
+                  icon: const Icon(AppIcons.phone, size: 18),
                   label: Text('Call', semanticsLabel: 'Call ${entry.name}'),
                 ),
               if (entry.canMessage)
@@ -203,7 +204,7 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => ContactActions.message(context, entry),
-                  icon: const Icon(CupertinoIcons.chat_bubble, size: 18),
+                  icon: const Icon(AppIcons.chat, size: 18),
                   label: Text(
                     'Message',
                     semanticsLabel: 'Message ${entry.name}',
@@ -217,7 +218,7 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => _openWebsite(context),
-                  icon: const Icon(CupertinoIcons.globe, size: 18),
+                  icon: const Icon(AppIcons.globe, size: 18),
                   label: const Text('Website'),
                 ),
               if (entry.copyNumber != null)
@@ -225,7 +226,7 @@ class _EntryCard extends StatelessWidget {
                   style: small,
                   onPressed:
                       () => ContactActions.copy(context, entry.copyNumber!),
-                  icon: const Icon(CupertinoIcons.doc_on_doc, size: 18),
+                  icon: const Icon(AppIcons.copy, size: 18),
                   label: Text(
                     'Copy',
                     semanticsLabel: 'Copy ${entry.name} number',

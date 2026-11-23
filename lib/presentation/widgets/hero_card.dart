@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -7,6 +6,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/haptics.dart';
 import 'press_scale.dart';
+import '../../core/theme/app_icons.dart';
 
 /// The painted scenes in assets/images/hero/ (no people in them).
 enum HeroScene {
@@ -134,11 +134,7 @@ class HeroCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    CupertinoIcons.chevron_right,
-                    size: 14,
-                    color: palette.text,
-                  ),
+                  Icon(AppIcons.chevronRight, size: 14, color: palette.text),
                 ],
               ),
             ],

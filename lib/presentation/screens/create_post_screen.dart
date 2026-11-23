@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +13,7 @@ import '../widgets/content_width.dart';
 import '../widgets/looma_button.dart';
 import '../widgets/ios.dart';
 import 'help_screen.dart';
+import '../../core/theme/app_icons.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({
@@ -215,7 +215,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ? null
                           : () =>
                               setState(() => _options.removeAt(i).dispose()),
-                  icon: const Icon(CupertinoIcons.minus_circle),
+                  icon: const Icon(AppIcons.removeCircle),
                 ),
             ],
           ),
@@ -229,7 +229,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     ? null
                     : () =>
                         setState(() => _options.add(TextEditingController())),
-            icon: const Icon(CupertinoIcons.add_circled, size: 18),
+            icon: const Icon(AppIcons.addCircle, size: 18),
             label: const Text('Add an answer'),
           ),
         ),

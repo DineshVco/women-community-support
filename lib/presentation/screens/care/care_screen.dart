@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -22,6 +21,7 @@ import 'ground_screen.dart';
 import 'guides_screen.dart';
 import 'journal_screen.dart';
 import 'mood_screen.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Opens the journal. With App lock on, she confirms her PIN first.
 Future<void> openJournal(BuildContext context) async {
@@ -126,19 +126,19 @@ class CareScreen extends StatelessWidget {
                   header: 'Tools',
                   children: [
                     GroupedRow(
-                      icon: CupertinoIcons.wind,
+                      icon: AppIcons.breathe,
                       title: 'Breathe',
                       subtitle: 'Slow breathing with the cat, 1 to 5 minutes',
                       onTap: () => _push(context, const BreatheScreen()),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.hand_raised,
+                      icon: AppIcons.ground,
                       title: 'Ground yourself',
                       subtitle: '5-4-3-2-1: come back to right now',
                       onTap: () => _push(context, const GroundScreen()),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.smiley,
+                      icon: AppIcons.mood,
                       title: 'How are you feeling',
                       subtitle:
                           private ? 'A private check-in' : EncryptedBox.webNote,
@@ -146,7 +146,7 @@ class CareScreen extends StatelessWidget {
                       onTap: () => _push(context, const MoodScreen()),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.book,
+                      icon: AppIcons.book,
                       title: 'My journal',
                       subtitle:
                           private
@@ -156,7 +156,7 @@ class CareScreen extends StatelessWidget {
                       onTap: () => openJournal(context),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.shield,
+                      icon: AppIcons.safety,
                       title: 'Safety plan',
                       subtitle:
                           private
@@ -182,19 +182,19 @@ class CareScreen extends StatelessWidget {
                   header: 'Guides',
                   children: [
                     GroupedRow(
-                      icon: CupertinoIcons.book_circle,
+                      icon: AppIcons.guides,
                       title: 'Guides library',
                       subtitle: 'Short, kind guides you can read offline',
                       onTap: () => _push(context, const GuidesScreen()),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.phone_circle,
+                      icon: AppIcons.directory,
                       title: 'Directory',
                       subtitle: 'Organisations and help lines',
                       onTap: () => _push(context, const DirectoryScreen()),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.question_circle,
+                      icon: AppIcons.askTeam,
                       title: 'Ask Looma Team',
                       subtitle:
                           'A question for the team, answered as Looma Team',

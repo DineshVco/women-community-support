@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/content_library.dart';
 import 'package:women_community_support/data/help_lines.dart';
@@ -210,7 +211,7 @@ void main() {
     ) async {
       await tester.pumpWidget(app());
       expect(find.text('Quick exit'), findsOneWidget);
-      expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+      expect(find.byIcon(AppIcons.eyeSlash), findsOneWidget);
     });
 
     testWidgets('first tap explains it once; "Got it" stays in Looma', (

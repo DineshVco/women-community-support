@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/haptics.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/post_repository.dart';
+import '../../core/theme/app_icons.dart';
 
 /// A poll: the options as buttons until she votes, then rounded bars with
 /// percentages. Results are shown only after she votes. One vote, final.
@@ -218,11 +219,7 @@ class _ResultBar extends StatelessWidget {
               child: Row(
                 children: [
                   if (picked) ...[
-                    Icon(
-                      CupertinoIcons.checkmark_alt,
-                      size: 16,
-                      color: palette.text,
-                    ),
+                    Icon(AppIcons.check, size: 16, color: palette.text),
                     const SizedBox(width: 6),
                   ],
                   Expanded(child: Text(label, style: textStyle)),

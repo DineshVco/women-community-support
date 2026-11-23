@@ -16,6 +16,7 @@ import '../widgets/ios.dart';
 import '../widgets/looma_button.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
+import '../../core/theme/app_icons.dart';
 
 /// Get help: calm, static, and works with no internet and no account.
 ///
@@ -37,16 +38,16 @@ class HelpScreen extends StatelessWidget {
 
   static const List<(IconData, String)> safeTips = [
     (
-      Icons.phone_android_outlined,
+      AppIcons.mobile,
       'If someone checks your phone, call from a phone they cannot see, like '
           'a friend\'s.',
     ),
     (
-      Icons.history_outlined,
+      AppIcons.history,
       'If it is safer, delete the call from your call history afterwards.',
     ),
     (
-      Icons.key_outlined,
+      AppIcons.key,
       'Agree a code word with someone you trust, so you can ask for help '
           'without saying it out loud.',
     ),
@@ -168,7 +169,7 @@ class EmergencyCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.phone_in_talk_outlined, color: palette.danger),
+                Icon(AppIcons.phoneCall, color: palette.danger),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
@@ -197,7 +198,7 @@ class EmergencyCard extends StatelessWidget {
                     ),
                   ),
                   onPressed: () => HelpScreen.call(context, line),
-                  icon: const Icon(Icons.call_outlined),
+                  icon: const Icon(AppIcons.phone),
                   label: Text('Call ${line.number}'),
                 ),
               ),
@@ -238,10 +239,10 @@ class HelplineGroupSection extends StatelessWidget {
   final HelpLineGroup group;
 
   static const Map<String, IconData> _icons = {
-    'befrienders-kl': Icons.chat_bubble_outline,
-    'talian-kasih': Icons.support_agent_outlined,
-    'wao-hotline': Icons.shield_outlined,
-    'wao-tina': Icons.sms_outlined,
+    'befrienders-kl': AppIcons.chat,
+    'talian-kasih': AppIcons.support,
+    'wao-hotline': AppIcons.safety,
+    'wao-tina': AppIcons.message,
   };
 
   @override
@@ -260,9 +261,7 @@ class HelplineGroupSection extends StatelessWidget {
             entry: entry,
             icon:
                 _icons[entry.id] ??
-                (entry.number == null
-                    ? Icons.sms_outlined
-                    : Icons.call_outlined),
+                (entry.number == null ? AppIcons.message : AppIcons.phone),
           ),
           if (entry != group.entries.last) const Divider(height: 1),
         ],
@@ -357,7 +356,7 @@ class _HelplineRow extends StatelessWidget {
                       OutlinedButton.icon(
                         style: outlined,
                         onPressed: () => ContactActions.call(context, number),
-                        icon: const Icon(Icons.call_outlined, size: 18),
+                        icon: const Icon(AppIcons.phone, size: 18),
                         label: Text(
                           'Call',
                           semanticsLabel: 'Call ${entry.name}',
@@ -367,7 +366,7 @@ class _HelplineRow extends StatelessWidget {
                       OutlinedButton.icon(
                         style: outlined,
                         onPressed: () => ContactActions.message(context, entry),
-                        icon: const Icon(Icons.sms_outlined, size: 18),
+                        icon: const Icon(AppIcons.message, size: 18),
                         label: Text(
                           'Message',
                           semanticsLabel: 'Message ${entry.name}',
@@ -378,7 +377,7 @@ class _HelplineRow extends StatelessWidget {
                         style: small,
                         onPressed:
                             () => ContactActions.copy(context, copyNumber),
-                        icon: const Icon(Icons.content_copy_outlined, size: 18),
+                        icon: const Icon(AppIcons.copy, size: 18),
                         label: Text(
                           'Copy',
                           semanticsLabel: 'Copy ${entry.name} number',
@@ -444,7 +443,7 @@ class QuickExitCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.visibility_off_outlined, color: palette.text),
+              Icon(AppIcons.eyeSlash, color: palette.text),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(

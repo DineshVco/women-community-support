@@ -29,6 +29,7 @@ import '../widgets/question_of_the_day.dart';
 import '../widgets/quick_exit_button.dart';
 import 'create_post_screen.dart';
 import 'post_detail_screen.dart';
+import '../../core/theme/app_icons.dart';
 
 /// The discussion feed: search, category filter, newest first.
 class HomeScreen extends StatefulWidget {
@@ -211,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
       tooltip: 'Write a post',
       extendedPadding: EdgeInsets.symmetric(horizontal: _fabExtended ? 20 : 16),
       extendedIconLabelSpacing: _fabExtended ? 8 : 0,
-      icon: const Icon(Icons.add),
+      icon: const Icon(AppIcons.add),
       // The label folds away while scrolling down and returns on the way up.
       label: AnimatedSize(
         duration: fabDuration,

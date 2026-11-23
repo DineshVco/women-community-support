@@ -4,6 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/haptics.dart';
 import 'press_scale.dart';
+import '../../core/theme/app_icons.dart';
 
 /// Full-width Looma buttons.
 ///  * [LoomaButton.primary]: black fill, white text, then an arrow "→".
@@ -53,7 +54,7 @@ class LoomaButton extends StatelessWidget {
     final Widget content =
         success
             ? Icon(
-              Icons.check,
+              AppIcons.check,
               key: const ValueKey('success'),
               size: 24,
               color: foreground,
@@ -76,7 +77,7 @@ class LoomaButton extends StatelessWidget {
                 Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
                 if (showArrow) ...[
                   const SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, size: 20, color: foreground),
+                  Icon(AppIcons.arrowRight, size: 20, color: foreground),
                 ],
               ],
             );

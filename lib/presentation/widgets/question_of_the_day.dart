@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../data/help_lines.dart';
+import '../../core/theme/app_icons.dart';
 
 /// A soft card with today's gentle question (content/daily_questions.json,
 /// one per day). "Share your answer" opens the compose screen with the
@@ -71,7 +72,7 @@ class QuestionOfTheDay extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => onAnswer(question),
                 iconAlignment: IconAlignment.end,
-                icon: const Icon(Icons.arrow_forward, size: 18),
+                icon: const Icon(AppIcons.arrowRight, size: 18),
                 label: const Text('Share your answer'),
               ),
             ),

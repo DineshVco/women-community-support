@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/security/app_lock.dart';
@@ -10,6 +9,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
 import '../lock/lock_screen.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Asks for the PIN (or fingerprint / face) before something sensitive:
 /// opening the safety plan, changing or turning off the PIN.
@@ -119,13 +119,13 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                       'on this phone.',
                   children: [
                     GroupedSwitchRow(
-                      icon: CupertinoIcons.lock,
+                      icon: AppIcons.lock,
                       title: 'App lock',
                       value: true,
                       onChanged: (_) => _turnOff(lock),
                     ),
                     GroupedRow(
-                      icon: CupertinoIcons.number,
+                      icon: AppIcons.passcode,
                       title: 'Change PIN',
                       onTap: () => _changePin(lock),
                     ),
@@ -136,8 +136,7 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                           return const SizedBox.shrink();
                         }
                         return GroupedSwitchRow(
-                          icon:
-                              CupertinoIcons.person_crop_circle_badge_checkmark,
+                          icon: AppIcons.faceId,
                           title: 'Unlock with fingerprint or face',
                           value: lock.biometrics,
                           onChanged: lock.setBiometrics,
@@ -167,7 +166,7 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                           : 'Shows a blank screen in the app switcher.',
                   children: [
                     GroupedSwitchRow(
-                      icon: CupertinoIcons.eye_slash,
+                      icon: AppIcons.eyeSlash,
                       title: 'Hide Looma in recent apps',
                       value: lock.hidePreview,
                       onChanged: lock.setHidePreview,

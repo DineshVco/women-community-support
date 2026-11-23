@@ -12,6 +12,7 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/looma_character.dart';
 import 'sign_in_hold.dart';
+import '../../../core/theme/app_icons.dart';
 
 /// Sign in / create account (email + password, or Google).
 /// After success, AuthGate swaps this screen for the app automatically.
@@ -200,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen>
                 leading: IconButton(
                   onPressed: _isLoading ? null : widget.onBack,
                   tooltip: 'Back',
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                  icon: const Icon(AppIcons.back, size: 20),
                 ),
                 shape: const Border(),
               ),
@@ -270,9 +271,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ? 'Show password'
                                   : 'Hide password',
                           icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
+                            _obscurePassword ? AppIcons.eye : AppIcons.eyeSlash,
                           ),
                           onPressed:
                               () => setState(

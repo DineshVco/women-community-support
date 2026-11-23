@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,6 +27,7 @@ import 'me/open_to_chat_tile.dart';
 import 'me/post_list_screen.dart';
 import 'me/privacy_centre_screen.dart';
 import 'moderator_screen.dart';
+import '../../core/theme/app_icons.dart';
 
 /// The "Me" tab, top to bottom:
 ///  chat profile (avatar, alias, bio, badge) · Open to chat · interests ·
@@ -187,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       header: 'My space',
                       children: [
                         GroupedRow(
-                          icon: CupertinoIcons.doc_text,
+                          icon: AppIcons.myPosts,
                           title: 'My posts',
                           subtitle: 'Only you can see this list',
                           onTap:
@@ -206,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                         ),
                         GroupedRow(
-                          icon: CupertinoIcons.bookmark,
+                          icon: AppIcons.bookmark,
                           title: 'Saved posts',
                           onTap:
                               () => _push(
@@ -222,18 +222,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                         ),
                         GroupedRow(
-                          icon: CupertinoIcons.flag,
+                          icon: AppIcons.flag,
                           title: 'My reports',
                           onTap: () => _push(const MyReportsScreen()),
                         ),
                         const GroupedRow(
-                          icon: CupertinoIcons.envelope,
+                          icon: AppIcons.envelope,
                           title: 'My requests',
                           subtitle: 'Arrives with Connect',
                           enabled: false,
                         ),
                         const GroupedRow(
-                          icon: CupertinoIcons.nosign,
+                          icon: AppIcons.blocked,
                           title: 'Blocked list',
                           subtitle: 'Arrives with Connect',
                           enabled: false,
@@ -252,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           header: 'Moderation',
                           children: [
                             GroupedRow(
-                              icon: CupertinoIcons.checkmark_shield,
+                              icon: AppIcons.shieldCheck,
                               title: 'Report queue',
                               onTap: () => _push(const ModeratorScreen()),
                             ),
@@ -266,18 +266,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       header: 'Privacy centre',
                       children: [
                         GroupedRow(
-                          icon: CupertinoIcons.lock,
+                          icon: AppIcons.lock,
                           title: 'App lock',
                           value: (lock?.enabled ?? false) ? 'On' : 'Off',
                           onTap: () => _push(const AppLockSettingsScreen()),
                         ),
                         GroupedRow(
-                          icon: CupertinoIcons.eye,
+                          icon: AppIcons.eye,
                           title: 'Who can see what',
                           onTap: () => _push(const PrivacyCentreScreen()),
                         ),
                         GroupedRow(
-                          icon: CupertinoIcons.delete,
+                          icon: AppIcons.delete,
                           title: 'Delete my account and data',
                           destructive: true,
                           onTap: () => _push(const PrivacyCentreScreen()),
@@ -292,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GroupedSection(
                       children: [
                         GroupedRow(
-                          icon: CupertinoIcons.square_arrow_right,
+                          icon: AppIcons.signOut,
                           title: 'Sign out',
                           destructive: true,
                           onTap: _signOut,
@@ -528,14 +528,14 @@ class SettingsSection extends StatelessWidget {
               ),
             ),
             GroupedSwitchRow(
-              icon: CupertinoIcons.leaf_arrow_circlepath,
+              icon: AppIcons.gentle,
               title: 'Gentle mode',
               subtitle: 'Hides numbers like replies and "me too" counts.',
               value: settings.gentleMode,
               onChanged: settings.setGentleMode,
             ),
             GroupedSwitchRow(
-              icon: CupertinoIcons.slowmo,
+              icon: AppIcons.reduceMotion,
               title: 'Reduce motion',
               subtitle:
                   'Turns off animations in Looma. Your phone\'s own setting '
@@ -557,13 +557,13 @@ class SettingsSection extends StatelessWidget {
               ),
             ),
             GroupedRow(
-              icon: CupertinoIcons.cloud_sun,
+              icon: AppIcons.weather,
               title: 'Weather city',
               value: settings.weatherCity,
               onTap: () => _editCity(context),
             ),
             GroupedRow(
-              icon: CupertinoIcons.eye_slash,
+              icon: AppIcons.eyeSlash,
               title: 'Practice Quick exit',
               onTap: () => QuickExit.practice(context),
             ),

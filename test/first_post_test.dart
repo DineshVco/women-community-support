@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/core/utils/first_post_celebration.dart';
 import 'package:women_community_support/presentation/widgets/heart_burst.dart';
@@ -82,7 +83,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(HeartBurst), findsOneWidget);
-      expect(find.byIcon(Icons.favorite), findsNWidgets(HeartBurst.count));
+      expect(
+        find.byIcon(AppIcons.heartFilled),
+        findsNWidgets(HeartBurst.count),
+      );
 
       // The 800 ms clock starts at the first frame (the 300 ms pump above).
       await tester.pump(const Duration(milliseconds: 700));

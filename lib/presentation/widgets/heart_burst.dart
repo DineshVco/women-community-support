@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import 'transient_overlays.dart';
+import '../../core/theme/app_icons.dart';
 
 /// A small, soft burst of blush hearts that rise and fade (800 ms).
 /// Shown once, after her very first post. Never blocks taps.
@@ -110,7 +111,7 @@ class _HeartBurstState extends State<HeartBurst>
         opacity: opacity,
         child: Transform.scale(
           scale: 0.6 + 0.4 * eased,
-          child: Icon(Icons.favorite, size: heart.size, color: color),
+          child: Icon(AppIcons.heartFilled, size: heart.size, color: color),
         ),
       ),
     );

@@ -26,6 +26,7 @@ import '../widgets/press_scale.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/team_badge.dart';
 import '../widgets/ios.dart';
+import '../../core/theme/app_icons.dart';
 
 /// One discussion: the post, "Me too", replies (one level deep) and the
 /// reply box. Everything updates live.
@@ -312,10 +313,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       },
       child: Semantics(
         label: 'More options',
-        child: Icon(
-          CupertinoIcons.ellipsis_circle,
-          color: context.palette.text,
-        ),
+        child: Icon(AppIcons.more, color: context.palette.text),
       ),
     );
   }
@@ -444,7 +442,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           minimumSize: const Size(0, 44),
                           padding: const EdgeInsets.symmetric(horizontal: 18),
                         ),
-                        icon: const Icon(Icons.flag_outlined, size: 18),
+                        icon: const Icon(AppIcons.flag, size: 18),
                         label: const Text('Report'),
                       ),
                     ),
@@ -470,8 +468,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         return IconButton(
           tooltip: saved ? 'Remove from saved' : 'Save',
           isSelected: saved,
-          icon: const Icon(CupertinoIcons.bookmark),
-          selectedIcon: const Icon(CupertinoIcons.bookmark_fill),
+          icon: const Icon(AppIcons.bookmark),
+          selectedIcon: const Icon(AppIcons.bookmarkOn),
           onPressed:
               snapshot.hasData
                   ? () async {
@@ -519,7 +517,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               icon: _PopOnSelect(
                 selected: on,
                 child: Icon(
-                  on ? Icons.favorite : Icons.favorite_border,
+                  on ? AppIcons.heartFilled : AppIcons.heart,
                   size: 20,
                 ),
               ),
