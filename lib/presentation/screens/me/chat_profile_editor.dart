@@ -163,7 +163,8 @@ class _ChatProfileEditorState extends State<ChatProfileEditor> {
             children: [
               Text(
                 'This is how you appear in Connect. It is separate from your '
-                'posts and replies: nobody can link the two.',
+                'posts and replies: other members and moderators cannot link the '
+                'two.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: palette.textSecondary,
                 ),

@@ -560,8 +560,8 @@ class ChatProfileHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Pick an avatar and a nickname for Connect. It is never '
-                    'linked to your posts.',
+                    'Pick an avatar and a nickname for Connect. Other members '
+                    'can’t link it to your posts.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: palette.textSecondary,
                     ),
