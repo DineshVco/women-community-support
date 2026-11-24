@@ -37,6 +37,15 @@ void main() {
     // Engine files: kept a week; this rule comes last, so it wins.
     final headers = hosting['headers'] as List;
     expect((headers.last as Map)['source'], '/canvaskit/**');
+    // The app code: kept a year (its address changes with every build),
+    // after the general no-cache rule for scripts so it wins.
+    final sources = [for (final h in headers) (h as Map)['source']];
+    final appCode = sources.indexOf('/main.dart.js');
+    expect(appCode, greaterThan(sources.indexOf('**/*.@(js|json|wasm|mjs)')));
+    expect(
+      jsonEncode(headers[appCode]),
+      contains('max-age=31536000, immutable'),
+    );
   });
 
   test('the first screens use small pictures; no unused font', () {

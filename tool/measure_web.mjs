@@ -21,6 +21,9 @@ import { join } from 'node:path';
 
 const url = process.argv[2];
 const label = process.argv[3] ?? '';
+// --repeat: load once, then measure a second start (like opening the
+// Home Screen app again, with the browser's cache warm).
+const repeat = process.argv.includes('--repeat');
 if (!url) {
   console.error('Usage: node tool/measure_web.mjs <url> [label]');
   process.exit(1);
@@ -86,6 +89,9 @@ const send = (method, params = {}) =>
 const sizes = new Map();
 const urls = new Map();
 let firstFrameAt = null;
+// The welcome screen's picture (a new visitor's first real screen).
+let welcomeAt = null;
+const navStart = { t: 0 };
 listeners.push((msg) => {
   if (msg.method === 'Network.responseReceived') {
     urls.set(msg.params.requestId, msg.params.response.url);
@@ -94,6 +100,13 @@ listeners.push((msg) => {
   if (msg.method === 'Network.dataReceived' && firstFrameAt === null) {
     const r = msg.params.requestId;
     sizes.set(r, (sizes.get(r) ?? 0) + msg.params.encodedDataLength);
+  }
+  if (
+    msg.method === 'Network.loadingFinished' &&
+    welcomeAt === null &&
+    (urls.get(msg.params.requestId) ?? '').includes('looma_character')
+  ) {
+    welcomeAt = Date.now();
   }
   if (msg.method === 'Network.loadingFinished' && firstFrameAt === null) {
     const r = msg.params.requestId;
@@ -135,7 +148,22 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
   });`,
 });
 
+if (repeat) {
+  await send('Page.navigate', { url });
+  for (let i = 0; i < 960; i++) {
+    await sleep(250);
+    const r = await send('Runtime.evaluate', {
+      expression: 'window.__firstFrame ?? null',
+      returnByValue: true,
+    });
+    if (r.result?.result?.value) break;
+  }
+  await sleep(8000); // let the first visit finish its downloads
+  sizes.clear();
+  welcomeAt = null;
+}
 const started = Date.now();
+navStart.t = started;
 await send('Page.navigate', { url });
 
 let result = null;
@@ -157,7 +185,9 @@ while (Date.now() - started < 240000) {
     break;
   }
 }
-await sleep(300);
+// Wait for the welcome screen (up to 60 s more).
+const waitUntil = Date.now() + 60000;
+while (welcomeAt === null && Date.now() < waitUntil) await sleep(250);
 
 const total = [...sizes.values()].reduce((a, b) => a + b, 0);
 const top = [...sizes.entries()]
@@ -167,12 +197,18 @@ const top = [...sizes.entries()]
 
 const kb = (b) => `${(b / 1024).toFixed(0)} KB`;
 console.log(`\n== ${label || url} ==`);
-console.log('Network: Slow 4G (562.5 ms RTT, 1.44 Mbps down), as iPhone Safari, empty cache');
+console.log(
+  'Network: Slow 4G (562.5 ms RTT, 1.44 Mbps down), as iPhone Safari, ' +
+    (repeat ? 'second start (cache warm)' : 'empty cache'),
+);
 console.log(
   `First paint (anything on screen): ${result?.paint ? (result.paint / 1000).toFixed(1) + ' s' : 'n/a'}`,
 );
 console.log(
   `Flutter first frame (app on screen): ${result?.firstFrame ? (result.firstFrame / 1000).toFixed(1) + ' s' : 'not reached in 240 s'}`,
+);
+console.log(
+  `Welcome screen ready (its picture loaded): ${welcomeAt ? ((welcomeAt - started) / 1000).toFixed(1) + ' s' : 'not seen'}`,
 );
 console.log(`Downloaded until first frame: ${kb(total)} in ${sizes.size} files`);
 for (const [u, b] of top) {

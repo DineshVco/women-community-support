@@ -77,6 +77,12 @@ void main() {
       expect(boot, isNot(contains('serviceWorkerSettings')));
       expect(boot, contains('r.unregister()'));
       expect(boot, contains('caches.delete'));
+      // The app code's address changes with every build (cached for a
+      // year in firebase.json, yet always the latest).
+      expect(
+        boot,
+        contains("mainJsPath += '?v=' + {{flutter_service_worker_version}}"),
+      );
     });
   });
 

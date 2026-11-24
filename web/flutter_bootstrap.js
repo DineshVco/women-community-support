@@ -26,4 +26,13 @@ if ('serviceWorker' in navigator) {
   }
 }
 
+// The app's code gets a new address for every build (?v=...), so phones
+// may keep it for a year (firebase.json) and still get a new version at
+// once: this small file is always fetched fresh and names the new one.
+_flutter.buildConfig.builds.forEach(function (build) {
+  if (build.mainJsPath) {
+    build.mainJsPath += '?v=' + {{flutter_service_worker_version}};
+  }
+});
+
 _flutter.loader.load();
