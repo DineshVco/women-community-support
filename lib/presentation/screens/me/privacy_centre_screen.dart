@@ -320,7 +320,11 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     );
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'Privacy centre'),
+      appBar: loomaNavBar(
+        context,
+        title: 'Privacy centre',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: ContentWidth(

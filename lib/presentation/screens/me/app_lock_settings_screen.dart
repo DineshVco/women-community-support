@@ -10,6 +10,7 @@ import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
 import '../lock/lock_screen.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// Asks for the PIN (or fingerprint / face) before something sensitive:
 /// opening the safety plan, changing or turning off the PIN.
@@ -78,7 +79,11 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
     final android = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'App lock'),
+      appBar: loomaNavBar(
+        context,
+        title: 'App lock',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: ContentWidth(

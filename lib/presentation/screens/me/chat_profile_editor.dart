@@ -12,6 +12,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// What the editor hands back when she taps Save.
 class ChatProfileDraft {
@@ -147,6 +148,7 @@ class _ChatProfileEditorState extends State<ChatProfileEditor> {
       appBar: loomaNavBar(
         context,
         title: widget.initial == null ? 'Set up chat profile' : 'Chat profile',
+        trailing: const QuickExitButton(),
       ),
       body: SafeArea(
         top: false,

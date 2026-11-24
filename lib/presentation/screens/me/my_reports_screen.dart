@@ -11,6 +11,7 @@ import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/post_route.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// Reports she made, and what happened to each.
 class MyReportsScreen extends StatefulWidget {
@@ -27,7 +28,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'My reports'),
+      appBar: loomaNavBar(
+        context,
+        title: 'My reports',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: ContentWidth(

@@ -14,6 +14,7 @@ import '../../widgets/brand_mark.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/ios.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// Six dots and a number pad. Used by the lock screen and "Set PIN".
 class PinPad extends StatelessWidget {
@@ -509,7 +510,11 @@ class _SetPinScreenState extends State<SetPinScreen> {
     }
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'App lock'),
+      appBar: loomaNavBar(
+        context,
+        title: 'App lock',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: Center(

@@ -11,6 +11,7 @@ import '../post_detail_screen.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/post_route.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// A simple list of posts for "My posts" and "Saved posts" (Me tab).
 /// Only she can see these lists.
@@ -68,7 +69,11 @@ class _PostListScreenState extends State<PostListScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: widget.title),
+      appBar: loomaNavBar(
+        context,
+        title: widget.title,
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: ContentWidth(
