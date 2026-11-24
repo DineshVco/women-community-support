@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/post_repository.dart';
 import '../widgets/content_width.dart';
+import '../widgets/looma_loader.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/looma_button.dart';
 import 'app_shell.dart';
@@ -138,9 +139,8 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator.adaptive()),
-    );
+    // The cat watching the yarn roll (still with Reduce motion).
+    return const LoomaLoadingScreen();
   }
 }
 

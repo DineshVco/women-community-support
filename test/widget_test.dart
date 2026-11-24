@@ -18,6 +18,7 @@ import 'package:women_community_support/presentation/screens/auth_gate.dart';
 import 'package:women_community_support/presentation/screens/membership/membership_flow.dart';
 import 'package:women_community_support/presentation/screens/onboarding_screen.dart';
 import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
+import 'package:women_community_support/presentation/widgets/looma_loader.dart';
 
 void main() {
   // ───────────────────────── Login screen ─────────────────────────
@@ -242,7 +243,9 @@ void main() {
       await tester.pump();
 
       expect(signOuts, 1);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // The cat watching the yarn roll.
+      expect(find.byType(LoomaLoader), findsOneWidget);
+      expect(find.bySemanticsLabel('Loading'), findsOneWidget);
     });
 
     testWidgets('does not crash if signing out fails', (tester) async {

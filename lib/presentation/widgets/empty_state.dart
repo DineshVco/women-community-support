@@ -93,11 +93,17 @@ class CatEmptyState extends StatelessWidget {
     required this.line,
     this.actionLabel,
     this.onAction,
+    this.picture = CardPictures.catSleep,
+    this.pictureAspect = CardPictures.catSleepAspect,
   });
 
   final String line;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// The painted picture: the sleeping cat, or e.g. the yarn ball.
+  final String picture;
+  final double pictureAspect;
 
   /// How wide the sleeping cat is drawn.
   static const double catWidth = 168;
@@ -119,9 +125,9 @@ class CatEmptyState extends StatelessWidget {
               child: SizedBox(
                 key: const ValueKey('empty-cat'),
                 width: catWidth,
-                height: catWidth / CardPictures.catSleepAspect,
+                height: catWidth / pictureAspect,
                 child: Image.asset(
-                  CardPictures.catSleep,
+                  picture,
                   fit: BoxFit.contain,
                   excludeFromSemantics: true,
                   // If it cannot load, the drawn cat instead.

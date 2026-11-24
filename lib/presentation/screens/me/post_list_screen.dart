@@ -21,11 +21,16 @@ class PostListScreen extends StatefulWidget {
     required this.load,
     required this.emptyMessage,
     this.note,
+    this.emptyPicture,
   });
 
   final String title;
   final Future<List<Post>> Function() load;
   final String emptyMessage;
+
+  /// A picture for the empty list instead of the sleeping cat, with its
+  /// width / height.
+  final (String, double)? emptyPicture;
 
   /// One line above the list, e.g. "Only you can see this list."
   final String? note;
@@ -83,7 +88,16 @@ class _PostListScreenState extends State<PostListScreen> {
               } else if (!snapshot.hasData) {
                 children = const [SkeletonPostList()];
               } else if (snapshot.data!.isEmpty) {
-                children = [CatEmptyState(line: widget.emptyMessage)];
+                final picture = widget.emptyPicture;
+                children = [
+                  picture == null
+                      ? CatEmptyState(line: widget.emptyMessage)
+                      : CatEmptyState(
+                        line: widget.emptyMessage,
+                        picture: picture.$1,
+                        pictureAspect: picture.$2,
+                      ),
+                ];
               } else {
                 children = [
                   if (widget.note != null)

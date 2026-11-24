@@ -15,6 +15,10 @@ class CardPictures {
   /// Its width / height.
   static const double catSleepAspect = 800 / 528;
 
+  /// A pink yarn ball with a loose thread (cut-out): "no saved posts".
+  static const String yarnFull = 'assets/images/hero/yarn_full.webp';
+  static const double yarnFullAspect = 600 / 571;
+
   /// Answers already found (only finished answers are kept, never a lookup
   /// still in progress, so one slow lookup can never block later ones).
   static final Map<String, bool> _known = {};

@@ -13,6 +13,7 @@ import '../../../data/safety_plan.dart';
 import '../../widgets/adaptive.dart';
 import '../../widgets/app_lock_gate.dart';
 import '../../widgets/content_width.dart';
+import '../../widgets/paw_loader.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/quick_exit_button.dart';
 import '../../widgets/ios.dart';
@@ -215,7 +216,7 @@ class _SafetyPlanScreenState extends State<SafetyPlanScreen> {
         child: ContentWidth(
           child:
               _loading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: PawLoader())
                   : ListView(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.screenHorizontal,

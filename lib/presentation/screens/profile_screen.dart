@@ -237,6 +237,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   title: 'Saved posts',
                                   load: _repo.savedPosts,
                                   emptyMessage: Microcopy.emptySaved,
+                                  // A yarn ball, waiting to be played with.
+                                  emptyPicture: (
+                                    CardPictures.yarnFull,
+                                    CardPictures.yarnFullAspect,
+                                  ),
                                 ),
                               ),
                         ),

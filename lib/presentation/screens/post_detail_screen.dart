@@ -28,6 +28,7 @@ import '../widgets/quick_exit_button.dart';
 import '../widgets/team_badge.dart';
 import '../widgets/ios.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/paw_loader.dart';
 import '../../core/theme/app_icons.dart';
 
 /// One discussion: the post, "Me too", replies (one level deep) and the
@@ -248,7 +249,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             onAction: () => Navigator.of(context).pop(),
           );
         } else if (_deleting) {
-          body = const Center(child: CircularProgressIndicator());
+          body = const Center(child: PawLoader(label: 'Deleting'));
         } else if (post == null &&
             snapshot.connectionState == ConnectionState.waiting) {
           // The post in the shape of a card, then two replies.
