@@ -376,7 +376,7 @@ class _OnlyOnPhoneCard extends StatelessWidget {
           if (showLockTip) ...[
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Tip: turn on App lock so nobody else can open your plan.',
+              'Tip: turn on App lock so nobody can open your plan without your PIN.',
               style: theme.textTheme.bodyMedium,
             ),
             TextButton(

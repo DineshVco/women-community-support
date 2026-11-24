@@ -51,8 +51,8 @@ class PrivacyCentreScreen extends StatefulWidget {
   static const String deleteSummary =
       'Deletes your posts, replies, saved posts, chat profile and private '
       'profile, then your login. Your mood log, journal and safety plan are '
-      'deleted from this phone too. "Me too" taps and reports you made stay, '
-      'with nothing that links them to you.';
+      'deleted from this phone too. "Me too" taps, poll votes and reports '
+      'you made stay, with no name or account attached.';
 
   /// The text blocks, kept here so a test can check the honest parts.
   static const List<(String, String)> sections = [
@@ -75,7 +75,8 @@ class PrivacyCentreScreen extends StatefulWidget {
       'What the project owner can see',
       'To be honest about the limits: the person who runs Looma\'s database '
           'can technically see everything stored in it. That includes your '
-          'email, your birth year, which posts and replies are yours, your '
+          'email (and, if you use Google, the name on your Google account), '
+          'your birth year, which posts and replies are yours, your '
           'saved posts and your chat profile. Avoid sharing names, places or '
           'details that could identify you or others.',
     ),

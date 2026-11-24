@@ -185,8 +185,8 @@ class _AppLockSettingsScreenState extends State<AppLockSettingsScreen> {
                   ),
                   child: Text(
                     'Forgot your PIN? Tap "Forgot PIN" on the lock screen. '
-                    'You will be signed out and the safety plan on this phone '
-                    'is deleted. Your posts and chat profile stay on the '
+                    'You will be signed out and your safety plan and journal on '
+                    'this phone are deleted. Your posts and chat profile stay on the '
                     'server.',
                     style: TextStyle(
                       fontSize: 13,

@@ -367,5 +367,7 @@ void main() {
     expect(all, contains('can technically see everything'));
     expect(all, contains('cannot prove it'));
     expect(all, contains('nobody can link it to your posts'));
+    // Google sign-in also saves her Google name in Firebase.
+    expect(all, contains('the name on your Google account'));
   });
 }
