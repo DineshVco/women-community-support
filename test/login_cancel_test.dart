@@ -14,8 +14,11 @@ class _FakeAuth extends LoginAuth {
   final calls = <String>[];
   Completer<void> pending = Completer<void>();
 
+  /// Becomes true when a sign-in "succeeds" in a test.
+  bool signedInNow = false;
+
   @override
-  bool get signedIn => false;
+  bool get signedIn => signedInNow;
 
   Future<void> _wait(String name) {
     calls.add(name);
@@ -74,7 +77,87 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
-  tearDown(() => SignInHold.active.value = false);
+  tearDown(() {
+    SignInHold.active.value = false;
+    LoginScreen.debugIsWeb = null;
+  });
+
+  group('web: back on the page after Google', () {
+    Future<void> leaveAndComeBack(WidgetTester tester) async {
+      // The Google window opens: the page hides; then she is back.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump(const Duration(seconds: 5));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+    }
+
+    testWidgets('nothing finished: back to normal 2 seconds later, quietly', (
+      tester,
+    ) async {
+      LoginScreen.debugIsWeb = true;
+      final auth = await _pump(tester);
+      await tester.tap(_google);
+      await tester.pump();
+      await leaveAndComeBack(tester);
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(_loading(tester), isTrue); // still giving it a moment
+      await tester.pump(const Duration(milliseconds: 600));
+      await _settle(tester);
+      expect(_loading(tester), isFalse);
+      expect(_usable(tester), isTrue);
+      expect(find.textContaining('try again'), findsNothing);
+      expect(SignInHold.active.value, isFalse);
+      // She can tap again at once.
+      await tester.tap(_google);
+      await tester.pump();
+      expect(auth.calls, ['google', 'google']);
+      auth.pending.completeError(const SignInCancelled());
+      await _settle(tester);
+    });
+
+    testWidgets('signed in while coming back: not cancelled', (tester) async {
+      LoginScreen.debugIsWeb = true;
+      final auth = await _pump(tester);
+      await tester.tap(_google);
+      await tester.pump();
+      await leaveAndComeBack(tester);
+      auth.signedInNow = true; // Google answered
+      await tester.pump(const Duration(seconds: 3));
+      expect(_loading(tester), isTrue); // still finishing, not cut off
+      auth.pending.complete();
+      await _settle(tester);
+      expect(find.textContaining('try again'), findsNothing);
+    });
+
+    testWidgets('she never left the page: no early reset', (tester) async {
+      LoginScreen.debugIsWeb = true;
+      final auth = await _pump(tester);
+      await tester.tap(_google);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump(const Duration(seconds: 5));
+      expect(_loading(tester), isTrue);
+      auth.pending.completeError(const SignInCancelled());
+      await _settle(tester);
+    });
+
+    testWidgets('Android and iPhone apps: unchanged (no early reset)', (
+      tester,
+    ) async {
+      LoginScreen.debugIsWeb = false;
+      final auth = await _pump(tester);
+      await tester.tap(_google);
+      await tester.pump();
+      await leaveAndComeBack(tester);
+      await tester.pump(const Duration(seconds: 5));
+      expect(_loading(tester), isTrue);
+      auth.pending.completeError(const SignInCancelled());
+      await _settle(tester);
+      expect(_loading(tester), isFalse);
+    });
+  });
 
   group('Google sign-in: cancel is a normal outcome', () {
     for (final (name, cancel) in <(String, Object)>[

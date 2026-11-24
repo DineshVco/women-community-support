@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -37,12 +38,24 @@ class LoginScreen extends StatefulWidget {
   static const String timeoutMessage =
       'Sign-in did not finish. Please try again.';
 
+  /// On the web, after she comes back to the page from the Google window
+  /// (closed it, or switched back), the screen waits this long for the
+  /// sign-in to finish, then returns to normal. Safari can take up to a
+  /// minute to report a closed Google window.
+  static const Duration returnGrace = Duration(seconds: 2);
+
+  /// Tests switch the web behaviour on.
+  @visibleForTesting
+  static bool? debugIsWeb;
+
+  static bool get _isWeb => debugIsWeb ?? kIsWeb;
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with EntranceOnce<LoginScreen> {
+    with EntranceOnce<LoginScreen>, WidgetsBindingObserver {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -51,6 +64,15 @@ class _LoginScreenState extends State<LoginScreen>
 
   /// Which button shows the success tick (null = none).
   _Method? _succeeded;
+
+  /// Web only: ends a Google sign-in early as "cancelled" when she is back
+  /// on the page and it has not finished.
+  Completer<void>? _googleAbort;
+
+  /// Web only: she left the page (the Google window opened) during this
+  /// Google sign-in.
+  bool _leftForGoogle = false;
+  Timer? _returnCheck;
   String? _message;
   bool _messageIsError = true;
 
@@ -58,13 +80,38 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
     _isSignUp = widget.initialSignUp;
+    // On the web, page visibility and focus come in as lifecycle changes.
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _returnCheck?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Web: the page hid or lost focus (the Google window opened), then came
+  /// back. If the sign-in has not finished 2 seconds after she is back, it
+  /// was cancelled: the screen returns to normal. (The 60-second timeout
+  /// stays as the last safety.)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!LoginScreen._isWeb || _googleAbort == null) return;
+    if (state != AppLifecycleState.resumed) {
+      _leftForGoogle = true;
+      _returnCheck?.cancel();
+      return;
+    }
+    if (!_leftForGoogle) return;
+    _returnCheck?.cancel();
+    _returnCheck = Timer(LoginScreen.returnGrace, () {
+      final abort = _googleAbort;
+      if (abort == null || abort.isCompleted || widget.auth.signedIn) return;
+      abort.completeError(const SignInCancelled());
+    });
   }
 
   void _setMessage(String text, {bool isError = true}) {
@@ -146,8 +193,23 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Future<void> _continueWithGoogle() =>
-      _run(widget.auth.signInWithGoogle, signIn: _Method.google);
+  Future<void> _continueWithGoogle() async {
+    if (!LoginScreen._isWeb) {
+      return _run(widget.auth.signInWithGoogle, signIn: _Method.google);
+    }
+    // Web: also end it when she is back on the page and nothing happened.
+    final abort = Completer<void>();
+    await _run(() {
+      if (_googleAbort != null) return Future<void>.value();
+      _googleAbort = abort;
+      _leftForGoogle = false;
+      return Future.any([widget.auth.signInWithGoogle(), abort.future]);
+    }, signIn: _Method.google);
+    if (identical(_googleAbort, abort)) {
+      _googleAbort = null;
+      _returnCheck?.cancel();
+    }
+  }
 
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
