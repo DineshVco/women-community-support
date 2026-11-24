@@ -10,7 +10,7 @@ import '../../../core/utils/haptics.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
-import '../../widgets/looma_character.dart';
+import '../../widgets/welcome_cat.dart';
 import 'sign_in_hold.dart';
 import '../../../core/theme/app_icons.dart';
 
@@ -220,11 +220,12 @@ class _LoginScreenState extends State<LoginScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  entrance.character(
-                    const Center(child: LoomaCharacter(height: 150)),
+                  // The elegant cat, only when there is room.
+                  WelcomeCat(
+                    animate: entrance.enabled,
+                    keyboard: MediaQuery.viewInsetsOf(context).bottom,
                   ),
                   ...entrance.items([
-                    const SizedBox(height: AppSpacing.lg),
                     Text(
                       _isSignUp ? 'Create your space' : 'Welcome back',
                       style: theme.textTheme.headlineLarge?.copyWith(
