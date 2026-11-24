@@ -134,7 +134,7 @@ class _Header extends StatelessWidget {
         const FloatingIllustration(
           asset: LoomaCats.safe,
           height: 96,
-          semanticLabel: 'Drawing of a cat holding a shield',
+          semanticLabel: 'Painting of a cat asleep by a lantern',
         ),
       ],
     );

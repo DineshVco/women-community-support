@@ -81,13 +81,11 @@ flutter:
     # Animation layers, same canvas size as the character.
     - assets/images/looma_heart.png
     - assets/images/looma_sparks.png
-    # Looma cat drawings (onboarding pages 2-4, empty states, "Posted").
-    # source_svg/ holds the same drawings as SVG for editing; not shipped.
-    - assets/images/looma_cat_share.png
-    - assets/images/looma_cat_browse.png
-    - assets/images/looma_cat_safe.png
+    # The line-drawn heart cat. (The onboarding cats are painted WebPs in
+    # hero/.) source_svg/ holds the drawings as SVG for editing; not shipped.
     - assets/images/looma_cat_heart.png
-    # Painted hero scenes (no people): Discuss by time of day, Care.
+    # Painted hero scenes (no people): Discuss by time of day, Care, and
+    # the painted cats (onboarding, sleeping cat, sign-in cat).
     - assets/images/hero/
     # Looma Care content (offline). guides.json holds the journal prompts
     # now and the guides library later.
