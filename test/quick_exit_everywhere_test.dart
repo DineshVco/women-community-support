@@ -29,6 +29,7 @@ import 'package:women_community_support/presentation/screens/me/my_reports_scree
 import 'package:women_community_support/presentation/screens/me/post_list_screen.dart';
 import 'package:women_community_support/presentation/screens/me/privacy_centre_screen.dart';
 import 'package:women_community_support/presentation/screens/membership/membership_flow.dart';
+import 'package:women_community_support/presentation/screens/moderator_screen.dart';
 import 'package:women_community_support/presentation/screens/onboarding_screen.dart';
 import 'package:women_community_support/presentation/widgets/app_lock_gate.dart';
 import 'package:women_community_support/presentation/widgets/quick_exit_button.dart';
@@ -50,6 +51,9 @@ class _Posts extends PostRepository {
 
   @override
   Stream<List<Report>> watchMyReports() => Stream.value(const []);
+
+  @override
+  Stream<List<Report>> watchOpenReports() => Stream.value(const []);
 }
 
 Future<void> _noSecure(bool _) async {}
@@ -101,6 +105,7 @@ final Map<String, Widget Function()> _screens = {
   'App lock settings': () => const AppLockSettingsScreen(),
   'Choose PIN': () => SetPinScreen(onSet: (_) async {}),
   'Chat profile editor': () => ChatProfileEditor(onSave: (_) async {}),
+  'Moderator screen': () => const ModeratorScreen(),
 };
 
 /// The screen opened on top of a page (so the bar shows its back arrow),

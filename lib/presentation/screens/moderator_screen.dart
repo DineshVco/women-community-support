@@ -13,6 +13,7 @@ import '../widgets/adaptive.dart';
 import '../widgets/content_width.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/press_scale.dart';
+import '../widgets/quick_exit_button.dart';
 import '../widgets/ios.dart';
 import '../widgets/post_route.dart';
 import '../widgets/skeleton.dart';
@@ -184,9 +185,14 @@ class _ModeratorScreenState extends State<ModeratorScreen> {
       appBar: loomaNavBar(
         context,
         title: 'Report queue',
-        trailing: TextButton(
-          onPressed: _startSmallWins,
-          child: const Text('Small wins'),
+        trailing: NavBarActions(
+          children: [
+            TextButton(
+              onPressed: _startSmallWins,
+              child: const Text('Small wins'),
+            ),
+            const QuickExitButton(),
+          ],
         ),
       ),
       body: SafeArea(
