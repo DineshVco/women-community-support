@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_colors.dart';
 import 'fade_slide_in.dart';
 
-/// The tall, elegant line-drawn cat on the sign-in screen: a large, quiet
-/// picture above the form, shown only when there is room. It is hidden
-/// while the keyboard is open, with large text, and on short screens, so
-/// the form is never pushed down. It fades in once (not with Reduce
-/// motion). The lines are dark on the light theme and a soft cream on the
-/// dark theme (one transparent picture, coloured in the app).
-class WelcomeCat extends StatelessWidget {
-  const WelcomeCat({super.key, this.animate = true, this.keyboard = 0});
+/// The Looma logo (the painted cat in its flower circle, with the name) on
+/// the sign-in screen, shown only when there is room. It is hidden while the
+/// keyboard is open, with large text, and on short screens, so the form is
+/// never pushed down. It fades in once (not with Reduce motion). In dark
+/// mode the brown lettering would be too dark, so a copy with soft cream
+/// lettering is used.
+class WelcomeLogo extends StatelessWidget {
+  const WelcomeLogo({super.key, this.animate = true, this.keyboard = 0});
 
   /// False after the screen's first frame: no fade when it comes back.
   final bool animate;
@@ -19,21 +18,21 @@ class WelcomeCat extends StatelessWidget {
   /// the Scaffold body the keyboard is already taken out).
   final double keyboard;
 
-  static const String asset = 'assets/images/hero/cat_elegant.webp';
+  static const String asset = 'assets/images/hero/looma_logo.webp';
 
-  /// Width / height of the picture.
-  static const double aspect = 314 / 900;
+  /// The same logo with cream lettering, for dark backgrounds.
+  static const String darkAsset = 'assets/images/hero/looma_logo_dark.webp';
+
+  /// Width / height of the logo.
+  static const double aspect = 1000 / 1283;
 
   /// As tall as this at most, and not shown if it would be shorter than
-  /// [minHeight].
-  static const double maxHeight = 200;
-  static const double minHeight = 110;
+  /// [minHeight] (the name would be too small to read).
+  static const double maxHeight = 220;
+  static const double minHeight = 120;
 
   /// The form needs about this much height at normal text size.
   static const double formHeight = 640;
-
-  /// Lines in dark mode: a soft cream.
-  static const Color darkLine = Color(0xFFF2E6DA);
 
   /// How tall to draw it, or 0 to hide it.
   static double heightFor({
@@ -58,7 +57,6 @@ class WelcomeCat extends StatelessWidget {
       safeArea: mq.padding.vertical,
     );
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final line = dark ? darkLine : context.palette.textSecondary;
 
     return GentleSize(
       alignment: Alignment.topCenter,
@@ -68,21 +66,24 @@ class WelcomeCat extends StatelessWidget {
               : Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Center(
-                  child: ExcludeSemantics(
+                  child: Semantics(
+                    image: true,
+                    label: 'Looma',
+                    excludeSemantics: true,
                     child: FadeSlideIn(
                       animate: animate,
                       distance: 0,
                       duration: Entrance.characterDuration,
                       child: SizedBox(
-                        key: const ValueKey('welcome-cat'),
+                        key: const ValueKey('welcome-logo'),
                         height: height,
                         width: height * aspect,
                         child: Image.asset(
-                          asset,
+                          dark ? darkAsset : asset,
                           fit: BoxFit.contain,
-                          color: line,
-                          colorBlendMode: BlendMode.srcIn,
                           excludeFromSemantics: true,
+                          cacheWidth:
+                              (height * aspect * mq.devicePixelRatio).round(),
                           // If it cannot load, simply nothing.
                           errorBuilder: (_, _, _) => const SizedBox.shrink(),
                         ),
