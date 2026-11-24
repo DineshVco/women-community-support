@@ -1,40 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 
-/// She closed the Google window, pressed back or chose no account. A normal
-/// outcome, not an error: the sign-in screen simply returns to normal.
-class SignInCancelled implements Exception {
-  const SignInCancelled();
-}
+import '../../../data/auth/sign_in_cancel.dart';
+
+export '../../../data/auth/sign_in_cancel.dart' show SignInCancelled;
 
 /// The sign-in calls the sign-in screen makes. Tests pass a fake.
 class LoginAuth {
   const LoginAuth();
 
-  /// Firebase web error codes that mean "she closed or cancelled it".
-  static const Set<String> webCancelCodes = {
-    'popup-closed-by-user',
-    'cancelled-popup-request',
-    'user-cancelled',
-  };
-
   /// Whether [error] (from Google or Firebase) is just a cancel.
-  static bool isCancel(Object error) {
-    if (error is SignInCancelled) return true;
-    if (error is FirebaseAuthException) {
-      return webCancelCodes.contains(error.code);
-    }
-    if (error is PlatformException) {
-      final code = error.code.toLowerCase();
-      return code == 'sign_in_canceled' ||
-          code == 'canceled' ||
-          code == 'cancelled' ||
-          code.contains('cancel');
-    }
-    return false;
-  }
+  static bool isCancel(Object error) => isSignInCancel(error);
 
   bool get signedIn => FirebaseAuth.instance.currentUser != null;
 

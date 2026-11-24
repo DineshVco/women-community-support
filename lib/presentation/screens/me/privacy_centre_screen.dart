@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../data/auth/sign_in_cancel.dart';
 import '../../../data/local_private_data.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/post_repository.dart';
@@ -21,6 +24,13 @@ class PrivacyCentreScreen extends StatefulWidget {
   /// Opened from "Delete my account and data" on Me: the delete card is
   /// at the top (same confirmation as always).
   final bool deleteFirst;
+
+  /// If confirming it is her (Google or password) has not finished by then,
+  /// the screen stops waiting.
+  static const Duration confirmTimeout = Duration(seconds: 60);
+
+  static const String confirmTimeoutMessage =
+      'Confirming it is you did not finish. Please try again.';
 
   /// The confirmation before deleting everything.
   static const String deleteConfirmMessage =
@@ -97,7 +107,31 @@ class PrivacyCentreScreen extends StatefulWidget {
 class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
   bool _deleting = false;
 
+  /// A delete is under way (from the first tap to the end): more taps are
+  /// ignored.
+  bool _busy = false;
+
+  /// Waiting for Google or the password check: the button shows a spinner.
+  bool _confirming = false;
+
+  /// Whatever happens (done, error, cancel, no answer) the button works
+  /// again afterwards.
   Future<void> _deleteAccount() async {
+    if (_busy) return; // already running: ignore the second tap
+    setState(() => _busy = true);
+    try {
+      await _runDelete();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _confirming = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _runDelete() async {
     final posts = context.read<PostRepository>();
     final chat = context.read<ChatRepository>();
     final local = context.read<LocalPrivateData>();
@@ -107,7 +141,9 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
     // Rules: no deleting within a minute of posting (stops the post limit
     // being dodged by deleting and re-creating the account record).
     try {
-      final wait = await posts.waitBeforeAccountDeletion();
+      final wait = await posts.waitBeforeAccountDeletion().timeout(
+        PrivacyCentreScreen.confirmTimeout,
+      );
       if (wait > Duration.zero) {
         messenger.showSnackBar(
           SnackBar(
@@ -135,27 +171,44 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
 
     // Firebase needs a recent sign-in before it deletes a login.
     try {
-      final bool ok;
+      String? password;
       if (posts.signInMethod == SignInMethod.password) {
-        final password = await _askPassword();
-        if (password == null) return;
-        ok = await posts.reauthenticate(password: password);
-      } else {
-        ok = await posts.reauthenticate();
+        password = await _askPassword();
+        if (password == null || !mounted) return;
       }
+      setState(() => _confirming = true);
+      final ok = await posts
+          .reauthenticate(password: password)
+          .timeout(PrivacyCentreScreen.confirmTimeout);
+      // Cancelled (closed the Google window, back, no account): quietly
+      // back to normal.
       if (!ok) return;
-    } on FirebaseAuthException catch (e) {
+    } on TimeoutException {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(PrivacyCentreScreen.confirmTimeoutMessage),
+        ),
+      );
+      return;
+    } catch (e) {
+      if (isSignInCancel(e)) return;
+      final wrongPassword =
+          e is FirebaseAuthException &&
+          (e.code == 'wrong-password' || e.code == 'invalid-credential');
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            e.code == 'wrong-password' || e.code == 'invalid-credential'
+            wrongPassword
                 ? 'That password is not right.'
                 : 'Could not confirm it is you. Please try again.',
           ),
         ),
       );
       return;
+    } finally {
+      if (mounted) setState(() => _confirming = false);
     }
+    if (!mounted) return;
 
     setState(() => _deleting = true);
     try {
@@ -253,9 +306,14 @@ class _PrivacyCentreScreenState extends State<PrivacyCentreScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           LoomaButton.outline(
-            label: _deleting ? 'Deleting…' : 'Delete my account',
-            loading: _deleting,
-            onPressed: _deleteAccount,
+            label:
+                _deleting
+                    ? 'Deleting…'
+                    : _confirming
+                    ? 'Confirming…'
+                    : 'Delete my account',
+            loading: _deleting || _confirming,
+            onPressed: _busy ? null : _deleteAccount,
           ),
         ],
       ),

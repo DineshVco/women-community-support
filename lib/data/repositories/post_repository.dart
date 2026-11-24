@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/utils/alias.dart';
+import '../auth/sign_in_cancel.dart';
 import '../models/comment.dart';
 import '../models/community.dart';
 import '../models/post.dart';
@@ -123,7 +124,8 @@ class PostRepository {
   }
 
   /// Firebase only deletes an account after a recent sign-in, so she
-  /// confirms it is her first. Returns false if she closed the Google window.
+  /// confirms it is her first. Returns false if she cancelled the Google
+  /// check (closed the window, pressed back, chose no account).
   Future<bool> reauthenticate({String? password}) async {
     final user = _auth.currentUser;
     if (user == null) throw StateError('You need to be signed in.');
@@ -138,20 +140,25 @@ class PostRepository {
         );
         return true;
       case SignInMethod.google:
-        if (kIsWeb) {
-          await user.reauthenticateWithPopup(GoogleAuthProvider());
+        try {
+          if (kIsWeb) {
+            await user.reauthenticateWithPopup(GoogleAuthProvider());
+            return true;
+          }
+          final googleUser = await GoogleSignIn().signIn();
+          if (googleUser == null) return false;
+          final googleAuth = await googleUser.authentication;
+          await user.reauthenticateWithCredential(
+            GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            ),
+          );
           return true;
+        } catch (error) {
+          if (isSignInCancel(error)) return false;
+          rethrow;
         }
-        final googleUser = await GoogleSignIn().signIn();
-        if (googleUser == null) return false;
-        final googleAuth = await googleUser.authentication;
-        await user.reauthenticateWithCredential(
-          GoogleAuthProvider.credential(
-            accessToken: googleAuth.accessToken,
-            idToken: googleAuth.idToken,
-          ),
-        );
-        return true;
       case SignInMethod.other:
         return true;
     }
