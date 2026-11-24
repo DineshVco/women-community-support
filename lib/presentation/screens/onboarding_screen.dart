@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -39,6 +41,22 @@ class OnboardingScreen extends StatefulWidget {
 
   static const int pageCount = 4;
 
+  /// The page background: soft blush at the top to cream at the bottom.
+  static const List<Color> lightBackground = [
+    Color(0xFFF9E4DF),
+    Color(0xFFFEF7F2),
+  ];
+
+  /// Dark mode, still warm: a deep rose-brown to near black.
+  static const List<Color> darkBackground = [
+    Color(0xFF2B201E),
+    Color(0xFF141110),
+  ];
+
+  /// The faint painted blob behind each cat.
+  static const Color lightBlob = Color(0xFFF1C4BC);
+  static const Color darkBlob = Color(0xFF6E4842);
+
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
@@ -50,7 +68,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const _ideas = [
     (
       asset: LoomaCats.share,
-      label: 'Drawing of a cat with a speech bubble holding a heart',
+      label: 'Painting of a cat holding a heart-shaped letter',
       title: 'Share anonymously',
       line:
           'Speak freely in a safe and respectful space. You get a random '
@@ -58,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     (
       asset: LoomaCats.browse,
-      label: 'Drawing of a cat sitting on a stack of books',
+      label: 'Painting of a cat at a round window with flowers',
       title: 'Browse by category',
       line:
           'Find stories on health, school, work and safety, and see you are '
@@ -66,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     (
       asset: LoomaCats.safe,
-      label: 'Drawing of a cat holding a shield with a tick',
+      label: 'Painting of a cat asleep by a lantern',
       title: 'Stay safe and protected',
       line:
           'Report anything harmful. Moderators keep Looma kind and respectful.',
@@ -97,102 +115,118 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // The dots and buttons fade in after the welcome page's own entrance.
     final buttonDelay = Entrance.firstItemDelay + Entrance.gap * 7;
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      body: SafeArea(
-        child: ContentWidth(
-          maxWidth: 520,
-          child: Column(
-            children: [
-              // "Skip" on pages 2–4. The space is kept on page 1 so nothing jumps.
-              SizedBox(
-                height: 48,
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: AnimatedOpacity(
-                    opacity: _index == 0 ? 0 : 1,
-                    duration: AppMotion.of(context, AppMotion.fast),
-                    child: IgnorePointer(
-                      ignoring: _index == 0,
-                      child: ExcludeSemantics(
-                        excluding: _index == 0,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: AppSpacing.sm),
-                          child: TextButton(
-                            onPressed: _skip,
-                            style: TextButton.styleFrom(
-                              foregroundColor: context.palette.textSecondary,
+      body: DecoratedBox(
+        key: const ValueKey('onboarding-background'),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors:
+                dark
+                    ? OnboardingScreen.darkBackground
+                    : OnboardingScreen.lightBackground,
+          ),
+        ),
+        child: SafeArea(
+          child: ContentWidth(
+            maxWidth: 520,
+            child: Column(
+              children: [
+                // "Skip" on pages 2–4. The space is kept on page 1 so nothing jumps.
+                SizedBox(
+                  height: 48,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: AnimatedOpacity(
+                      opacity: _index == 0 ? 0 : 1,
+                      duration: AppMotion.of(context, AppMotion.fast),
+                      child: IgnorePointer(
+                        ignoring: _index == 0,
+                        child: ExcludeSemantics(
+                          excluding: _index == 0,
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              right: AppSpacing.sm,
                             ),
-                            child: const Text('Skip'),
+                            child: TextButton(
+                              onPressed: _skip,
+                              style: TextButton.styleFrom(
+                                foregroundColor: context.palette.textSecondary,
+                              ),
+                              child: const Text('Skip'),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: PageView(
-                  controller: _pages,
-                  onPageChanged: (value) {
-                    AppHaptics.selection();
-                    setState(() => _index = value);
-                  },
-                  children: [
-                    const _WelcomePage(),
-                    for (var i = 0; i < _ideas.length; i++)
-                      _IdeaPage(
-                        pages: _pages,
-                        index: i + 1,
-                        current: _index == i + 1,
-                        asset: _ideas[i].asset,
-                        label: _ideas[i].label,
-                        title: _ideas[i].title,
-                        line: _ideas[i].line,
-                      ),
-                  ],
+                Expanded(
+                  child: PageView(
+                    controller: _pages,
+                    onPageChanged: (value) {
+                      AppHaptics.selection();
+                      setState(() => _index = value);
+                    },
+                    children: [
+                      const _WelcomePage(),
+                      for (var i = 0; i < _ideas.length; i++)
+                        _IdeaPage(
+                          pages: _pages,
+                          index: i + 1,
+                          current: _index == i + 1,
+                          asset: _ideas[i].asset,
+                          label: _ideas[i].label,
+                          title: _ideas[i].title,
+                          line: _ideas[i].line,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenHorizontal,
-                  AppSpacing.md,
-                  AppSpacing.screenHorizontal,
-                  AppSpacing.lg,
-                ),
-                child: Column(
-                  children: [
-                    FadeSlideIn(
-                      delay: buttonDelay,
-                      distance: 0,
-                      child: _PageDots(
-                        count: OnboardingScreen.pageCount,
-                        index: _index,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    FadeSlideIn(
-                      delay: buttonDelay + Entrance.gap,
-                      distance: 0,
-                      child: LoomaButton.primary(
-                        label: widget.viewOnly ? 'Done' : 'Get Started',
-                        onPressed: widget.onGetStarted,
-                      ),
-                    ),
-                    if (!widget.viewOnly) ...[
-                      const SizedBox(height: AppSpacing.md),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenHorizontal,
+                    AppSpacing.md,
+                    AppSpacing.screenHorizontal,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    children: [
                       FadeSlideIn(
-                        delay: buttonDelay + Entrance.gap * 2,
+                        delay: buttonDelay,
                         distance: 0,
-                        child: LoomaButton.outline(
-                          label: 'I already have an account',
-                          onPressed: widget.onSignIn,
+                        child: _PageDots(
+                          count: OnboardingScreen.pageCount,
+                          index: _index,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.lg),
+                      FadeSlideIn(
+                        delay: buttonDelay + Entrance.gap,
+                        distance: 0,
+                        child: LoomaButton.primary(
+                          label: widget.viewOnly ? 'Done' : 'Get Started',
+                          onPressed: widget.onGetStarted,
+                        ),
+                      ),
+                      if (!widget.viewOnly) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        FadeSlideIn(
+                          delay: buttonDelay + Entrance.gap * 2,
+                          distance: 0,
+                          child: LoomaButton.outline(
+                            label: 'I already have an account',
+                            onPressed: widget.onSignIn,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -318,43 +352,192 @@ class _IdeaPage extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = context.palette;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenHorizontal,
-        vertical: AppSpacing.xl,
-      ),
-      child: Column(
-        children: [
-          _Parallax(
-            pages: pages,
-            index: index,
-            child: FloatingIllustration(
-              asset: asset,
-              height: 260,
-              visible: current,
-              semanticLabel: label,
-            ),
+    return LayoutBuilder(
+      builder: (context, page) {
+        final box = IdeaArt.boxFor(
+          page.biggest,
+          textScale: MediaQuery.textScalerOf(context).scale(1),
+        );
+        final art = IdeaArt.fit(LoomaCats.aspect[asset] ?? 1, box);
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenHorizontal,
+            vertical: AppSpacing.lg,
           ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.heading(32, palette.text),
+          child: Column(
+            children: [
+              _Parallax(
+                pages: pages,
+                index: index,
+                child: SizedBox(
+                  key: ValueKey('idea-art-$index'),
+                  width: box.width,
+                  height: box.height,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // A faint painted blob behind the cat.
+                      Positioned.fill(
+                        child: ExcludeSemantics(
+                          child: CustomPaint(
+                            painter: _BlobPainter(
+                              seed: index,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? OnboardingScreen.darkBlob
+                                      : OnboardingScreen.lightBlob,
+                            ),
+                          ),
+                        ),
+                      ),
+                      FloatingIllustration(
+                        asset: asset,
+                        width: art.width,
+                        height: art.height,
+                        visible: current,
+                        semanticLabel: label,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTypography.heading(32, palette.text),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                line,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontSize: 16,
+                  height: 1.45,
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            line,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontSize: 16,
-              height: 1.45,
-              color: palette.textSecondary,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+}
+
+/// Sizes for the idea pages' pictures.
+class IdeaArt {
+  IdeaArt._();
+
+  static const double maxWidth = 320;
+  static const double maxHeight = 320;
+  static const double minHeight = 110;
+
+  /// The box is at most this much wider than tall, so a tall cat and a
+  /// wide cat can both be the same size in it.
+  static const double maxBoxAspect = 1.2;
+
+  /// The same box on every idea page: about half the page height (less
+  /// with large text, so the title and line keep their room), never wider
+  /// than the page.
+  static Size boxFor(Size page, {double textScale = 1}) {
+    var height = page.height * (textScale > 1.4 ? 0.34 : 0.5);
+    height = height.clamp(minHeight, maxHeight);
+    final width = math.min(
+      math.min(maxWidth, height * maxBoxAspect),
+      math.max(0.0, page.width - 2 * AppSpacing.screenHorizontal),
+    );
+    return Size(width, height);
+  }
+
+  /// How much of the box each picture covers: as much as possible while
+  /// the tallest and the widest cat still fit whole.
+  static double weightFor(Size box) {
+    final shapes = LoomaCats.aspect.values;
+    final tallest = shapes.reduce(math.min);
+    final widest = shapes.reduce(math.max);
+    final ratio = box.width / box.height;
+    return math.min(
+      0.5,
+      math.min(0.97 * tallest / ratio, 0.97 * ratio / widest),
+    );
+  }
+
+  /// The picture's size inside [box]: the same area for every shape, and
+  /// never bigger than the box (so it is never cropped).
+  static Size fit(double aspect, Size box) {
+    final area = box.width * box.height * weightFor(box);
+    var w = math.sqrt(area * aspect);
+    var h = w / aspect;
+    final shrink = math.min(1.0, math.min(box.width / w, box.height / h));
+    w *= shrink;
+    h *= shrink;
+    return Size(w, h);
+  }
+}
+
+/// A soft, uneven, watercolour-like blob (two faint layers), different on
+/// each page.
+class _BlobPainter extends CustomPainter {
+  const _BlobPainter({required this.seed, required this.color});
+
+  final int seed;
+  final Color color;
+
+  Path _blob(Size size, int salt, double scale) {
+    final random = math.Random(seed * 31 + salt);
+    const points = 8;
+    final c = size.center(Offset.zero);
+    final rx = size.width / 2 * scale;
+    final ry = size.height / 2 * scale;
+    final pts = <Offset>[
+      for (var i = 0; i < points; i++)
+        () {
+          final a = i * 2 * math.pi / points + random.nextDouble() * 0.3;
+          final r = 0.82 + random.nextDouble() * 0.18;
+          return c + Offset(math.cos(a) * rx * r, math.sin(a) * ry * r);
+        }(),
+    ];
+    // A smooth closed curve through the points (Catmull-Rom).
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (var i = 0; i < points; i++) {
+      final p0 = pts[(i - 1 + points) % points];
+      final p1 = pts[i];
+      final p2 = pts[(i + 1) % points];
+      final p3 = pts[(i + 2) % points];
+      path.cubicTo(
+        p1.dx + (p2.dx - p0.dx) / 6,
+        p1.dy + (p2.dy - p0.dy) / 6,
+        p2.dx - (p3.dx - p1.dx) / 6,
+        p2.dy - (p3.dy - p1.dy) / 6,
+        p2.dx,
+        p2.dy,
+      );
+    }
+    return path..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    for (final (salt, scale, alpha) in [(1, 0.98, 0.42), (2, 0.8, 0.32)]) {
+      final paint =
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                color.withValues(alpha: alpha),
+                color.withValues(alpha: alpha * 0.35),
+              ],
+            ).createShader(rect)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      canvas.drawPath(_blob(size, salt, scale), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) =>
+      old.seed != seed || old.color != color;
 }
 
 // ───────────────────────── Pieces ─────────────────────────
