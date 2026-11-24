@@ -70,10 +70,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     (
       asset: LoomaCats.share,
       label: 'Painting of a cat holding a heart-shaped letter',
-      title: 'Share anonymously',
+      title: 'Share without your name',
       line:
-          'Speak freely in a safe and respectful space. You get a random '
-          'alias, never your name.',
+          'A random alias, never your name. Other members can’t see who '
+          'you are.',
     ),
     (
       asset: LoomaCats.browse,
@@ -86,9 +86,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     (
       asset: LoomaCats.safe,
       label: 'Painting of a cat asleep by a lantern',
-      title: 'Stay safe and protected',
-      line:
-          'Report anything harmful. Moderators keep Looma kind and respectful.',
+      title: 'Report what feels wrong',
+      line: 'Moderators review reports to keep Looma kind.',
     ),
   ];
 
@@ -278,8 +277,9 @@ class _WelcomePage extends StatelessWidget {
   static const _features = [
     (
       icon: AppIcons.chat,
-      title: 'Share Anonymously',
-      text: 'Speak freely in a safe and respectful space',
+      title: 'Share Without Your Name',
+      text:
+          'A random alias, never your name. Other members can’t see who you are.',
     ),
     (
       icon: AppIcons.guides,
@@ -293,8 +293,8 @@ class _WelcomePage extends StatelessWidget {
     ),
     (
       icon: AppIcons.safety,
-      title: 'Stay Safe & Protected',
-      text: 'Report harmful content, moderators keep the community respectful',
+      title: 'Report What Feels Wrong',
+      text: 'Moderators review reports to keep Looma kind.',
     ),
   ];
 

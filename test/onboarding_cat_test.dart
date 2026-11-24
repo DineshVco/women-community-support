@@ -58,7 +58,7 @@ void main() {
     expect(find.byType(FloatingIllustration), findsNothing);
 
     await _swipeLeft(tester);
-    expect(find.text('Share anonymously'), findsOneWidget);
+    expect(find.text('Share without your name'), findsOneWidget);
     expect(_cat(LoomaCats.share), findsOneWidget);
     expect(_opacityOf(tester, _cat(LoomaCats.share)), 1);
     expect(find.bySemanticsLabel('Page 2 of 4'), findsOneWidget);
@@ -69,7 +69,7 @@ void main() {
     expect(find.bySemanticsLabel('Page 3 of 4'), findsOneWidget);
 
     await _swipeLeft(tester);
-    expect(find.text('Stay safe and protected'), findsOneWidget);
+    expect(find.text('Report what feels wrong'), findsOneWidget);
     expect(_cat(LoomaCats.safe), findsOneWidget);
     expect(find.bySemanticsLabel('Page 4 of 4'), findsOneWidget);
     expect(find.text('Get Started'), findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
     await tester.tap(find.text('Skip'));
     await _wait(tester);
 
-    expect(find.text('Stay safe and protected'), findsOneWidget);
+    expect(find.text('Report what feels wrong'), findsOneWidget);
     expect(find.bySemanticsLabel('Page 4 of 4'), findsOneWidget);
   });
 
@@ -106,7 +106,7 @@ void main() {
     await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
     // Settles: nothing loops, so this returns instead of timing out.
     await tester.pumpAndSettle();
-    expect(find.text('Share anonymously'), findsOneWidget);
+    expect(find.text('Share without your name'), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     // Shown at once, and not moving.
@@ -122,7 +122,7 @@ void main() {
     // One frame to jump, one for the page dots to redraw; then nothing.
     await tester.pump();
     await tester.pump();
-    expect(find.text('Stay safe and protected'), findsOneWidget);
+    expect(find.text('Report what feels wrong'), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
 }

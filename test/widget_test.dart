@@ -77,8 +77,8 @@ void main() {
 
       expect(find.text('Welcome to Looma'), findsOneWidget);
       expect(find.text('SUPPORT · SHARE · EMPOWER'), findsOneWidget);
-      expect(find.text('Share Anonymously'), findsOneWidget);
-      expect(find.text('Stay Safe & Protected'), findsOneWidget);
+      expect(find.text('Share Without Your Name'), findsOneWidget);
+      expect(find.text('Report What Feels Wrong'), findsOneWidget);
       expect(find.text('I already have an account'), findsOneWidget);
       expect(find.textContaining('guest'), findsNothing);
 
@@ -107,7 +107,7 @@ void main() {
 
       await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
       await settle(tester);
-      expect(find.text('Share anonymously'), findsOneWidget);
+      expect(find.text('Share without your name'), findsOneWidget);
       expect(find.bySemanticsLabel('Page 2 of 4'), findsOneWidget);
       // Buttons stay on every page.
       expect(find.text('Get Started'), findsOneWidget);
@@ -115,7 +115,7 @@ void main() {
 
       await tester.tap(find.text('Skip'));
       await settle(tester);
-      expect(find.text('Stay safe and protected'), findsOneWidget);
+      expect(find.text('Report what feels wrong'), findsOneWidget);
       expect(find.bySemanticsLabel('Page 4 of 4'), findsOneWidget);
     });
   });
@@ -175,7 +175,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('When’s your birthday?'), findsOneWidget);
-      expect(find.text('Your data is private and secure.'), findsOneWidget);
+      expect(find.text('Only your birth year is saved. Other members never see it.'), findsOneWidget);
     });
   });
 
