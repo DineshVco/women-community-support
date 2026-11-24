@@ -14,6 +14,7 @@ import '../../widgets/looma_button.dart';
 import '../../widgets/mood_face.dart';
 import '../help_screen.dart';
 import '../../../core/theme/app_icons.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// How are you feeling: tap a cat face, add a line if you like, saved only
 /// on this phone. A month calendar with small coloured dots and a gentle
@@ -104,7 +105,11 @@ class _MoodScreenState extends State<MoodScreen> {
     final days = MoodCalendar.daysLoggedThisWeek(_entries, _today);
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: 'How are you feeling'),
+      appBar: loomaNavBar(
+        context,
+        title: 'How are you feeling',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         top: false,
         child: ContentWidth(

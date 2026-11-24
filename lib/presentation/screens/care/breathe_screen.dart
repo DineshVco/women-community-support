@@ -11,6 +11,7 @@ import '../../../core/utils/breath_pattern.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
+import '../../widgets/quick_exit_button.dart';
 
 enum _Stage { choose, running, done }
 
@@ -88,7 +89,11 @@ class _BreatheScreenState extends State<BreatheScreen> {
     final palette = context.palette;
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: loomaNavBar(context, title: 'Breathe'),
+      appBar: loomaNavBar(
+        context,
+        title: 'Breathe',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: AppMotion.of(context, AppMotion.slow),

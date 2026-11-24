@@ -11,6 +11,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
+import '../../widgets/quick_exit_button.dart';
 import '../../../core/theme/app_icons.dart';
 
 /// My journal: private notes, only on this phone (encrypted). List, write,
@@ -88,15 +89,20 @@ class _JournalScreenState extends State<JournalScreen> {
       appBar: loomaNavBar(
         context,
         title: 'My journal',
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          minSize: 44,
-          onPressed: _write,
-          child: Icon(
-            AppIcons.journal,
-            color: palette.text,
-            semanticLabel: 'New note',
-          ),
+        trailing: NavBarActions(
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minSize: 44,
+              onPressed: _write,
+              child: Icon(
+                AppIcons.journal,
+                color: palette.text,
+                semanticLabel: 'New note',
+              ),
+            ),
+            const QuickExitButton(),
+          ],
         ),
       ),
       body: SafeArea(
@@ -168,6 +174,9 @@ class _JournalEditorState extends State<JournalEditor> {
 
   @override
   void dispose() {
+    // Quick exit closes the page without "going back": keep what she wrote
+    // (encrypted, on this phone), as going back does.
+    _save();
     _text.dispose();
     super.dispose();
   }
@@ -248,6 +257,7 @@ class _JournalEditorState extends State<JournalEditor> {
                   ),
                 ),
               ),
+              const QuickExitButton(),
             ],
           ),
         ),

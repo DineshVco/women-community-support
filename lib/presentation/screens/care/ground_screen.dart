@@ -8,6 +8,7 @@ import '../../../core/utils/haptics.dart';
 import '../../widgets/floating_illustration.dart';
 import '../../widgets/ios.dart';
 import '../../widgets/looma_button.dart';
+import '../../widgets/quick_exit_button.dart';
 
 /// Ground yourself: the 5-4-3-2-1 exercise, one step per screen, big text,
 /// a Next button, and a kind message at the end.
@@ -110,14 +111,29 @@ class _GroundScreenState extends State<GroundScreen> {
 
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: loomaNavBar(context, title: 'Ground yourself'),
+      appBar: loomaNavBar(
+        context,
+        title: 'Ground yourself',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-          child: AnimatedSwitcher(
-            duration: AppMotion.of(context, AppMotion.slow),
-            child: body,
-          ),
+        // Scrolls only when it does not fit (small phone, large text).
+        child: LayoutBuilder(
+          builder:
+              (context, box) => SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: box.maxHeight - AppSpacing.screenHorizontal * 2,
+                  ),
+                  child: IntrinsicHeight(
+                    child: AnimatedSwitcher(
+                      duration: AppMotion.of(context, AppMotion.slow),
+                      child: body,
+                    ),
+                  ),
+                ),
+              ),
         ),
       ),
     );

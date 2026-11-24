@@ -14,6 +14,7 @@ import '../widgets/looma_button.dart';
 import '../widgets/ios.dart';
 import 'help_screen.dart';
 import '../../core/theme/app_icons.dart';
+import '../widgets/quick_exit_button.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({
@@ -242,7 +243,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: loomaNavBar(context, title: _isPoll ? 'New poll' : 'New post'),
+      appBar: loomaNavBar(
+        context,
+        title: _isPoll ? 'New poll' : 'New post',
+        trailing: const QuickExitButton(),
+      ),
       body: SafeArea(
         child: ContentWidth(
           child: SingleChildScrollView(
