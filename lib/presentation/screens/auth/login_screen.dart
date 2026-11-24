@@ -1,7 +1,7 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -11,16 +11,31 @@ import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/welcome_logo.dart';
+import 'login_auth.dart';
 import 'sign_in_hold.dart';
 import '../../../core/theme/app_icons.dart';
 
 /// Sign in / create account (email + password, or Google).
 /// After success, AuthGate swaps this screen for the app automatically.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, this.initialSignUp = false, this.onBack});
+  const LoginScreen({
+    super.key,
+    this.initialSignUp = false,
+    this.onBack,
+    this.auth = const LoginAuth(),
+  });
 
   final bool initialSignUp;
   final VoidCallback? onBack;
+
+  /// The sign-in calls (tests pass a fake).
+  final LoginAuth auth;
+
+  /// If a sign-in has not finished by then, the screen gives up waiting.
+  static const Duration timeout = Duration(seconds: 60);
+
+  static const String timeoutMessage =
+      'Sign-in did not finish. Please try again.';
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -63,7 +78,12 @@ class _LoginScreenState extends State<LoginScreen>
   /// Runs a sign-in / sign-up / reset action with a spinner and error text.
   /// For [signIn] actions: on success the button shows a tick for 400 ms,
   /// then AuthGate opens the app.
+  ///
+  /// Whatever happens (success, error, cancel, or no answer at all within
+  /// [LoginScreen.timeout]) the spinner stops and the screen can be used
+  /// again. A second tap while one is running is ignored.
   Future<void> _run(Future<void> Function() action, {_Method? signIn}) async {
+    if (_isLoading) return; // already running: ignore the second tap
     FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
@@ -72,8 +92,9 @@ class _LoginScreenState extends State<LoginScreen>
     // Keep this screen up after Firebase signs in, so the tick can show.
     if (signIn != null) SignInHold.active.value = true;
     try {
-      await action();
-      final signedIn = FirebaseAuth.instance.currentUser != null;
+      // Never wait forever (e.g. a Google window that never answers).
+      await action().timeout(LoginScreen.timeout);
+      final signedIn = widget.auth.signedIn;
       if (signIn != null && signedIn && mounted) {
         AppHaptics.medium();
         setState(() {
@@ -82,10 +103,16 @@ class _LoginScreenState extends State<LoginScreen>
         });
         await Future<void>.delayed(SignInHold.tickDuration);
       }
+    } on SignInCancelled {
+      // She cancelled: no message, just back to normal.
+    } on TimeoutException {
+      _setMessage(LoginScreen.timeoutMessage);
     } on FirebaseAuthException catch (error) {
-      _setMessage(_authErrorMessage(error));
-    } catch (_) {
-      _setMessage('Something went wrong. Please try again.');
+      if (!LoginAuth.isCancel(error)) _setMessage(_authErrorMessage(error));
+    } catch (error) {
+      if (!LoginAuth.isCancel(error)) {
+        _setMessage('Something went wrong. Please try again.');
+      }
     } finally {
       // Always let go, whatever happened, so nobody is stuck here.
       if (signIn != null) SignInHold.active.value = false;
@@ -110,39 +137,17 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
 
-    await _run(() async {
-      final auth = FirebaseAuth.instance;
-      if (_isSignUp) {
-        await auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-      } else {
-        await auth.signInWithEmailAndPassword(email: email, password: password);
-      }
-    }, signIn: _Method.email);
+    await _run(
+      () =>
+          _isSignUp
+              ? widget.auth.createAccount(email, password)
+              : widget.auth.signInWithEmail(email, password),
+      signIn: _Method.email,
+    );
   }
 
-  Future<void> _continueWithGoogle() async {
-    await _run(() async {
-      final auth = FirebaseAuth.instance;
-
-      if (kIsWeb) {
-        await auth.signInWithPopup(GoogleAuthProvider());
-        return;
-      }
-
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // person closed the Google window
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      await auth.signInWithCredential(credential);
-    }, signIn: _Method.google);
-  }
+  Future<void> _continueWithGoogle() =>
+      _run(widget.auth.signInWithGoogle, signIn: _Method.google);
 
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
@@ -152,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     await _run(() async {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      await widget.auth.sendPasswordReset(email);
       _setMessage(
         'If an account exists for $email, a reset link is on its way.',
         isError: false,
@@ -180,9 +185,6 @@ class _LoginScreenState extends State<LoginScreen>
         return 'Check your internet connection and try again.';
       case 'operation-not-allowed':
         return 'This sign-in method is not switched on in Firebase yet.';
-      case 'popup-closed-by-user':
-      case 'cancelled-popup-request':
-        return 'The sign-in window was closed before finishing.';
       default:
         return 'Unable to continue. Please try again.';
     }
