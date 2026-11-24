@@ -19,11 +19,21 @@
 //      node seed.mjs --key <key path> --delete --yes
 //
 // Fixed ids (demo-01 … demo-12), so running it twice does not duplicate.
+// Each post and reply also gets its author record (authors/demo-NN and
+// posts/demo-NN/commentAuthors/<reply id>, authorId 'looma-team'), like
+// seed_starter_posts.js. firestore.rules only lets members create those
+// together with a NEW post or reply, so nobody can claim the demo content.
+// Posts that already exist are left as they are (their Me too taps and
+// replies are kept); only missing author records are added, so it is safe
+// to run again.
 // Also works against the local emulator: add --emulator instead of --key.
 
 import { readFileSync } from 'node:fs';
 import { cert, initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+
+/** Not a real Firebase uid (those are 28 characters), so no member owns it. */
+const TEAM_AUTHOR_ID = 'looma-team';
 
 // The app has four categories. Work and money → career, family → health &
 // wellness, study → education.
@@ -270,20 +280,51 @@ if (!confirmed) {
 
 const now = Date.now();
 const batch = db.batch();
+let kept = 0;
+let authorsAdded = 0;
 
 for (const p of POSTS) {
   const postRef = db.collection('posts').doc(p.id);
-  const replyRefs = p.replies.map((_, i) =>
-    postRef.collection('comments').doc(`${p.id}-r${i + 1}`),
+  const authorRef = db.collection('authors').doc(p.id);
+  const replyIds = p.replies.map((_, i) => `${p.id}-r${i + 1}`);
+  const replyRefs = replyIds.map((id) => postRef.collection('comments').doc(id));
+  const replyAuthorRefs = replyIds.map((id) =>
+    postRef.collection('commentAuthors').doc(id),
   );
 
   if (remove) {
     replyRefs.forEach((ref) => batch.delete(ref));
+    replyAuthorRefs.forEach((ref) => batch.delete(ref));
     batch.delete(postRef);
+    batch.delete(authorRef);
     continue;
   }
 
   const postedAt = now - p.hoursAgo * 3600 * 1000;
+  const replyAt = (i) => postedAt + (i + 1) * 20 * 60 * 1000;
+
+  // Already there: keep it, only add the author records it is missing.
+  if ((await postRef.get()).exists) {
+    kept++;
+    if (!(await authorRef.get()).exists) {
+      batch.set(authorRef, {
+        authorId: TEAM_AUTHOR_ID,
+        createdAt: Timestamp.fromMillis(postedAt),
+      });
+      authorsAdded++;
+    }
+    for (const [i, ref] of replyAuthorRefs.entries()) {
+      if (!(await replyRefs[i].get()).exists) continue;
+      if ((await ref.get()).exists) continue;
+      batch.set(ref, {
+        authorId: TEAM_AUTHOR_ID,
+        createdAt: Timestamp.fromMillis(replyAt(i)),
+      });
+      authorsAdded++;
+    }
+    continue;
+  }
+
   batch.set(postRef, {
     alias: p.alias,
     categoryId: p.category,
@@ -296,18 +337,28 @@ for (const p of POSTS) {
     status: 'visible',
     demo: true, // DEMO CONTENT marker
   });
+  batch.set(authorRef, {
+    authorId: TEAM_AUTHOR_ID,
+    createdAt: Timestamp.fromMillis(postedAt),
+  });
+  authorsAdded++;
 
   p.replies.forEach((reply, i) => {
     batch.set(replyRefs[i], {
       alias: reply.alias,
       content: reply.text,
       // Replies arrive 20 minutes apart after the post.
-      timestamp: Timestamp.fromMillis(postedAt + (i + 1) * 20 * 60 * 1000),
+      timestamp: Timestamp.fromMillis(replyAt(i)),
       parentCommentId: null,
       status: 'visible',
       flagCount: 0,
       demo: true, // DEMO CONTENT marker
     });
+    batch.set(replyAuthorRefs[i], {
+      authorId: TEAM_AUTHOR_ID,
+      createdAt: Timestamp.fromMillis(replyAt(i)),
+    });
+    authorsAdded++;
   });
 }
 
@@ -315,6 +366,8 @@ await batch.commit();
 const replyCount = POSTS.reduce((n, p) => n + p.replies.length, 0);
 console.log(
   remove
-    ? `Deleted ${POSTS.length} demo posts and their ${replyCount} replies.`
-    : `Added ${POSTS.length} demo posts and ${replyCount} replies.`,
+    ? `Deleted ${POSTS.length} demo posts, their ${replyCount} replies and ` +
+        'their author records.'
+    : `Added ${POSTS.length - kept} demo posts (${kept} were already there, ` +
+        `kept as they are) and ${authorsAdded} author records.`,
 );
