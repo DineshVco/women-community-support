@@ -51,8 +51,8 @@ Future<bool> _blinkedWithin(WidgetTester tester, Duration total) async {
 void main() {
   group('the picture files', () {
     for (final (path, width, height, limitKb) in [
-      (LoomaCatBlink.openAsset, 600, 755, 120),
-      (LoomaCatBlink.closedAsset, 600, 755, 120),
+      (LoomaCatBlink.openAsset, 600, 756, 120),
+      (LoomaCatBlink.closedAsset, 600, 756, 120),
       (LoomaLoader.ballAsset, 400, 400, 60),
       (CardPictures.yarnFull, 600, 571, 100),
     ]) {
