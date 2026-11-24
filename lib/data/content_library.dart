@@ -226,12 +226,20 @@ class ContentLibrary {
 
   static Future<ContentLibrary> load([AssetBundle? bundle]) async {
     final b = bundle ?? rootBundle;
+    // All five at once (on the web each one is a download).
+    final files = await Future.wait([
+      b.loadString(guidesAsset),
+      b.loadString(directoryAsset),
+      b.loadString(dailyQuestionsAsset),
+      b.loadString(smallWinsAsset),
+      b.loadString(todayForYouAsset),
+    ]);
     return parse(
-      guidesJson: await b.loadString(guidesAsset),
-      directoryJson: await b.loadString(directoryAsset),
-      dailyQuestionsJson: await b.loadString(dailyQuestionsAsset),
-      smallWinsJson: await b.loadString(smallWinsAsset),
-      todayForYouJson: await b.loadString(todayForYouAsset),
+      guidesJson: files[0],
+      directoryJson: files[1],
+      dailyQuestionsJson: files[2],
+      smallWinsJson: files[3],
+      todayForYouJson: files[4],
     );
   }
 

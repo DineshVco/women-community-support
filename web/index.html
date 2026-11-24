@@ -9,8 +9,10 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Looma: a calm, moderated space where women support each other.">
-  <meta name="theme-color" content="#FDF2EC">
+  <meta name="theme-color" content="#FEF7F2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141110" media="(prefers-color-scheme: dark)">
 
   <!-- Add to Home Screen on iPhone: opens full screen, like an app. -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,12 +26,61 @@
 
   <title>Looma</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Start the graphics engine download as early as possible. -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preload" href="icons/splash_cat.webp" as="image">
   <style>
-    /* Cream while Flutter starts, instead of a white flash. */
-    html, body { background: #FDF2EC; margin: 0; }
+    /* The loading screen: shown at once, before Flutter has started, so
+       there is never a blank page. Removed at Flutter's first frame. */
+    html, body { background: #FEF7F2; margin: 0; height: 100%; }
+    #looma-splash {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #FEF7F2; color: #4A3B36;
+      font-family: Georgia, "Times New Roman", serif;
+      transition: opacity 200ms ease-out;
+    }
+    #looma-splash img { width: 96px; height: 96px; }
+    #looma-splash .name { margin-top: 12px; font-size: 28px; letter-spacing: 0.5px; }
+    #looma-splash .dot {
+      margin-top: 18px; width: 8px; height: 8px; border-radius: 50%;
+      background: #E9B8B3;
+      animation: looma-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes looma-pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+    @media (prefers-color-scheme: dark) {
+      html, body, #looma-splash { background: #141110; }
+      #looma-splash { color: #F2E6DA; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #looma-splash { transition: none; }
+      #looma-splash .dot { animation: none; opacity: 0.8; }
+    }
+    #looma-splash.gone { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
+  <div id="looma-splash" role="status" aria-label="Loading Looma">
+    <img src="icons/splash_cat.webp" alt="" width="96" height="96">
+    <div class="name" aria-hidden="true">Looma</div>
+    <div class="dot" aria-hidden="true"></div>
+  </div>
+  <script>
+    // Hand over to Flutter as soon as it has drawn its first frame.
+    window.addEventListener('flutter-first-frame', function () {
+      var splash = document.getElementById('looma-splash');
+      if (!splash) return;
+      var still = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (still) { splash.remove(); return; }
+      splash.classList.add('gone');
+      setTimeout(function () { splash.remove(); }, 250);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ import 'presentation/providers/app_settings.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/auth_gate.dart';
 import 'presentation/widgets/app_lock_gate.dart';
+import 'presentation/widgets/web_start.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,49 +39,121 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(const ['Caveat font'], text);
   });
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (kIsWeb) {
+    // Web: draw at once (the page's own loading screen hands over to this
+    // one), and get everything ready behind it.
+    runApp(WebStart(start: LoomaServices.start));
+    return;
+  }
+  // Phones: the native splash stays up until everything is ready.
+  runApp(LoomaRoot(services: await LoomaServices.start()));
+}
 
-  // Saved on the phone: dark mode, Gentle mode, Reduce motion.
-  final theme = await ThemeProvider.load();
-  final settings = await AppSettings.load();
+/// Everything the app needs before its first real screen.
+class LoomaServices {
+  LoomaServices._({
+    required this.theme,
+    required this.settings,
+    required this.appLock,
+    required this.safetyPlan,
+    required this.moodLog,
+    required this.journal,
+    required this.guideBookmarks,
+    required this.content,
+  });
 
-  // Kept only on this phone, in secure storage: App lock and safety plan.
-  final secureStore = DeviceSecureStore();
-  final appLock = AppLock(secureStore);
-  await appLock.load();
-  final safetyPlan = SafetyPlanStore(secureStore);
-  final moodLog = MoodStore(secureStore);
-  final journal = JournalStore(secureStore);
-  final guideBookmarks = GuideBookmarks(secureStore);
+  final ThemeProvider theme;
+  final AppSettings settings;
+  final AppLock appLock;
+  final SafetyPlanStore safetyPlan;
+  final MoodStore moodLog;
+  final JournalStore journal;
+  final GuideBookmarks guideBookmarks;
+  final ContentLibrary content;
 
-  // Help lines, guides and directory: bundled with the app (offline).
-  final content = await ContentLibrary.load();
-  await Microcopy.load(); // warm lines for empty lists
+  /// Starts Firebase and loads the saved settings, the App lock and the
+  /// bundled content, all at the same time.
+  static Future<LoomaServices> start() async {
+    // Kept only on this phone, in secure storage: App lock and safety plan.
+    final secureStore = DeviceSecureStore();
+    final appLock = AppLock(secureStore);
 
-  runApp(
-    MultiProvider(
+    final firebase = Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).then((_) {
+      if (kIsWeb) {
+        // Safari can hang for a long time on Firestore's default streaming
+        // connection; long polling is slower in theory but always works.
+        FirebaseFirestore.instance.settings = const Settings(
+          webExperimentalForceLongPolling: true,
+        );
+      }
+    });
+    // Saved on the phone: dark mode, Gentle mode, Reduce motion.
+    final theme = ThemeProvider.load();
+    final settings = AppSettings.load();
+    final lock = appLock.load();
+    // Help lines, guides and directory: bundled with the app (offline).
+    final content = ContentLibrary.load();
+    final microcopy = Microcopy.load(); // warm lines for empty lists
+
+    await Future.wait<void>([
+      firebase,
+      theme,
+      settings,
+      lock,
+      content,
+      microcopy,
+    ]);
+
+    return LoomaServices._(
+      theme: await theme,
+      settings: await settings,
+      appLock: appLock,
+      safetyPlan: SafetyPlanStore(secureStore),
+      moodLog: MoodStore(secureStore),
+      journal: JournalStore(secureStore),
+      guideBookmarks: GuideBookmarks(secureStore),
+      content: await content,
+    );
+  }
+}
+
+/// The app with everything it reads through Provider.
+class LoomaRoot extends StatelessWidget {
+  const LoomaRoot({super.key, required this.services});
+
+  final LoomaServices services;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = services;
+    return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: theme),
-        ChangeNotifierProvider.value(value: settings),
+        ChangeNotifierProvider.value(value: s.theme),
+        ChangeNotifierProvider.value(value: s.settings),
         // Shared repositories: every screen reads and writes through them.
         Provider<PostRepository>(create: (_) => PostRepository()),
         Provider<ChatRepository>(create: (_) => ChatRepository()),
-        Provider<SafetyPlanStore>.value(value: safetyPlan),
-        Provider<MoodStore>.value(value: moodLog),
-        Provider<JournalStore>.value(value: journal),
+        Provider<SafetyPlanStore>.value(value: s.safetyPlan),
+        Provider<MoodStore>.value(value: s.moodLog),
+        Provider<JournalStore>.value(value: s.journal),
         Provider<LocalPrivateData>.value(
           value: LocalPrivateData(
-            moodLog: moodLog,
-            journal: journal,
-            safetyPlan: safetyPlan,
-            guideBookmarks: guideBookmarks,
+            moodLog: s.moodLog,
+            journal: s.journal,
+            safetyPlan: s.safetyPlan,
+            guideBookmarks: s.guideBookmarks,
           ),
         ),
-        Provider<GuideBookmarks>.value(value: guideBookmarks),
+        Provider<GuideBookmarks>.value(value: s.guideBookmarks),
       ],
-      child: ContentScope(library: content, child: LoomaApp(appLock: appLock)),
-    ),
-  );
+      child: ContentScope(
+        library: s.content,
+        child: LoomaApp(appLock: s.appLock),
+      ),
+    );
+  }
 }
 
 class LoomaApp extends StatelessWidget {
