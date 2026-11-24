@@ -257,6 +257,10 @@ class _FloatingQuickBarState extends State<FloatingQuickBar> {
 
 /// iOS navigation bar for pushed screens: centred title, back chevron,
 /// translucent and blurred, with a hairline.
+///
+/// A [QuickExitButton] in [trailing] (alone or in [NavBarActions]) drops
+/// its label when it would crowd the centred title (small phone, large
+/// text). A title that is still too long ends in "…", never under a button.
 CupertinoNavigationBar loomaNavBar(
   BuildContext context, {
   String? title,
@@ -264,23 +268,75 @@ CupertinoNavigationBar loomaNavBar(
   Widget? leading,
 }) {
   final palette = context.palette;
+  const titleStyle = TextStyle(fontSize: 17, fontWeight: FontWeight.w600);
   return CupertinoNavigationBar(
     middle:
         title == null
             ? null
             : Text(
               title,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: palette.text,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: titleStyle.copyWith(color: palette.text),
             ),
     leading: leading,
-    trailing: trailing,
+    trailing:
+        trailing == null
+            ? null
+            : _fitQuickExit(context, title, titleStyle, trailing),
     backgroundColor: barColor(context),
     border: hairline(context),
     transitionBetweenRoutes: false,
+  );
+}
+
+/// [trailing] with its Quick exit pill shown as the icon only when the
+/// label would not fit beside the centred title.
+Widget _fitQuickExit(
+  BuildContext context,
+  String? title,
+  TextStyle titleStyle,
+  Widget trailing,
+) {
+  final others =
+      trailing is NavBarActions
+          ? trailing.children.where((w) => w is! QuickExitButton).length
+          : 0;
+  final hasExit =
+      trailing is QuickExitButton ||
+      (trailing is NavBarActions &&
+          trailing.children.any((w) => w is QuickExitButton));
+  if (!hasExit) return trailing;
+
+  final scaler = MediaQuery.textScalerOf(context);
+  var titleWidth = 0.0;
+  if (title != null) {
+    final painter = TextPainter(
+      text: TextSpan(text: title, style: titleStyle),
+      textScaler: scaler,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    titleWidth = painter.width;
+    painter.dispose();
+  }
+  // Half the bar, minus half the title, the bar's edge padding, a small
+  // gap and the other buttons (about 44 px each, more with large text).
+  final room =
+      MediaQuery.sizeOf(context).width / 2 -
+      titleWidth / 2 -
+      16 -
+      8 -
+      others * scaler.scale(44);
+  if (QuickExitButton.widthFor(scaler) <= room) return trailing;
+
+  const compact = QuickExitButton(iconOnly: true);
+  if (trailing is QuickExitButton) return compact;
+  return NavBarActions(
+    children: [
+      for (final w in (trailing as NavBarActions).children)
+        w is QuickExitButton ? compact : w,
+    ],
   );
 }
 
