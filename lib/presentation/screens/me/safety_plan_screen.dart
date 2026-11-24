@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../data/encrypted_box.dart';
 import '../../../data/safety_plan.dart';
 import '../../widgets/adaptive.dart';
 import '../../widgets/app_lock_gate.dart';
@@ -21,6 +22,8 @@ import '../../../core/theme/app_icons.dart';
 /// Opens the safety plan. With App lock on, she types her PIN (or uses her
 /// fingerprint / face) first, every time.
 Future<void> openSafetyPlan(BuildContext context) async {
+  // Not on the web: a clear note instead.
+  if (EncryptedBox.explainOnWeb(context)) return;
   final lock = AppLockScope.maybeOf(context);
   if (lock != null && lock.enabled) {
     final ok = await confirmWithPin(context, lock);

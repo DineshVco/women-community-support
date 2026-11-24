@@ -32,6 +32,8 @@ import '../../../core/theme/app_icons.dart';
 
 /// Opens the journal. With App lock on, she confirms her PIN first.
 Future<void> openJournal(BuildContext context) async {
+  // Not on the web: a clear note instead.
+  if (EncryptedBox.explainOnWeb(context)) return;
   final lock = AppLockScope.maybeOf(context);
   if (lock != null && lock.enabled) {
     final ok = await confirmWithPin(context, lock);
@@ -252,7 +254,10 @@ class _CareScreenState extends State<CareScreen> {
                       subtitle:
                           private ? 'A private check-in' : EncryptedBox.webNote,
                       enabled: private,
-                      onTap: () => _push(context, const MoodScreen()),
+                      onTap: () {
+                        if (EncryptedBox.explainOnWeb(context)) return;
+                        _push(context, const MoodScreen());
+                      },
                     ),
                     GroupedRow(
                       icon: AppIcons.book,

@@ -9,12 +9,14 @@ import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/presentation/widgets/card_picture.dart';
 import 'package:women_community_support/core/theme/app_icons.dart';
 import 'package:women_community_support/data/models/chat_profile.dart';
+import 'package:women_community_support/data/encrypted_box.dart';
 import 'package:women_community_support/data/models/user_profile.dart';
 import 'package:women_community_support/data/repositories/chat_repository.dart';
 import 'package:women_community_support/data/repositories/post_repository.dart';
 import 'package:women_community_support/presentation/providers/app_settings.dart';
 import 'package:women_community_support/presentation/providers/theme_provider.dart';
 import 'package:women_community_support/presentation/screens/me/privacy_centre_screen.dart';
+import 'package:women_community_support/presentation/screens/me/safety_plan_screen.dart';
 import 'package:women_community_support/presentation/screens/profile_screen.dart';
 import 'package:women_community_support/presentation/widgets/cat_avatar.dart';
 import 'package:women_community_support/presentation/widgets/ios.dart';
@@ -117,6 +119,28 @@ String? _sectionOf(WidgetTester tester, String row) {
 }
 
 void main() {
+  group('on the web (iPhone browser)', () {
+    setUp(() => EncryptedBox.debugPretendWeb = true);
+    tearDown(() => EncryptedBox.debugPretendWeb = null);
+
+    testWidgets('safety plan says "Available in the phone app"; no journal', (
+      tester,
+    ) async {
+      await _pumpMe(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Safety plan'), findsOneWidget);
+      expect(find.text(EncryptedBox.webNote), findsOneWidget);
+      expect(find.text('My journal'), findsNothing);
+      // Saved posts live in her account (not on the phone): still there.
+      expect(find.text('Saved posts'), findsOneWidget);
+      // Tapping the safety plan opens nothing.
+      await tester.tap(find.text('Safety plan'), warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(SafetyPlanScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets('three card sections, the profile with the cat on top', (
     tester,
   ) async {

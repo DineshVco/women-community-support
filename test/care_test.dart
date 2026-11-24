@@ -7,6 +7,7 @@ import 'package:women_community_support/core/security/secure_store.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/core/utils/breath_pattern.dart';
 import 'package:women_community_support/data/journal.dart';
+import 'package:women_community_support/data/encrypted_box.dart';
 import 'package:women_community_support/data/mood.dart';
 import 'package:women_community_support/presentation/screens/care/breathe_screen.dart';
 import 'package:women_community_support/presentation/screens/care/care_screen.dart';
@@ -63,6 +64,52 @@ void main() {
     expect(find.text('Talk to someone now'), findsOneWidget);
     expect(find.text('Women and family support'), findsOneWidget);
     expect(find.text('Guides library'), findsOneWidget);
+  });
+
+  group('on the web (iPhone browser)', () {
+    setUp(() => EncryptedBox.debugPretendWeb = true);
+    tearDown(() => EncryptedBox.debugPretendWeb = null);
+
+    testWidgets('mood, journal and safety plan: "Available in the phone app"', (
+      tester,
+    ) async {
+      _phone(tester, height: 3200);
+      await tester.pumpWidget(_app(const CareScreen()));
+      await _settle(tester);
+      expect(tester.takeException(), isNull);
+      // The private check-in row is not shown at all.
+      expect(find.text('How are you today?'), findsNothing);
+      // The three private tools stay listed, each with the note.
+      expect(find.text(EncryptedBox.webNote), findsNWidgets(3));
+      // The calm tools that keep nothing still work.
+      expect(find.text('Breathe'), findsOneWidget);
+      await tester.tap(find.text('My journal'), warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(JournalScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('opening the journal or safety plan another way: a note', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          Scaffold(
+            body: Builder(
+              builder:
+                  (context) => TextButton(
+                    onPressed: () => openJournal(context),
+                    child: const Text('open'),
+                  ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(JournalScreen), findsNothing);
+      expect(find.text(EncryptedBox.webNote), findsOneWidget);
+    });
   });
 
   // ───────────────────────── Breathe ─────────────────────────

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
+
+import 'package:flutter/material.dart'
+    show BuildContext, ScaffoldMessenger, SnackBar, Text;
 
 import '../core/security/secure_store.dart';
 
@@ -23,11 +26,23 @@ class EncryptedBox {
 
   /// On the web, "secure storage" is ordinary browser storage. Looma turns
   /// these private tools off there and says why.
-  static bool get supported => !kIsWeb;
+  static bool get supported => !(debugPretendWeb ?? kIsWeb);
+
+  /// Tests set this to true to see the web version.
+  @visibleForTesting
+  static bool? debugPretendWeb;
 
   static const String webNote =
-      'For your privacy, this is only in the phone app. Browsers cannot keep '
-      'it safely locked.';
+      'Available in the phone app. Browsers cannot keep it safely locked.';
+
+  /// On the web, says why instead of opening a private tool.
+  static bool explainOnWeb(BuildContext context) {
+    if (supported) return false;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(webNote)));
+    return true;
+  }
 
   Future<SecretKey> _key({required bool create}) async {
     final saved = await _store.read(keyName);
