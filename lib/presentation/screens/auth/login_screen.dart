@@ -11,6 +11,7 @@ import '../../../core/utils/haptics.dart';
 import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
+import '../../widgets/quick_exit_button.dart';
 import '../../widgets/welcome_logo.dart';
 import 'login_auth.dart';
 import 'sign_in_hold.dart';
@@ -258,17 +259,22 @@ class _LoginScreenState extends State<LoginScreen>
     final palette = context.palette;
 
     return Scaffold(
-      appBar:
-          widget.onBack == null
-              ? null
-              : AppBar(
-                leading: IconButton(
+      appBar: AppBar(
+        // Just the height of Quick exit's tap area, to keep the form high.
+        toolbarHeight: 48,
+        automaticallyImplyLeading: false,
+        leading:
+            widget.onBack == null
+                ? null
+                : IconButton(
                   onPressed: _isLoading ? null : widget.onBack,
                   tooltip: 'Back',
                   icon: const Icon(AppIcons.back, size: 20),
                 ),
-                shape: const Border(),
-              ),
+        // Works before she has an account too: the disguise needs none.
+        actions: const [QuickExitButton(), SizedBox(width: AppSpacing.sm)],
+        shape: const Border(),
+      ),
       body: SafeArea(
         child: ContentWidth(
           maxWidth: 440,

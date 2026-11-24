@@ -162,7 +162,12 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         expect(_logo, findsNothing);
-        expect(tester.getRect(find.text('Email')).top, lessThan(400));
+        // The email box is fully on the first screen, below the bar with
+        // Quick exit, without scrolling.
+        expect(
+          tester.getRect(find.byType(EditableText).first).bottom,
+          lessThanOrEqualTo(568),
+        );
       });
 
       testWidgets('320 px, 1x text, $mode: no overflow', (tester) async {

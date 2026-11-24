@@ -15,6 +15,7 @@ import '../../widgets/content_width.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/looma_button.dart';
 import '../../widgets/looma_character.dart';
+import '../../widgets/quick_exit_button.dart';
 import '../../../core/theme/app_icons.dart';
 
 /// The two steps after creating a login, shown once per account:
@@ -95,35 +96,55 @@ class _StepScaffold extends StatelessWidget {
                   AppSpacing.screenHorizontal,
                   0,
                 ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: onBack,
-                      tooltip: 'Back',
-                      icon: const Icon(AppIcons.back, size: 20),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Semantics(
-                        label: 'Step $step of 3',
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(end: step / 3),
-                            duration: AppMotion.of(context, AppMotion.slow),
-                            curve: AppMotion.enter,
-                            builder:
-                                (context, value, _) => LinearProgressIndicator(
-                                  value: value,
-                                  minHeight: 3,
-                                  color: palette.primary,
-                                  backgroundColor: palette.border,
-                                ),
+                child: LayoutBuilder(
+                  builder:
+                      (context, box) => Row(
+                        children: [
+                          IconButton(
+                            onPressed: onBack,
+                            tooltip: 'Back',
+                            icon: const Icon(AppIcons.back, size: 20),
                           ),
-                        ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Semantics(
+                              label: 'Step $step of 3',
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(2),
+                                child: TweenAnimationBuilder<double>(
+                                  tween: Tween(end: step / 3),
+                                  duration: AppMotion.of(
+                                    context,
+                                    AppMotion.slow,
+                                  ),
+                                  curve: AppMotion.enter,
+                                  builder:
+                                      (context, value, _) =>
+                                          LinearProgressIndicator(
+                                            value: value,
+                                            minHeight: 3,
+                                            color: palette.primary,
+                                            backgroundColor: palette.border,
+                                          ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          // Works before she has finished joining too. The
+                          // label goes when the bar would get too short.
+                          QuickExitButton(
+                            iconOnly:
+                                QuickExitButton.widthFor(
+                                      MediaQuery.textScalerOf(context),
+                                    ) +
+                                    48 +
+                                    AppSpacing.sm * 2 +
+                                    96 >
+                                box.maxWidth,
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
                 ),
               ),
               Expanded(
@@ -213,6 +234,10 @@ class _CannotJoinState extends State<_CannotJoin>
             padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
             child: Column(
               children: [
+                const Align(
+                  alignment: Alignment.topRight,
+                  child: QuickExitButton(),
+                ),
                 const Spacer(),
                 entrance.character(const LoomaCharacter(height: 170)),
                 ...entrance.items([

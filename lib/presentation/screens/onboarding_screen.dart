@@ -7,6 +7,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
+import '../widgets/quick_exit_button.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/content_width.dart';
 import '../widgets/fade_slide_in.dart';
@@ -110,6 +111,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
+  /// "Skip" on pages 2–4; on page 1 its space is kept so nothing jumps.
+  Widget _skipButton(BuildContext context) => AnimatedOpacity(
+    opacity: _index == 0 ? 0 : 1,
+    duration: AppMotion.of(context, AppMotion.fast),
+    child: IgnorePointer(
+      ignoring: _index == 0,
+      child: ExcludeSemantics(
+        excluding: _index == 0,
+        child: Padding(
+          padding: const EdgeInsets.only(right: AppSpacing.xs),
+          child: TextButton(
+            onPressed: _skip,
+            style: TextButton.styleFrom(
+              foregroundColor: context.palette.textSecondary,
+            ),
+            child: const Text('Skip'),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /// About how wide "Skip" is (its text, padding and gap).
+  double _skipWidth(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: 'Skip',
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width + 24 + AppSpacing.xs;
+    painter.dispose();
+    return width;
+  }
+
   @override
   Widget build(BuildContext context) {
     // The dots and buttons fade in after the welcome page's own entrance.
@@ -134,33 +173,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             maxWidth: 520,
             child: Column(
               children: [
-                // "Skip" on pages 2–4. The space is kept on page 1 so nothing jumps.
+                // Quick exit on every page, top right; "Skip" beside it on
+                // pages 2–4. The space is kept on page 1 so nothing jumps.
                 SizedBox(
                   height: 48,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: AnimatedOpacity(
-                      opacity: _index == 0 ? 0 : 1,
-                      duration: AppMotion.of(context, AppMotion.fast),
-                      child: IgnorePointer(
-                        ignoring: _index == 0,
-                        child: ExcludeSemantics(
-                          excluding: _index == 0,
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                              right: AppSpacing.sm,
+                  child: LayoutBuilder(
+                    builder:
+                        (context, box) => Row(
+                          children: [
+                            const Spacer(),
+                            _skipButton(context),
+                            QuickExitButton(
+                              // The label goes if Skip and the pill would
+                              // not both fit (small phone, large text).
+                              iconOnly:
+                                  QuickExitButton.widthFor(
+                                        MediaQuery.textScalerOf(context),
+                                      ) +
+                                      _skipWidth(context) +
+                                      AppSpacing.screenHorizontal * 2 >
+                                  box.maxWidth,
                             ),
-                            child: TextButton(
-                              onPressed: _skip,
-                              style: TextButton.styleFrom(
-                                foregroundColor: context.palette.textSecondary,
-                              ),
-                              child: const Text('Skip'),
-                            ),
-                          ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
                         ),
-                      ),
-                    ),
                   ),
                 ),
                 Expanded(
