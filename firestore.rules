@@ -273,8 +273,11 @@ service cloud.firestore {
         && request.resource.data.status in ['visible', 'hidden', 'removed'];
     }
 
+    // A moderator keeps (visible, flags cleared), hides or removes a post.
     function isModeratorUpdate() {
-      return isModerator() && changedKeys().hasOnly(['status', 'flagCount']);
+      return isModerator()
+        && changedKeys().hasOnly(['status', 'flagCount'])
+        && request.resource.data.status in ['visible', 'hidden', 'removed'];
     }
 
     match /posts/{postId} {
@@ -354,7 +357,11 @@ service cloud.firestore {
       }
 
       match /commentAuthors/{commentId} {
+        // Only together with a NEW reply (same batch), so nobody can claim
+        // a reply that has no author record (such as the demo replies).
         allow create: if signedIn()
+          && !exists(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId))
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId))
           && request.resource.data.keys().hasOnly(['authorId', 'createdAt'])
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.createdAt == request.time;
@@ -454,7 +461,10 @@ service cloud.firestore {
     // ───────────── who wrote what (locked) ─────────────
 
     match /authors/{postId} {
+      // Only together with a NEW post (same batch), so nobody can claim a
+      // post that has no author record (such as the demo posts).
       allow create: if signedIn()
+        && !exists(postPath(postId)) && existsAfter(postPath(postId))
         && request.resource.data.keys().hasOnly(['authorId', 'createdAt'])
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.createdAt == request.time;

@@ -1701,3 +1701,102 @@ describe('deleting a post: everything under it first', () => {
     await assertSucceeds(deleteDoc(doc(as('siti'), 'posts', 'p1', 'comments', 'c1')));
   });
 });
+
+// ───────────── author records only together with a new post or reply ─────────────
+
+describe('author records cannot be claimed later', () => {
+  beforeEach(async () => {
+    await makeMember('siti');
+    // Like the demo content: a post and a reply with no author records.
+    await seed(async (db) => {
+      await setDoc(doc(db, 'posts', 'demo-01'), {
+        alias: 'Quiet Fox',
+        categoryId: 'education',
+        title: 'Scholarship tips?',
+        content: 'Any advice?',
+        timestamp: new Date(),
+        flagCount: 0,
+        meTooCount: 0,
+        // (0, so addCommentBatch's count of 1 is the +1.)
+        commentCount: 0,
+        status: 'visible',
+      });
+      await setDoc(doc(db, 'posts', 'demo-01', 'comments', 'r1'), {
+        alias: 'Gentle Heron',
+        content: 'Same here.',
+        timestamp: new Date(),
+        parentCommentId: null,
+        status: 'visible',
+        flagCount: 0,
+      });
+    });
+  });
+
+  test('she cannot claim an existing post that has no author record', async () => {
+    await assertFails(
+      setDoc(doc(as('siti'), 'authors', 'demo-01'), {
+        authorId: 'siti',
+        createdAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  test('she cannot claim an author record with no post at all', async () => {
+    await assertFails(
+      setDoc(doc(as('siti'), 'authors', 'nothing-here'), {
+        authorId: 'siti',
+        createdAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  test('she cannot claim an existing reply', async () => {
+    await assertFails(
+      setDoc(doc(as('siti'), 'posts', 'demo-01', 'commentAuthors', 'r1'), {
+        authorId: 'siti',
+        createdAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  test('a new post and a new reply, the normal way, still work', async () => {
+    await assertSucceeds(createPostBatch(as('siti'), 'siti', 'new-post'));
+    await makeMember('amira');
+    await assertSucceeds(
+      addCommentBatch(as('amira'), 'amira', 'new-post', 'new-reply'),
+    );
+    // And a reply to the demo post.
+    await assertSucceeds(
+      addCommentBatch(as('amira'), 'amira', 'demo-01', 'r2'),
+    );
+  });
+});
+
+describe('moderator post updates', () => {
+  beforeEach(async () => {
+    await makeModerator('mod');
+    await seed((db) =>
+      setDoc(doc(db, 'posts', 'p1'), {
+        alias: 'Quiet Fox',
+        categoryId: 'education',
+        title: 'Scholarship tips?',
+        content: 'Any advice?',
+        timestamp: new Date(),
+        flagCount: 3,
+        meTooCount: 0,
+        commentCount: 0,
+        status: 'hidden',
+      }),
+    );
+  });
+
+  test('status must be visible, hidden or removed', async () => {
+    const post = doc(as('mod'), 'posts', 'p1');
+    await assertSucceeds(updateDoc(post, { status: 'removed' }));
+    await assertSucceeds(updateDoc(post, { status: 'visible', flagCount: 0 }));
+    await assertSucceeds(updateDoc(post, { status: 'hidden' }));
+    await assertFails(updateDoc(post, { status: 'deleted' }));
+    await assertFails(updateDoc(post, { status: '' }));
+    await assertFails(updateDoc(post, { status: 1 }));
+  });
+});
