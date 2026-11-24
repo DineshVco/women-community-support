@@ -1,14 +1,19 @@
 {
     "name": "Looma",
     "short_name": "Looma",
-    "start_url": ".",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#FFFFFF",
-    "theme_color": "#111111",
+    "background_color": "#FEF7F2",
+    "theme_color": "#FEF7F2",
     "description": "Looma: a calm, moderated space where women support each other.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
+        {
+            "src": "icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        },
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
@@ -31,5 +36,6 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "scope": "/"
 }
