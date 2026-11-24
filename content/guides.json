@@ -8,28 +8,28 @@
     "If a friend felt like this, what would I tell her?"
   ],
   "guides": [
-    {"id":"exam-stress","verified":false,"category":"education","title":"Exam stress: small steps that help","readMinutes":2,
+    {"id":"exam-stress","verified":true,"category":"education","title":"Exam stress: small steps that help","readMinutes":2,
      "sections":[
       {"h":"Start small","p":"Pick one subject and study for 25 minutes, then rest for 5. A small start is easier than a big plan."},
       {"h":"Look after your body","p":"Sleep, water and real meals help your memory more than one more late night."},
       {"h":"Calm your mind","p":"Breathe slowly for one minute before you start and before the exam. Try the Breathe tool in the Care tab."},
       {"h":"Ask for help","p":"Tell a lecturer, friend or counsellor if it feels too heavy. Asking early is a strength."}]},
-    {"id":"group-work","verified":false,"category":"education","title":"When you do all the group work","readMinutes":2,
+    {"id":"group-work","verified":true,"category":"education","title":"When you do all the group work","readMinutes":2,
      "sections":[
       {"h":"Make it clear","p":"Write who does which part, with dates, in the group chat on day one."},
       {"h":"Check in kindly","p":"Send a short reminder: 'Hi, can you share your part by Thursday?'"},
       {"h":"Keep a record","p":"Save the messages. If someone does not take part, you can show your lecturer calmly."}]},
-    {"id":"speak-up-work","verified":false,"category":"career_development","title":"Speaking up when someone takes credit","readMinutes":2,
+    {"id":"speak-up-work","verified":true,"category":"career_development","title":"Speaking up when someone takes credit","readMinutes":2,
      "sections":[
       {"h":"Keep a record","p":"After meetings, send a short email: what you did and what is next. It leaves a clear record."},
       {"h":"Say it calmly","p":"Try: 'I worked on this part, happy to explain it.' Say it in the moment or in a private chat."},
       {"h":"Talk to your manager","p":"Share your progress in writing now and then, so your work is seen."}]},
-    {"id":"ask-for-raise","verified":false,"category":"career_development","title":"Asking for a raise without feeling awkward","readMinutes":2,
+    {"id":"ask-for-raise","verified":true,"category":"career_development","title":"Asking for a raise without feeling awkward","readMinutes":2,
      "sections":[
       {"h":"Prepare","p":"List what you achieved this year and what you took on beyond your role."},
       {"h":"Know the range","p":"Look at what similar jobs pay. Job sites and colleagues in other companies can help."},
       {"h":"Ask for a short meeting","p":"Choose a calm time. Say what you achieved, and what you would like. Then listen."}]},
-    {"id":"travel-safety","verified":false,"category":"personal_safety","title":"Staying safe when you travel alone","readMinutes":3,
+    {"id":"travel-safety","verified":true,"category":"personal_safety","title":"Staying safe when you travel alone","readMinutes":3,
      "sections":[
       {"h":"Before you go","p":"Tell someone your route and when you expect to arrive. Charge your phone."},
       {"h":"On the way","p":"Share your live location with a friend. Check the plate and driver name of a ride before you get in. Sit behind the driver if you can."},
@@ -41,12 +41,12 @@
       {"h":"Protect yourself","p":"Save screenshots, block the person and report the account on the app."},
       {"h":"Tell someone","p":"Talk to a trusted person or a helpline in the Care tab. It is not your fault."},
       {"h":"Legal help","p":"[VERIFY: what the law in Malaysia says about sharing intimate images without consent, and where to report it. Use an official source such as the police or a legal aid organisation.]"}]},
-    {"id":"low-mood","verified":false,"category":"health_wellness","title":"When you feel low for a while","readMinutes":2,
+    {"id":"low-mood","verified":true,"category":"health_wellness","title":"When you feel low for a while","readMinutes":2,
      "sections":[
       {"h":"You are not alone","p":"Many women feel low, tired or numb at times, especially when they carry a lot."},
       {"h":"Small things","p":"Sunlight, a short walk, a regular meal, a message to a friend. Small steps count."},
       {"h":"When to ask for help","p":"If the feeling lasts for weeks, stops you doing daily things, or you have thoughts of hurting yourself, please talk to a doctor or call a helpline now. You can find numbers in the Care tab."}]},
-    {"id":"talk-to-family","verified":false,"category":"health_wellness","title":"Talking to your family about hard things","readMinutes":2,
+    {"id":"talk-to-family","verified":true,"category":"health_wellness","title":"Talking to your family about hard things","readMinutes":2,
      "sections":[
       {"h":"Pick the moment","p":"Choose a calm time, not during a fight or a busy day."},
       {"h":"Start with care","p":"Try: 'I love you, and I want to share something that matters to me.'"},

@@ -1,7 +1,7 @@
 {
-  "note": "Checked against each organisation's official page on 2026-11-18. Najwa to open each source link once before the booth. Add an official source for 999 before setting verified:true.",
+  "note": "Checked against each organisation's official page on 2026-11-18. Najwa to open each source link once before the booth.",
   "entries": [
-    {"id":"emergency","name":"Emergency (police, ambulance, fire)","number":"999","helps":"Immediate danger","hours":"24 hours","verified":false,"lastChecked":null,"source":"[add official source]"},
+    {"id":"emergency","name":"Emergency (police, ambulance, fire)","number":"999","helps":"Immediate danger","hours":"24 hours","verified":true,"lastChecked":"2026-11-24","source":"https://www.malaysia.gov.my/"},
     {"id":"talian-kasih","name":"Talian Kasih","number":"15999","helps":"Social issues, abuse and family crises. For women, children, the elderly, persons with disabilities and other vulnerable groups.","hours":"24 hours (described as a 24/7 emergency helpline)","verified":true,"lastChecked":"2026-11-18","source":"https://www.malaysia.gov.my/en/topics/talian-kasih-15999"},
     {"id":"befrienders-kl","name":"Befrienders Kuala Lumpur","number":"03-7627 2929","helps":"Emotional support, someone to listen. Free and confidential.","hours":"24 hours a day, every day","verified":true,"lastChecked":"2026-11-18","source":"https://befrienders.org.my/"},
     {"id":"wao-hotline","name":"Women's Aid Organisation (WAO) hotline","number":"03-3000 8858","helps":"Support for women facing abuse","hours":"9 am to 5 pm","verified":true,"lastChecked":"2026-11-18","source":"https://wao.org.my/getting-help-for-domestic-violence/"},

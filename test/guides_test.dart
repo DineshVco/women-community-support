@@ -121,9 +121,24 @@ void main() {
       }
     });
 
-    test('nothing is shown to users until Najwa checks it', () {
-      // Every guide in the file is still unverified.
-      expect(_realLibrary().visibleGuides(includeDrafts: false), isEmpty);
+    test('only the guides Najwa checked are shown (7 of 8)', () {
+      expect(
+        _realLibrary().visibleGuides(includeDrafts: false).map((g) => g.id),
+        unorderedEquals([
+          'exam-stress',
+          'group-work',
+          'speak-up-work',
+          'ask-for-raise',
+          'travel-safety',
+          'low-mood',
+          'talk-to-family',
+        ]),
+      );
+      // Not checked yet: held back.
+      final pressure = _realLibrary().guides.firstWhere(
+        (g) => g.id == 'online-pressure',
+      );
+      expect(pressure.verified, isFalse);
     });
 
     test('the guide on online pressure is held back by its [VERIFY] mark', () {
@@ -214,11 +229,25 @@ void main() {
       tester,
     ) async {
       _phone(tester);
+      // Guides that are all still unchecked.
+      final unchecked = ContentLibrary.parse(
+        guidesJson: jsonEncode({
+          'guides': [
+            for (final g
+                in jsonDecode(
+                      File('content/guides.json').readAsStringSync(),
+                    )['guides']
+                    as List)
+              {...g as Map<String, dynamic>, 'verified': false},
+          ],
+        }),
+        directoryJson: File('content/directory.json').readAsStringSync(),
+      );
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
           home: GuidesScreen(
-            library: _realLibrary(),
+            library: unchecked,
             bookmarks: GuideBookmarks(MemorySecureStore()),
             includeDrafts: false,
           ),
@@ -226,6 +255,31 @@ void main() {
       );
       await _settle(tester);
       expect(find.text(GuidesScreen.noneYet), findsOneWidget);
+    });
+
+    testWidgets('release build: the checked guides, not online pressure', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(420, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final library = _realLibrary();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: GuidesScreen(
+            library: library,
+            bookmarks: GuideBookmarks(MemorySecureStore()),
+            includeDrafts: false,
+          ),
+        ),
+      );
+      await _settle(tester);
+      expect(find.text(GuidesScreen.noneYet), findsNothing);
+      String title(String id) =>
+          library.guides.firstWhere((g) => g.id == id).title;
+      expect(find.text(title('exam-stress')), findsOneWidget);
+      expect(find.text(title('online-pressure')), findsNothing);
     });
 
     testWidgets('list, search, open, footer, bookmark and Saved', (
@@ -377,13 +431,14 @@ void main() {
       expect(find.text(e.name), findsOneWidget);
       if (e.number != null) expect(find.text(e.number!), findsOneWidget);
     }
-    // Only 999 is still waiting for an official source.
-    expect(find.text('Last checked: not yet confirmed'), findsOneWidget);
+    // Every entry is checked now, 999 too (official source, 24 Nov 2026).
+    expect(find.text('Last checked: not yet confirmed'), findsNothing);
     expect(find.textContaining('[add official source]'), findsNothing);
-    // Checked entries show their hours and source; 999 (unchecked) does not.
+    expect(find.text('Source: https://www.malaysia.gov.my/'), findsOneWidget);
+    // Checked entries show their hours and source.
     expect(find.text('Hours: 9 am to 5 pm'), findsOneWidget);
     expect(find.text('Source: https://befrienders.org.my/'), findsOneWidget);
-    expect(find.textContaining('Hours:'), findsNWidgets(4));
+    expect(find.textContaining('Hours:'), findsNWidgets(5));
     // TINA: Message, not Call.
     expect(
       find.bySemanticsLabel('Message WAO TINA (SMS or WhatsApp)'),
