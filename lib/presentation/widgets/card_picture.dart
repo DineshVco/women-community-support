@@ -8,8 +8,12 @@ class CardPictures {
   /// Right side of the profile card on Me.
   static const String magnolia = 'assets/images/hero/hero_magnolia.webp';
 
-  /// Right side of the "Today for you" card on Care: a ginger cat napping.
-  static const String catNap = 'assets/images/hero/cat_nap.webp';
+  /// The painted cat asleep on a pink cushion (cut-out): the "Today for
+  /// you" card on Care, the late-night Discuss hero and empty lists.
+  static const String catSleep = 'assets/images/hero/cat_sleep.webp';
+
+  /// Its width / height.
+  static const double catSleepAspect = 800 / 528;
 
   /// Answers already found (only finished answers are kept, never a lookup
   /// still in progress, so one slow lookup can never block later ones).

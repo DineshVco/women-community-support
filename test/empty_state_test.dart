@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/data/microcopy.dart';
+import 'package:women_community_support/presentation/widgets/card_picture.dart';
 import 'package:women_community_support/presentation/widgets/empty_state.dart';
 import 'package:women_community_support/presentation/widgets/living_cat.dart';
 
@@ -70,7 +71,15 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.byKey(const ValueKey('empty-cat')), findsOneWidget);
-      expect(find.byType(LivingCat), findsOneWidget);
+      // The painted cat asleep on its cushion.
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const ValueKey('empty-cat')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect((image.image as AssetImage).assetName, CardPictures.catSleep);
+      expect(find.byType(LivingCat), findsNothing);
       expect(find.text(Microcopy.emptyFeed), findsOneWidget);
       await tester.tap(find.text('Write a post'));
       expect(tapped, 1);

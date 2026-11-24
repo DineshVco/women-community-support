@@ -210,7 +210,7 @@ void main() {
           matching: find.byType(Image),
         ),
       );
-      expect((image.image as AssetImage).assetName, CardPictures.catNap);
+      expect((image.image as AssetImage).assetName, CardPictures.catSleep);
       expect(find.byKey(const ValueKey('card-picture-fallback')), findsNothing);
       final card = tester.getRect(find.byType(LoomaCard));
       final pictureStarts =

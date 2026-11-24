@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
 import 'package:women_community_support/core/utils/greeting.dart';
+import 'package:women_community_support/presentation/widgets/card_picture.dart';
 import 'package:women_community_support/presentation/widgets/feed_greeting.dart';
 import 'package:women_community_support/presentation/widgets/hero_card.dart';
 
@@ -96,44 +97,56 @@ void main() {
 
     for (final (width, scale) in [(320.0, 1.0), (320.0, 2.0), (390.0, 2.0)]) {
       for (final name in ['Bee', 'Nurulhidayahtu', null]) {
-        testWidgets('${width.round()} px, ${scale}x text, name: $name', (
-          tester,
-        ) async {
-          tester.view.physicalSize = Size(width, 400);
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.reset);
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: AppTheme.light,
-              builder:
-                  (context, child) => MediaQuery(
-                    data: MediaQuery.of(context).copyWith(
-                      textScaler: TextScaler.linear(scale),
-                      disableAnimations: true,
+        for (final hour in [19, 23]) {
+          testWidgets('${width.round()} px, ${scale}x text, name: $name, '
+              '${hour}h', (tester) async {
+            tester.view.physicalSize = Size(width, 400);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: AppTheme.light,
+                builder:
+                    (context, child) => MediaQuery(
+                      data: MediaQuery.of(context).copyWith(
+                        textScaler: TextScaler.linear(scale),
+                        disableAnimations: true,
+                      ),
+                      child: child!,
                     ),
-                    child: child!,
+                home: Scaffold(
+                  body: Column(
+                    children: [FeedGreeting(now: _at(hour), name: name)],
                   ),
-              home: Scaffold(
-                body: Column(
-                  children: [FeedGreeting(now: _at(19), name: name)],
                 ),
               ),
-            ),
-          );
-          await tester.pump();
-          expect(tester.takeException(), isNull);
-          final text = tester.widget<Text>(
-            find.byKey(const ValueKey('greeting')),
-          );
-          expect(text.maxLines, 1);
-          final size = tester.getSize(find.byKey(const ValueKey('greeting')));
-          final line = 28 * FeedGreeting.maxTextScale * 1.1;
-          expect(size.height, lessThan(line * 1.5)); // one line
-          expect(
-            tester.getSize(find.byType(HeroCard)).height,
-            lessThanOrEqualTo(FeedGreeting.heroHeight + 0.5),
-          );
-        });
+            );
+            await tester.pump();
+            expect(tester.takeException(), isNull);
+            final text = tester.widget<Text>(
+              find.byKey(const ValueKey('greeting')),
+            );
+            expect(text.maxLines, 1);
+            final size = tester.getSize(find.byKey(const ValueKey('greeting')));
+            final line = 28 * FeedGreeting.maxTextScale * 1.1;
+            expect(size.height, lessThan(line * 1.5)); // one line
+            expect(
+              tester.getSize(find.byType(HeroCard)).height,
+              lessThanOrEqualTo(FeedGreeting.heroHeight + 0.5),
+            );
+            if (hour == 23) {
+              // The sleeping cat never covers the greeting.
+              expect(
+                tester.getRect(find.byKey(const ValueKey('greeting'))).right,
+                lessThan(
+                  tester
+                      .getRect(find.byKey(const ValueKey('sleeping-cat')))
+                      .left,
+                ),
+              );
+            }
+          });
+        }
       }
     }
 
@@ -153,6 +166,22 @@ void main() {
       expect(
         tester.widget<HeroCard>(find.byType(HeroCard)).scene,
         HeroScene.night,
+      );
+      // The painted cat sleeps in the corner.
+      final cat = find.byKey(const ValueKey('sleeping-cat'));
+      expect(cat, findsOneWidget);
+      final image = tester.widget<Image>(
+        find.descendant(of: cat, matching: find.byType(Image)),
+      );
+      expect((image.image as AssetImage).assetName, CardPictures.catSleep);
+      // It stays inside the hero and clear of the greeting.
+      final hero = tester.getRect(find.byType(HeroCard));
+      final catRect = tester.getRect(cat);
+      expect(hero.contains(catRect.topLeft), isTrue);
+      expect(hero.contains(catRect.bottomRight - const Offset(1, 1)), isTrue);
+      expect(
+        tester.getRect(find.byKey(const ValueKey('greeting'))).right,
+        lessThan(catRect.left),
       );
     });
   });

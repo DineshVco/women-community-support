@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import 'card_picture.dart';
 import 'fade_slide_in.dart';
 import 'feed_greeting.dart' show PeekingCat;
 import 'floating_illustration.dart';
@@ -84,8 +85,8 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// An empty list: the Looma cat (gently alive, still with Reduce motion) and
-/// one warm line, with an optional button.
+/// An empty list: the painted cat asleep on its cushion and one warm line,
+/// with an optional button.
 class CatEmptyState extends StatelessWidget {
   const CatEmptyState({
     super.key,
@@ -98,7 +99,8 @@ class CatEmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
-  static const double catSize = 96;
+  /// How wide the sleeping cat is drawn.
+  static const double catWidth = 168;
 
   @override
   Widget build(BuildContext context) {
@@ -114,18 +116,25 @@ class CatEmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ExcludeSemantics(
-              child: Container(
+              child: SizedBox(
                 key: const ValueKey('empty-cat'),
-                width: catSize,
-                height: catSize,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  // Cream in both modes: the drawing has dark lines.
-                  color: PeekingCat.halo,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: palette.border),
+                width: catWidth,
+                height: catWidth / CardPictures.catSleepAspect,
+                child: Image.asset(
+                  CardPictures.catSleep,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                  // If it cannot load, the drawn cat instead.
+                  errorBuilder:
+                      (_, _, _) => Container(
+                        decoration: BoxDecoration(
+                          color: PeekingCat.halo,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: palette.border),
+                        ),
+                        child: const LivingCat(size: 72, listen: false),
+                      ),
                 ),
-                child: const LivingCat(size: catSize - 22, listen: false),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

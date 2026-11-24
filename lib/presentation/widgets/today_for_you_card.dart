@@ -35,7 +35,7 @@ class TodayForYouCard extends StatelessWidget {
 
   static const String heading = 'Today for you';
 
-  /// The napping cat takes the right 32%.
+  /// The sleeping cat takes the right 32%.
   static const double pictureWidth = 0.32;
 
   /// The text stops where the cat starts (it does not fade).
@@ -90,7 +90,7 @@ class TodayForYouCard extends StatelessWidget {
                   heightFactor: 1,
                   child: CardPicture(
                     key: const ValueKey('today-picture'),
-                    asset: CardPictures.catNap,
+                    asset: CardPictures.catSleep,
                     // A cut-out cat: shown whole, at the bottom right, with
                     // no fade (the text stops before it).
                     fit: BoxFit.contain,

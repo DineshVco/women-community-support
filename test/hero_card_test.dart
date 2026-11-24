@@ -123,6 +123,8 @@ void main() {
     // No PNG copies left behind, and the old cat picture is gone.
     for (final png in [
       'assets/images/cat_nap.png',
+      'assets/images/hero/cat_nap.webp', // the ginger cat, replaced
+      'assets/images/hero/cat_sleep_transparent.png',
       'assets/images/hero/cat_nap.png',
       'assets/images/hero/hero_cat_grass.webp',
       'assets/images/hero_magnolia.png',
@@ -134,10 +136,10 @@ void main() {
     }
   });
 
-  testWidgets('the napping cat: real WebP, about 800 px, under 100 KB', (
+  testWidgets('the sleeping cat: real WebP, 800 px, under 100 KB', (
     tester,
   ) async {
-    final file = File(CardPictures.catNap);
+    final file = File(CardPictures.catSleep);
     expect(file.existsSync(), isTrue);
     expect(file.lengthSync(), lessThan(100 * 1024));
     final bytes = file.readAsBytesSync();
@@ -148,6 +150,10 @@ void main() {
           return (await codec.getNextFrame()).image;
         }))!;
     expect(image.width, 800);
+    expect(
+      image.width / image.height,
+      closeTo(CardPictures.catSleepAspect, 0.01),
+    );
     // Clean edges: no faint specks away from the cat. Faint pixels are
     // allowed only right at its outline (the soft edge), within 4 px.
     final data =

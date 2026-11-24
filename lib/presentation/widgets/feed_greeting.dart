@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/greeting.dart';
 import '../../core/theme/app_icons.dart';
 import 'fade_slide_in.dart';
+import 'card_picture.dart';
 import 'living_cat.dart';
 import 'hero_card.dart';
 
@@ -116,9 +117,32 @@ class PeekingCat extends StatelessWidget {
   /// The circle behind the drawing, the same in light and dark mode.
   static const Color halo = Color(0xFFFEF7F2);
 
+  /// Late at night: the painted cat asleep on its cushion, this wide.
+  static const double sleepWidth = 92;
+
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    if (night) {
+      return ExcludeSemantics(
+        child: FadeSlideIn(
+          distance: 6,
+          child: SizedBox(
+            key: const ValueKey('sleeping-cat'),
+            width: sleepWidth,
+            height: sleepWidth / CardPictures.catSleepAspect,
+            child: Image.asset(
+              CardPictures.catSleep,
+              fit: BoxFit.contain,
+              excludeFromSemantics: true,
+              errorBuilder:
+                  (_, _, _) =>
+                      LivingCat(size: size - 12, night: true, listen: false),
+            ),
+          ),
+        ),
+      );
+    }
     return ExcludeSemantics(
       child: FadeSlideIn(
         distance: 6,
