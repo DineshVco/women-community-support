@@ -77,10 +77,10 @@ flutter:
   assets:
     # Looma character (transparent background). Listed by name so old,
     # unused pictures in assets/images/ are not shipped with the app.
-    - assets/images/looma_character.png
+    - assets/images/looma_character.webp
     # Animation layers, same canvas size as the character.
-    - assets/images/looma_heart.png
-    - assets/images/looma_sparks.png
+    - assets/images/looma_heart.webp
+    - assets/images/looma_sparks.webp
     # The line-drawn heart cat. (The onboarding cats are painted WebPs in
     # hero/.) source_svg/ holds the drawings as SVG for editing; not shipped.
     - assets/images/looma_cat_heart.png
@@ -97,7 +97,6 @@ flutter:
     - content/microcopy.json
     # Caveat (handwriting), bundled so google_fonts never downloads it at
     # runtime. Used only for the onboarding line and the Home greeting.
-    - assets/google_fonts/Caveat-Regular.ttf
     - assets/google_fonts/Caveat-SemiBold.ttf
     - assets/google_fonts/Caveat-OFL.txt
     # Newsreader's licence, shown on the app's licences page.

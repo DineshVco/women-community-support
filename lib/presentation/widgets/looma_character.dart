@@ -9,9 +9,9 @@ import '../../core/theme/app_radius.dart';
 /// The Looma girl-with-cat drawing, gently alive.
 ///
 /// Three PNG layers (same 900 × 959 canvas, so they line up exactly):
-///   looma_character.png  girl + cat
-///   looma_heart.png      small heart (floats up and fades, loops)
-///   looma_sparks.png     3 spark lines (soft blink)
+///   looma_character.webp girl + cat
+///   looma_heart.webp     small heart (floats up and fades, loops)
+///   looma_sparks.webp    3 spark lines (soft blink)
 /// Mug steam is drawn in code. The whole picture floats up and down a little.
 ///
 /// With "reduce motion" on (or [animate] false) it is a still picture with
@@ -23,12 +23,13 @@ class LoomaCharacter extends StatefulWidget {
   final double height;
   final bool animate;
 
-  /// Width / height of the PNG canvas (900 x 959).
+  /// Width / height of the canvas (all three layers line up; the WebPs
+  /// are 600 x 639, the same shape as the original 900 x 959).
   static const double aspect = 900 / 959;
 
-  static const String characterAsset = 'assets/images/looma_character.png';
-  static const String heartAsset = 'assets/images/looma_heart.png';
-  static const String sparksAsset = 'assets/images/looma_sparks.png';
+  static const String characterAsset = 'assets/images/looma_character.webp';
+  static const String heartAsset = 'assets/images/looma_heart.webp';
+  static const String sparksAsset = 'assets/images/looma_sparks.webp';
 
   @override
   State<LoomaCharacter> createState() => _LoomaCharacterState();
