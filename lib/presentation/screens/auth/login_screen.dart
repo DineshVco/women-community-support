@@ -305,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen>
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'We only use your email to sign you in. '
-                      'It is never shown to anyone.',
+                      'Other members and moderators never see it.',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: palette.textSecondary,
                       ),

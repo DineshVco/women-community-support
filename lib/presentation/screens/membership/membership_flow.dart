@@ -348,8 +348,8 @@ class _WomenOnlyStepState extends State<_WomenOnlyStep>
       onBack: _saving ? null : _back,
       title: 'Looma is a space for women',
       message:
-          'Please confirm to continue. Your answer is private and is never '
-          'shown to anyone.',
+          'Please confirm to continue. Your answer is private. Other members '
+          'and moderators never see it.',
       button: LoomaButton.primary(
         label: 'Continue',
         loading: _saving,
@@ -546,7 +546,7 @@ class _BirthdayStepState extends State<_BirthdayStep>
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'Your data is private and secure.',
+                'Only your birth year is saved. Other members never see it.',
                 style: theme.textTheme.bodySmall,
               ),
             ),
