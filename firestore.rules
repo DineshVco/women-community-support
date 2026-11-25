@@ -477,7 +477,9 @@ service cloud.firestore {
     //
     // users/{uid} holds: lastPostAt (rate limit), isWoman (women-only
     // self-confirmation), birthYear (the YEAR only, after the age check),
-    // createdAt, and aliasKey (her secret key for post and reply aliases).
+    // createdAt, aliasKey (her secret key for post and reply aliases) and,
+    // if she chose one, callName (the name the Discuss greeting uses: 1 to
+    // 20 characters, no email address; she can change or remove it).
     // Only the owner can read, create or update it; nobody else can.
     // isWoman can only ever be set to true; birthYear, createdAt and aliasKey
     // are set once and never changed. She can delete it (account deletion),
@@ -496,7 +498,15 @@ service cloud.firestore {
       let d = request.resource.data;
       let changed = userKeysChanged();
       return d.keys().hasOnly(['lastPostAt', 'isWoman', 'birthYear', 'createdAt',
-                               'aliasKey'])
+                               'aliasKey', 'callName'])
+        // callName: optional; a short name, never an email address. The
+        // app allows 20 characters, counting an emoji as one; an emoji can
+        // be several characters here, hence the higher safety limit.
+        && (!changed.hasAny(['callName']) || !('callName' in d) || (
+             d.callName is string
+             && d.callName.size() >= 1
+             && d.callName.size() <= 80
+             && !d.callName.matches('.*@.*')))
         // aliasKey: 64 hex characters (256 random bits), set once.
         && (!changed.hasAny(['aliasKey']) || (
              (resource == null || !('aliasKey' in resource.data))

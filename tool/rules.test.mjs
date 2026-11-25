@@ -19,6 +19,7 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -1798,5 +1799,43 @@ describe('moderator post updates', () => {
     await assertFails(updateDoc(post, { status: 'deleted' }));
     await assertFails(updateDoc(post, { status: '' }));
     await assertFails(updateDoc(post, { status: 1 }));
+  });
+});
+
+describe('the name Looma greets her with (callName)', () => {
+  test('she can set, change and remove it', async () => {
+    await makeMember('siti');
+    const me = doc(as('siti'), 'users', 'siti');
+    await assertSucceeds(setDoc(me, { callName: 'Siti' }, { merge: true }));
+    await assertSucceeds(setDoc(me, { callName: 'Kak Ti' }, { merge: true }));
+    await assertSucceeds(updateDoc(me, { callName: deleteField() }));
+  });
+
+  test('also during sign-up, before the birthday step', async () => {
+    const me = doc(as('newbie'), 'users', 'newbie');
+    await assertSucceeds(
+      setDoc(me, { isWoman: true, createdAt: serverTimestamp() }),
+    );
+    await assertSucceeds(setDoc(me, { callName: 'Bee' }, { merge: true }));
+  });
+
+  test('empty, too long, not text, or an email address: refused', async () => {
+    await makeMember('siti');
+    const me = doc(as('siti'), 'users', 'siti');
+    for (const bad of ['', 'x'.repeat(81), 42, 'siti@mail.com']) {
+      await assertFails(setDoc(me, { callName: bad }, { merge: true }));
+    }
+  });
+
+  test('nobody else can read or set it', async () => {
+    await makeMember('siti');
+    await seed((db) =>
+      setDoc(doc(db, 'users', 'siti'), { callName: 'Siti' }, { merge: true }),
+    );
+    await makeMember('amira');
+    await assertFails(getDoc(doc(as('amira'), 'users', 'siti')));
+    await assertFails(
+      setDoc(doc(as('amira'), 'users', 'siti'), { callName: 'X' }, { merge: true }),
+    );
   });
 });
