@@ -383,7 +383,8 @@ void main() {
     expect(still, everyElement(1.0));
   });
 
-  group('"Write a post" stays off poll answers and counts', () {
+  group('"Write a post": always there at rest, hidden only while scrolling '
+      'down', () {
     bool pillVisible(WidgetTester tester) =>
         !tester
             .widget<IgnorePointer>(
@@ -391,69 +392,118 @@ void main() {
             )
             .ignoring;
 
-    /// Poll answers and counts rows of cards on screen, found by their keys
-    /// (not by the app's own tracking).
-    List<Rect> tappableAreas(WidgetTester tester) {
-      final screen = Offset.zero & tester.view.physicalSize / 3;
-      return [
-        for (final e
-            in find
-                .byWidgetPredicate(
-                  (w) =>
-                      w.key is ValueKey<String> &&
-                      ((w.key! as ValueKey<String>).value.startsWith(
-                            'poll-answers-',
-                          ) ||
-                          (w.key! as ValueKey<String>).value.startsWith(
-                            'post-counts-',
-                          )),
-                )
-                .evaluate())
-          if (e.renderObject case final RenderBox box
-              when box.attached && box.hasSize)
-            if ((box.localToGlobal(Offset.zero) & box.size) case final r
-                when r.overlaps(screen))
-              r,
-      ];
-    }
-
-    void expectClear(WidgetTester tester, String when) {
-      if (!pillVisible(tester)) return; // hidden: nothing to cover
-      final pill = tester.getRect(find.byType(WritePill));
-      for (final area in tappableAreas(tester)) {
-        expect(pill.overlaps(area), isFalse, reason: '$when: $area');
+    /// Drags the feed by [dy] per step (negative: scrolls down), [steps]
+    /// times, one frame each. Returns the finger, still down.
+    Future<TestGesture> drag(
+      WidgetTester tester,
+      double dy, {
+      int steps = 10,
+      Offset from = const Offset(200, 500),
+    }) async {
+      final finger = await tester.startGesture(from);
+      for (var i = 0; i < steps; i++) {
+        await finger.moveBy(Offset(0, dy));
+        await tester.pump(const Duration(milliseconds: 16));
       }
+      return finger;
     }
 
-    testWidgets('at the start, while scrolling down and back up', (
+    testWidgets('visible at rest, at the top', (tester) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      expect(pillVisible(tester), isTrue);
+      expect(find.text('Write a post'), findsOneWidget);
+    });
+
+    testWidgets('hidden while scrolling down; back once she stops', (
       tester,
     ) async {
-      // Polls every third post (see _posts), on a 6-inch phone.
       await _pumpHome(tester, sixInchPhone: true);
-      expectClear(tester, 'at rest');
+      final finger = await drag(tester, -40);
+      expect(pillVisible(tester), isFalse);
 
-      // Scroll down: checked every frame. The pill hides.
-      final finger = await tester.startGesture(const Offset(100, 600));
-      for (var i = 0; i < 20; i++) {
-        await finger.moveBy(const Offset(0, -40));
-        await tester.pump(const Duration(milliseconds: 16));
-        expectClear(tester, 'down $i');
-      }
+      // The finger rests (no movement): back after about 300 ms.
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(pillVisible(tester), isFalse);
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(pillVisible(tester), isTrue);
+
+      // Down again, then let go with momentum: back after it settles.
+      await finger.moveBy(const Offset(0, -40));
+      await tester.pump(const Duration(milliseconds: 16));
+      await finger.moveBy(const Offset(0, -40));
+      await tester.pump(const Duration(milliseconds: 16));
       expect(pillVisible(tester), isFalse);
       await finger.up();
       await tester.pumpAndSettle();
-      expectClear(tester, 'stopped');
+      await tester.pump(HomeScreen.pillReturnDelay);
+      expect(pillVisible(tester), isTrue);
+    });
 
-      // Scroll back up: the pill returns, never on a button.
-      final up = await tester.startGesture(const Offset(100, 300));
-      for (var i = 0; i < 20; i++) {
-        await up.moveBy(const Offset(0, 30));
-        await tester.pump(const Duration(milliseconds: 16));
-        expectClear(tester, 'up $i');
-      }
-      await up.up();
+    testWidgets('a fling down: hidden while it glides, back at rest', (
+      tester,
+    ) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      await tester.fling(_feed, const Offset(0, -600), 2000);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(pillVisible(tester), isFalse);
       await tester.pumpAndSettle();
-      expectClear(tester, 'stopped again');
+      await tester.pump(HomeScreen.pillReturnDelay);
+      expect(pillVisible(tester), isTrue);
+    });
+
+    testWidgets('back at once when she scrolls up', (tester) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      final down = await drag(tester, -40, steps: 15);
+      await down.up();
+      await tester.pumpAndSettle();
+      // Down again so it is hidden, then straight up without stopping.
+      final finger = await drag(tester, -30, steps: 5);
+      expect(pillVisible(tester), isFalse);
+      await finger.moveBy(const Offset(0, 20));
+      await tester.pump(const Duration(milliseconds: 16));
+      await finger.moveBy(const Offset(0, 20));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(pillVisible(tester), isTrue);
+      await finger.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a short list: never hidden', (tester) async {
+      await _pumpHome(
+        tester,
+        sixInchPhone: true,
+        posts: _posts().sublist(0, 1),
+      );
+      final finger = await drag(tester, -40);
+      expect(pillVisible(tester), isTrue);
+      await finger.up();
+      await tester.pumpAndSettle();
+      expect(pillVisible(tester), isTrue);
+    });
+
+    testWidgets('pull to refresh at the top: still visible', (tester) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      final finger = await drag(tester, 30, steps: 6);
+      expect(pillVisible(tester), isTrue);
+      await finger.up();
+      await tester.pumpAndSettle();
+      expect(pillVisible(tester), isTrue);
+    });
+
+    testWidgets('the bounce at the end does not hide it', (tester) async {
+      await _pumpHome(tester, sixInchPhone: true);
+      for (var i = 0; i < 20; i++) {
+        await tester.fling(_feed, const Offset(0, -2000), 5000);
+        await tester.pumpAndSettle();
+      }
+      await tester.pump(HomeScreen.pillReturnDelay);
+      expect(pillVisible(tester), isTrue);
+      // Pull past the end and let it spring back.
+      final finger = await drag(tester, -20, steps: 6);
+      await finger.up();
+      await tester.pumpAndSettle();
+      await tester.pump(HomeScreen.pillReturnDelay);
+      expect(pillVisible(tester), isTrue);
     });
 
     testWidgets('Reduce motion: it just shows or hides', (tester) async {

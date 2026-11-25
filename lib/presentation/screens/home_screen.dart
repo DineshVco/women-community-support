@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -27,7 +26,6 @@ import '../widgets/post_route.dart';
 import '../widgets/looma_card.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/post_card.dart';
-import '../widgets/tap_zone.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/heart_burst.dart';
 import '../widgets/posted_confirmation.dart';
@@ -44,6 +42,12 @@ class HomeScreen extends StatefulWidget {
   /// Shown only when there are no discussions (from microcopy.json).
   static String get emptyMessage => Microcopy.emptyFeed;
 
+  /// "Write a post" comes back this long after the feed stops moving.
+  static const Duration pillReturnDelay = Duration(milliseconds: 300);
+
+  /// Scrolling down further than this (px) hides it.
+  static const double pillHideAfter = 8;
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -56,18 +60,17 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Posts that have already played their entrance animation.
   final Set<String> _shownPostIds = {};
 
-  /// "Write a post" hides while the feed scrolls down and comes back when
-  /// it scrolls up (or at the top), like iOS.
+  /// "Write a post" is always there when the feed is at rest. It hides
+  /// only while she scrolls down, and comes back when she scrolls up, is
+  /// at the top, or stops scrolling for [HomeScreen.pillReturnDelay].
   bool _pillShown = true;
 
-  /// True while the pill would sit on a poll answer or a counts row of a
-  /// card on screen; it stays hidden until the space is clear.
-  bool _pillBlocked = false;
+  /// Brings the pill back once scrolling has stopped.
+  Timer? _pillReturn;
 
-  /// The cards' tappable areas (see TapZone) and where the pill sits.
-  final TapZoneRegistry _zones = TapZoneRegistry();
-  final GlobalKey _pillKey = GlobalKey(debugLabel: 'write-pill');
-  bool _checkScheduled = false;
+  /// How far she has scrolled down since the pill last showed (a little
+  /// jitter does not hide it).
+  double _downTravel = 0;
 
   final ScrollController _scrollController = ScrollController();
 
@@ -102,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (final s in _subscriptions) {
       s.cancel();
     }
+    _pillReturn?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -182,51 +186,42 @@ class _HomeScreenState extends State<HomeScreen> {
     showHeartBurst(context);
   }
 
-  /// Hide the pill while scrolling down the feed, show it on the way up.
-  bool _onUserScroll(UserScrollNotification notification) {
-    // Ignore the sideways category chips.
-    if (notification.metrics.axis != Axis.vertical) return false;
-
-    // Scrolling down hides it (even from the very top); scrolling up, or
-    // coming to rest at the top, shows it.
-    final atTop = notification.metrics.pixels <= 0;
-    final shown = switch (notification.direction) {
-      ScrollDirection.reverse => false,
-      ScrollDirection.forward => true,
-      ScrollDirection.idle => _pillShown || atTop,
-    };
-    if (shown != _pillShown) setState(() => _pillShown = shown);
-    return false;
+  void _setPill(bool shown) {
+    if (shown) _downTravel = 0;
+    if (shown != _pillShown && mounted) setState(() => _pillShown = shown);
   }
 
-  /// After the next frame, check the pill against the cards on screen.
-  void _schedulePillCheck() {
-    if (_checkScheduled) return;
-    _checkScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPill());
-  }
-
-  void _checkPill({double dy = 0}) {
-    _checkScheduled = false;
-    if (!mounted) return;
-    final box = _pillKey.currentContext?.findRenderObject();
-    if (box is! RenderBox || !box.attached || !box.hasSize) return;
-    // Where the pill sits when shown, with a little room around it.
-    final pill = (box.localToGlobal(Offset.zero) & box.size).inflate(4);
-    final blocked = _zones.overlaps(pill, dy: dy);
-    if (blocked != _pillBlocked) setState(() => _pillBlocked = blocked);
-  }
-
-  /// While the feed moves, decide before this frame is drawn: the cards
-  /// are about to move by the scroll delta, so check where they will be.
+  /// Decides from the feed's own movement (not the finger's direction), so
+  /// iPhone momentum and the overscroll bounce cannot confuse it:
+  ///  * at or above the top (and pull to refresh): shown;
+  ///  * bouncing past the end: no change;
+  ///  * moving down by more than a few pixels: hidden;
+  ///  * moving up: shown;
+  ///  * every movement restarts a short timer; when the feed has been
+  ///    still for [HomeScreen.pillReturnDelay], it is shown again.
+  /// A short list that cannot scroll never hides it.
   bool _onScroll(ScrollNotification n) {
-    if (n.depth == 0 &&
-        n.metrics.axis == Axis.vertical &&
-        n is ScrollUpdateNotification &&
-        n.scrollDelta != null) {
-      _checkPill(dy: -n.scrollDelta!);
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final m = n.metrics;
+    if (n is ScrollUpdateNotification && n.scrollDelta != null) {
+      final delta = n.scrollDelta!;
+      if (m.pixels <= m.minScrollExtent) {
+        _setPill(true);
+      } else if (m.pixels >= m.maxScrollExtent) {
+        // The bounce at the end: its direction means nothing.
+      } else if (delta > 0) {
+        _downTravel += delta;
+        if (_downTravel > HomeScreen.pillHideAfter) _setPill(false);
+      } else if (delta < -1) {
+        _setPill(true);
+      }
     }
-    _schedulePillCheck();
+    if (n is ScrollUpdateNotification ||
+        n is ScrollEndNotification ||
+        n is OverscrollNotification) {
+      _pillReturn?.cancel();
+      _pillReturn = Timer(HomeScreen.pillReturnDelay, () => _setPill(true));
+    }
     return false;
   }
 
@@ -256,11 +251,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
 
     final palette = context.palette;
-    final visible = _pillShown && !_pillBlocked;
+    final visible = _pillShown;
     final pillMotion = AppMotion.of(context, AppMotion.medium);
-    // The key sits outside the fade, so it always gives the pill's spot.
     final fab = SizedBox(
-      key: _pillKey,
       child: IgnorePointer(
         key: const ValueKey('write-pill-gate'),
         ignoring: !visible,
@@ -292,116 +285,109 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _feed,
       builder: (context, snapshot) {
         Widget wide(Widget child) => ContentWidth(child: child);
-        // The feed changed or scrolled: is the pill still clear?
-        _schedulePillCheck();
-        return TapZoneScope(
-          registry: _zones,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _onScroll,
-            child: LargeTitleScaffold(
-              title: 'Discuss',
-              controller: _scrollController,
-              onUserScroll: _onUserScroll,
-              onRefresh: _refresh,
-              trailing: const QuickExitButton(),
-              floatingActionButton: fab,
-              slivers: [
-                SliverList(
-                  delegate: SliverChildListDelegate([
-                    wide(
-                      FeedGreeting(
-                        // Her first name, on this phone only.
-                        name: context.read<PostRepository>().myGreetingName,
-                      ),
-                    ),
-                    if (_themedWeek != null)
-                      wide(ThemedWeekBanner(week: _themedWeek!)),
-                    if (_smallWins != null)
-                      wide(
-                        SmallWinsCard(
-                          thread: _smallWins!,
-                          onOpen: () => _openSmallWins(_smallWins!),
-                        ),
-                      ),
-                    wide(
-                      QuestionOfTheDay(
-                        onAnswer:
-                            (question) => _openCompose(initialTitle: question),
-                      ),
-                    ),
-                  ]),
-                ),
-                // Search and filters stay pinned under the header while the
-                // hero and the question card scroll away.
-                PinnedHeaderSliver(
-                  child: ColoredBox(
-                    key: const ValueKey('discuss-filters'),
-                    color: palette.background,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        wide(
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.screenHorizontal,
-                              6,
-                              AppSpacing.screenHorizontal,
-                              6,
-                            ),
-                            child: CupertinoSearchTextField(
-                              placeholder: 'Search discussions',
-                              onChanged:
-                                  (value) => setState(() => _query = value),
-                              style: TextStyle(color: palette.text),
-                              backgroundColor: palette.softFill,
-                            ),
-                          ),
-                        ),
-                        wide(
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.screenHorizontal,
-                            ),
-                            child: Row(
-                              children: [
-                                for (final (id, label) in [
-                                  (null, 'All'),
-                                  for (final c in AppCategories.all)
-                                    (c.id, c.shortName),
-                                ])
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      right: AppSpacing.sm,
-                                    ),
-                                    child: Pill(
-                                      label: label,
-                                      selected: _categoryId == id,
-                                      onTap:
-                                          () =>
-                                              setState(() => _categoryId = id),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                      ],
+        return NotificationListener<ScrollNotification>(
+          onNotification: _onScroll,
+          child: LargeTitleScaffold(
+            title: 'Discuss',
+            controller: _scrollController,
+            onRefresh: _refresh,
+            trailing: const QuickExitButton(),
+            floatingActionButton: fab,
+            slivers: [
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  wide(
+                    FeedGreeting(
+                      // Her first name, on this phone only.
+                      name: context.read<PostRepository>().myGreetingName,
                     ),
                   ),
+                  if (_themedWeek != null)
+                    wide(ThemedWeekBanner(week: _themedWeek!)),
+                  if (_smallWins != null)
+                    wide(
+                      SmallWinsCard(
+                        thread: _smallWins!,
+                        onOpen: () => _openSmallWins(_smallWins!),
+                      ),
+                    ),
+                  wide(
+                    QuestionOfTheDay(
+                      onAnswer:
+                          (question) => _openCompose(initialTitle: question),
+                    ),
+                  ),
+                ]),
+              ),
+              // Search and filters stay pinned under the header while the
+              // hero and the question card scroll away.
+              PinnedHeaderSliver(
+                child: ColoredBox(
+                  key: const ValueKey('discuss-filters'),
+                  color: palette.background,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      wide(
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.screenHorizontal,
+                            6,
+                            AppSpacing.screenHorizontal,
+                            6,
+                          ),
+                          child: CupertinoSearchTextField(
+                            placeholder: 'Search discussions',
+                            onChanged:
+                                (value) => setState(() => _query = value),
+                            style: TextStyle(color: palette.text),
+                            backgroundColor: palette.softFill,
+                          ),
+                        ),
+                      ),
+                      wide(
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.screenHorizontal,
+                          ),
+                          child: Row(
+                            children: [
+                              for (final (id, label) in [
+                                (null, 'All'),
+                                for (final c in AppCategories.all)
+                                  (c.id, c.shortName),
+                              ])
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    right: AppSpacing.sm,
+                                  ),
+                                  child: Pill(
+                                    label: label,
+                                    selected: _categoryId == id,
+                                    onTap:
+                                        () => setState(() => _categoryId = id),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  ),
                 ),
-                SliverList(
-                  delegate: SliverChildListDelegate([
-                    for (final child in _buildBody(context, snapshot, theme))
-                      wide(child),
-                    // Room for the "Write a post" pill, so it never covers the
-                    // last card.
-                    const SizedBox(height: WritePill.room),
-                  ]),
-                ),
-              ],
-            ),
+              ),
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  for (final child in _buildBody(context, snapshot, theme))
+                    wide(child),
+                  // Room for the "Write a post" pill, so it never covers the
+                  // last card.
+                  const SizedBox(height: WritePill.room),
+                ]),
+              ),
+            ],
           ),
         );
       },

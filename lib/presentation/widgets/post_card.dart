@@ -11,7 +11,6 @@ import 'category_label.dart';
 import 'looma_card.dart';
 import 'poll_view.dart';
 import 'post_title_hero.dart';
-import 'tap_zone.dart';
 import 'team_badge.dart';
 
 /// One post in the feed, as a card (12 px apart):
@@ -69,14 +68,13 @@ class PostCard extends StatelessWidget {
             // Polls can be answered right here in the feed.
             if (post.isPoll && post.isVisible) ...[
               const SizedBox(height: AppSpacing.md),
-              // Kept clear of floating buttons (see TapZone).
-              TapZone(
+              KeyedSubtree(
                 key: ValueKey('poll-answers-${post.id}'),
                 child: LivePoll(post: post),
               ),
             ],
             const SizedBox(height: 10),
-            TapZone(
+            KeyedSubtree(
               key: ValueKey('post-counts-${post.id}'),
               child: Row(
                 children: [
