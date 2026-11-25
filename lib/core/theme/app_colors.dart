@@ -149,6 +149,8 @@ class AppPalette {
       _isDark ? const Color(0xFF3A2624) : const Color(0xFFF8E1DD),
     'personal_safety' =>
       _isDark ? const Color(0xFF2C2838) : const Color(0xFFE9E4F2),
+    // Ask Looma Team: a soft lavender-blush.
+    'ask_looma' => _isDark ? const Color(0xFF352A33) : const Color(0xFFF3E3EC),
     _ => softFill,
   };
 

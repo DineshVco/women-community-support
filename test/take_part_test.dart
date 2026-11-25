@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsFlag;
+
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -455,9 +457,12 @@ void main() {
       ),
     );
     expect(find.text(CreatePostScreen.askNote), findsOneWidget);
-    final chip = tester.widget<ChoiceChip>(
-      find.widgetWithText(ChoiceChip, 'Ask Looma Team'),
+    // Its chip is already chosen.
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('Ask Looma Team'))
+          .hasFlag(SemanticsFlag.isSelected),
+      isTrue,
     );
-    expect(chip.selected, isTrue);
   });
 }
