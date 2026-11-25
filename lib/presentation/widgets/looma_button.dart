@@ -74,7 +74,16 @@ class LoomaButton extends StatelessWidget {
               key: const ValueKey('label'),
               mainAxisSize: MainAxisSize.min,
               children: [
-                Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+                // Up to two lines with large text on a small phone (the
+                // button grows taller), so the whole label is readable.
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 if (showArrow) ...[
                   const SizedBox(width: 8),
                   Icon(AppIcons.arrowRight, size: 20, color: foreground),

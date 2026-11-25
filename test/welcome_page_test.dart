@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:women_community_support/core/theme/app_colors.dart';
 import 'package:women_community_support/core/theme/app_theme.dart';
@@ -113,6 +114,18 @@ void main() {
           reason: '$fg on $bg',
         );
       }
+    }
+  });
+
+  testWidgets('320 px, 2x text: "I already have an account" is whole', (
+    tester,
+  ) async {
+    await _pump(tester, width: 320, height: 640, textScale: 2);
+    expect(tester.takeException(), isNull);
+    for (final label in ['Get Started', 'I already have an account']) {
+      final paragraph = tester.renderObject<RenderParagraph>(find.text(label));
+      expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      expect(tester.getRect(find.text(label)).bottom, lessThanOrEqualTo(640));
     }
   });
 }
