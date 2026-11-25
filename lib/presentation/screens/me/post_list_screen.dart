@@ -12,6 +12,9 @@ import '../../widgets/ios.dart';
 import '../../widgets/post_route.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/quick_exit_button.dart';
+import '../../widgets/posted_confirmation.dart';
+import '../../../core/utils/haptics.dart';
+import '../create_post_screen.dart';
 
 /// A simple list of posts for "My posts" and "Saved posts" (Me tab).
 /// Only she can see these lists.
@@ -23,7 +26,11 @@ class PostListScreen extends StatefulWidget {
     required this.emptyMessage,
     this.note,
     this.emptyPicture,
+    this.offerWrite = false,
   });
+
+  /// My posts: the empty list offers "Write a post" (opens New post).
+  final bool offerWrite;
 
   final String title;
   final Future<List<Post>> Function() load;
@@ -51,6 +58,18 @@ class _PostListScreenState extends State<PostListScreen> {
     } catch (_) {
       // The FutureBuilder shows the error.
     }
+  }
+
+  /// "Write a post" from the empty list: New post, then the new post in
+  /// this list.
+  Future<void> _write() async {
+    final alias = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(builder: (_) => const CreatePostScreen()),
+    );
+    if (alias == null || !mounted) return;
+    AppHaptics.light();
+    showPostedConfirmation(context, alias: alias);
+    _reload();
   }
 
   Future<void> _open(Post post) async {
@@ -94,13 +113,20 @@ class _PostListScreenState extends State<PostListScreen> {
                 children = const [SkeletonPostList()];
               } else if (snapshot.data!.isEmpty) {
                 final picture = widget.emptyPicture;
+                final write = widget.offerWrite;
                 children = [
                   picture == null
-                      ? CatEmptyState(line: widget.emptyMessage)
+                      ? CatEmptyState(
+                        line: widget.emptyMessage,
+                        actionLabel: write ? 'Write a post' : null,
+                        onAction: write ? _write : null,
+                      )
                       : CatEmptyState(
                         line: widget.emptyMessage,
                         picture: picture.$1,
                         pictureAspect: picture.$2,
+                        actionLabel: write ? 'Write a post' : null,
+                        onAction: write ? _write : null,
                       ),
                 ];
               } else {

@@ -266,6 +266,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       'Only you can see this list. Others '
                                       'only ever see a random alias.',
                                   emptyMessage: Microcopy.emptyMyPosts,
+                                  offerWrite: true,
                                 ),
                               ),
                         ),
