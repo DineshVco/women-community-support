@@ -27,8 +27,13 @@ class Wordmark extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            // A logo: it keeps its size with large text (it would break
+            // into "Loo / ma" on a small phone otherwise).
             Text(
               'Looma',
+              maxLines: 1,
+              softWrap: false,
+              textScaler: TextScaler.noScaling,
               style: AppTypography.heading(
                 size,
                 color,

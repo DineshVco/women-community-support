@@ -7,13 +7,13 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
+import '../widgets/looma_cat_blink.dart';
 import '../widgets/quick_exit_button.dart';
 import '../widgets/brand_mark.dart';
 import '../widgets/content_width.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/floating_illustration.dart';
 import '../widgets/looma_button.dart';
-import '../widgets/looma_character.dart';
 import '../../core/theme/app_icons.dart';
 
 /// First screen: four swipeable pages (Looma polish step 4).
@@ -48,10 +48,11 @@ class OnboardingScreen extends StatefulWidget {
     Color(0xFFFEF7F2),
   ];
 
-  /// Dark mode, still warm: a deep rose-brown to near black.
+  /// Dark mode, still warm: a deep rose-brown down to the app's dark
+  /// background (AppPalette.dark).
   static const List<Color> darkBackground = [
     Color(0xFF2B201E),
-    Color(0xFF141110),
+    Color(0xFF1C1614),
   ];
 
   /// The faint painted blob behind each cat.
@@ -274,6 +275,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 class _WelcomePage extends StatelessWidget {
   const _WelcomePage();
 
+  static const String subtitle = 'A community support app for women';
+
+  /// How tall the soft fade at the bottom edge is.
+  static const double _fade = 28;
+
   static const _features = [
     (
       icon: AppIcons.chat,
@@ -304,59 +310,84 @@ class _WelcomePage extends StatelessWidget {
     final palette = context.palette;
     const entrance = Entrance();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenHorizontal,
-      ),
-      child: Column(
-        children: [
-          ...entrance.items([
-            const Wordmark(size: AppTypography.wordmarkLarge),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'SUPPORT · SHARE · EMPOWER',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 13,
-                letterSpacing: 1.8,
-                color: palette.textSecondary,
-              ),
-            ),
-          ]),
-          const SizedBox(height: AppSpacing.lg),
-          entrance.character(const LoomaCharacter(height: 220)),
-          const SizedBox(height: AppSpacing.lg),
-          ...entrance.items([
-            Column(
-              children: [
-                Text(
-                  'Welcome to Looma',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineLarge,
+    // On a short screen the page scrolls; its bottom edge fades softly
+    // (instead of cutting a card in half), and there is room at the end so
+    // every sentence can scroll fully into view.
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback:
+          (rect) => LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: const [Colors.white, Colors.white, Colors.transparent],
+            stops: [
+              0,
+              1 - _fade / rect.height.clamp(_fade, double.infinity),
+              1,
+            ],
+          ).createShader(rect),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenHorizontal,
+          0,
+          AppSpacing.screenHorizontal,
+          _fade,
+        ),
+        child: Column(
+          children: [
+            ...entrance.items([
+              const Wordmark(size: 48),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'SUPPORT · SHARE · EMPOWER',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: 13,
+                  letterSpacing: 1.8,
+                  color: palette.textSecondary,
                 ),
-                HandDrawnUnderline(width: 170, color: palette.text),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'A women community support app',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontSize: 15,
-                color: palette.textSecondary,
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.md),
+            // The painted Looma cat, as on the sign-in screen: no box behind
+            // it, in light or dark mode.
+            entrance.character(
+              const ExcludeSemantics(
+                child: LoomaCatBlink(key: ValueKey('welcome-cat'), height: 110),
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'a safer, brighter tomorrow',
-              textAlign: TextAlign.center,
-              style: AppTypography.script(24, palette.text),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const _FeatureRow(features: _features),
-          ]),
-          const SizedBox(height: AppSpacing.lg),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            ...entrance.items([
+              Column(
+                children: [
+                  Text(
+                    'Welcome to Looma',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineLarge,
+                  ),
+                  HandDrawnUnderline(width: 170, color: palette.text),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _WelcomePage.subtitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontSize: 15,
+                  color: palette.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'a safer, brighter tomorrow',
+                textAlign: TextAlign.center,
+                style: AppTypography.script(24, palette.text),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const _FeatureGrid(features: _features),
+            ]),
+          ],
+        ),
       ),
     );
   }
@@ -623,31 +654,38 @@ class _Parallax extends StatelessWidget {
 typedef _Feature = ({IconData icon, String title, String text});
 
 /// Four features side by side, separated by thin vertical lines.
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({required this.features});
+/// The four features as a 2 x 2 grid. Every sentence is shown whole: the
+/// text wraps onto as many lines as it needs (the page scrolls if it must,
+/// with large text on a small phone).
+class _FeatureGrid extends StatelessWidget {
+  const _FeatureGrid({required this.features});
 
   final List<_Feature> features;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
-    final children = <Widget>[];
-
-    for (var i = 0; i < features.length; i++) {
-      if (i > 0) {
-        children.add(
-          VerticalDivider(width: 1, thickness: 1, color: palette.border),
-        );
-      }
-      children.add(Expanded(child: _FeatureTile(feature: features[i])));
+    final rows = <Widget>[];
+    for (var i = 0; i < features.length; i += 2) {
+      if (i > 0) rows.add(const SizedBox(height: AppSpacing.md));
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _FeatureTile(feature: features[i])),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child:
+                    i + 1 < features.length
+                        ? _FeatureTile(feature: features[i + 1])
+                        : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      );
     }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
+    return Column(children: rows);
   }
 }
 
@@ -660,34 +698,45 @@ class _FeatureTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: palette.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.border),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: palette.softFill,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(feature.icon, size: 24, color: palette.text),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            feature.title,
-            textAlign: TextAlign.center,
-            style: AppTypography.heading(
-              12,
-              palette.text,
-              weight: FontWeight.w600,
-              height: 1.2,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: palette.softFill,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(feature.icon, size: 16, color: palette.text),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  feature.title,
+                  style: AppTypography.heading(
+                    15,
+                    palette.text,
+                    weight: FontWeight.w600,
+                    height: 1.2,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             feature.text,
-            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
               height: 1.35,
