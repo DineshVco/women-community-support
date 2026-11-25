@@ -15,7 +15,7 @@ class WebStart extends StatefulWidget {
 
   /// The page's loading screen colours (the same as in index.html).
   static const Color lightBackground = Color(0xFFFEF7F2);
-  static const Color darkBackground = Color(0xFF141110);
+  static const Color darkBackground = Color(0xFF1C1614);
   static const Color lightText = Color(0xFF4A3B36);
   static const Color darkText = Color(0xFFF2E6DA);
 

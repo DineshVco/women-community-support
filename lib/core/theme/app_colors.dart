@@ -108,13 +108,13 @@ class AppPalette {
   Color get emergencyButton =>
       _isDark ? const Color(0xFFF5F2EC) : const Color(0xFF252221);
   Color get onEmergencyButton =>
-      _isDark ? const Color(0xFF111111) : const Color(0xFFFFFFFF);
+      _isDark ? const Color(0xFF1C1614) : const Color(0xFFFFFFFF);
 
   /// The "Write a post" pill and its text.
   Color get writePill =>
       _isDark ? const Color(0xFFF5F2EC) : const Color(0xFF191518);
   Color get onWritePill =>
-      _isDark ? const Color(0xFF111111) : const Color(0xFFFFFFFF);
+      _isDark ? const Color(0xFF1C1614) : const Color(0xFFFFFFFF);
 
   /// Interest chips on Me.
   Color get chipFill =>
@@ -181,19 +181,21 @@ class AppPalette {
     dangerSoft: Color(0xFFFDEEED),
   );
 
+  /// One warm dark palette for every screen, card and bar: the deep
+  /// rose-brown of the Welcome screen. Raised surfaces are a little lighter
+  /// than the background (as on iOS).
   static const AppPalette dark = AppPalette(
-    background: Color(0xFF0E0E0E),
-    // Raised surfaces are a little lighter than the background (as on iOS).
-    surface: Color(0xFF1C1B1A),
-    softFill: Color(0xFF2A2927),
-    border: Color(0xFF3A3835),
+    background: Color(0xFF1C1614),
+    surface: Color(0xFF2A211E),
+    softFill: Color(0xFF362B28),
+    border: Color(0xFF4A3D39),
     borderStrong: Color(0xFFF5F2EC),
     text: Color(0xFFF5F2EC),
-    // At least 5:1 on every dark background (AA).
-    textSecondary: Color(0xFFA8A39C),
-    textMuted: Color(0xFF9E9992),
+    // At least 5:1 on every dark background, cards and fills too (AA).
+    textSecondary: Color(0xFFB0A79F),
+    textMuted: Color(0xFFA69D95),
     primary: Color(0xFFF5F2EC),
-    onPrimary: Color(0xFF111111),
+    onPrimary: Color(0xFF1C1614),
     // Lighter shade of the accent so small labels stay readable on black.
     accent: Color(0xFFE07A62),
     blush: Color(0xFFE9B8B3),

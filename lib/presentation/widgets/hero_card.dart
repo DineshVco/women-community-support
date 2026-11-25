@@ -90,10 +90,11 @@ class HeroVeil {
   /// A soft blush wash in the top left corner (light mode).
   static const double blushWash = 0.18;
 
-  /// The plain veil's colour: warm cream in light mode, near-black in dark.
+  /// The plain veil's colour: the page background (warm cream, or the
+  /// warm dark brown).
   static Color colorFor(Brightness brightness) =>
       brightness == Brightness.dark
-          ? const Color(0xFF0E0E0E)
+          ? const Color(0xFF1C1614)
           : const Color(0xFFFEF7F2);
 
   /// The tint's colour at [x], between the two gradient colours.
