@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
 import 'looma_card.dart';
 import 'looma_header.dart';
@@ -268,7 +269,13 @@ CupertinoNavigationBar loomaNavBar(
   Widget? leading,
 }) {
   final palette = context.palette;
-  const titleStyle = TextStyle(fontSize: 17, fontWeight: FontWeight.w600);
+  // Newsreader, like the app's other headings.
+  final titleStyle = AppTypography.heading(
+    19,
+    palette.text,
+    weight: FontWeight.w600,
+    height: 1.1,
+  );
   return CupertinoNavigationBar(
     middle:
         title == null
@@ -277,7 +284,7 @@ CupertinoNavigationBar loomaNavBar(
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: titleStyle.copyWith(color: palette.text),
+              style: titleStyle,
             ),
     leading: leading,
     trailing:
