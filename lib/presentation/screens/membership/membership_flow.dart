@@ -6,6 +6,7 @@ import '../../../core/constants/membership.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/greeting.dart';
 import '../../../core/utils/time_format.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/post_repository.dart';
@@ -21,36 +22,78 @@ import '../../../core/theme/app_icons.dart';
 /// The two steps after creating a login, shown once per account:
 ///  1. Women only confirmation   2. Birthday (age check)
 /// AuthGate shows this until `users/{uid}` has both answers.
+///
+/// With [askName] (she has no Google name to greet her with), a short,
+/// skippable step comes between the two: "What should we call you?"
 class MembershipFlow extends StatefulWidget {
-  const MembershipFlow({super.key, required this.profile});
+  const MembershipFlow({
+    super.key,
+    required this.profile,
+    this.askName = false,
+  });
 
   final UserProfile profile;
+
+  /// Ask for a first name or nickname for the greeting (email sign-ups).
+  final bool askName;
+
+  /// Under "What should we call you?" (and in Me).
+  static const String nameNote =
+      'Looma greets you with it on Discuss. Only you see this name. '
+      'You can skip this and change it later in Me.';
 
   @override
   State<MembershipFlow> createState() => _MembershipFlowState();
 }
 
 class _MembershipFlowState extends State<MembershipFlow> {
-  /// True when the person tapped back from the birthday step.
+  /// True when the person tapped back to step 1.
   bool _revisitStepOne = false;
+
+  /// The name step was answered or skipped.
+  bool _nameDone = false;
 
   @override
   Widget build(BuildContext context) {
     final onStepOne = !widget.profile.isWoman || _revisitStepOne;
+    final askName = widget.askName;
+    final total = askName ? 4 : 3;
+
+    final Widget step;
+    if (onStepOne) {
+      step = _WomenOnlyStep(
+        key: const ValueKey('step1'),
+        total: total,
+        alreadyConfirmed: widget.profile.isWoman,
+        onConfirmed: () => setState(() => _revisitStepOne = false),
+      );
+    } else if (askName && !_nameDone) {
+      step = _NameStep(
+        key: const ValueKey('step-name'),
+        total: total,
+        initial: widget.profile.callName,
+        onBack: () => setState(() => _revisitStepOne = true),
+        onDone: () => setState(() => _nameDone = true),
+      );
+    } else {
+      step = _BirthdayStep(
+        key: const ValueKey('step2'),
+        step: askName ? 3 : 2,
+        total: total,
+        onBack:
+            () => setState(() {
+              if (askName) {
+                _nameDone = false;
+              } else {
+                _revisitStepOne = true;
+              }
+            }),
+      );
+    }
 
     return AnimatedSwitcher(
       duration: AppMotion.of(context, AppMotion.medium),
-      child:
-          onStepOne
-              ? _WomenOnlyStep(
-                key: const ValueKey('step1'),
-                alreadyConfirmed: widget.profile.isWoman,
-                onConfirmed: () => setState(() => _revisitStepOne = false),
-              )
-              : _BirthdayStep(
-                key: const ValueKey('step2'),
-                onBack: () => setState(() => _revisitStepOne = true),
-              ),
+      child: step,
     );
   }
 }
@@ -60,6 +103,7 @@ class _MembershipFlowState extends State<MembershipFlow> {
 class _StepScaffold extends StatelessWidget {
   const _StepScaffold({
     required this.step,
+    this.total = 3,
     required this.onBack,
     required this.title,
     required this.message,
@@ -70,8 +114,9 @@ class _StepScaffold extends StatelessWidget {
 
   final Entrance entrance;
 
-  /// 1 or 2 (out of 3; the third is the app itself).
+  /// This step's number, out of [total] (the last one is the app itself).
   final int step;
+  final int total;
   final VoidCallback? onBack;
   final String title;
   final String message;
@@ -108,11 +153,11 @@ class _StepScaffold extends StatelessWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Semantics(
-                              label: 'Step $step of 3',
+                              label: 'Step $step of $total',
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(2),
                                 child: TweenAnimationBuilder<double>(
-                                  tween: Tween(end: step / 3),
+                                  tween: Tween(end: step / total),
                                   duration: AppMotion.of(
                                     context,
                                     AppMotion.slow,
@@ -275,10 +320,12 @@ class _CannotJoinState extends State<_CannotJoin>
 class _WomenOnlyStep extends StatefulWidget {
   const _WomenOnlyStep({
     super.key,
+    this.total = 3,
     required this.alreadyConfirmed,
     required this.onConfirmed,
   });
 
+  final int total;
   final bool alreadyConfirmed;
   final VoidCallback onConfirmed;
 
@@ -345,6 +392,7 @@ class _WomenOnlyStepState extends State<_WomenOnlyStep>
     return _StepScaffold(
       entrance: entrance,
       step: 1,
+      total: widget.total,
       onBack: _saving ? null : _back,
       title: 'Looma is a space for women',
       message:
@@ -372,12 +420,127 @@ class _WomenOnlyStepState extends State<_WomenOnlyStep>
   }
 }
 
-// ───────────────────────── Step 2: birthday ─────────────────────────
+// ─────────────────── Step 2 (email sign-ups): her name ───────────────────
+
+class _NameStep extends StatefulWidget {
+  const _NameStep({
+    super.key,
+    required this.total,
+    required this.onBack,
+    required this.onDone,
+    this.initial,
+  });
+
+  final int total;
+  final VoidCallback onBack;
+  final VoidCallback onDone;
+  final String? initial;
+
+  @override
+  State<_NameStep> createState() => _NameStepState();
+}
+
+class _NameStepState extends State<_NameStep> with EntranceOnce<_NameStep> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initial ?? '',
+  );
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  String? get _clean => cleanCallName(_name.text);
+
+  Future<void> _continue() async {
+    final name = _clean;
+    if (name == null) return;
+    setState(() => _saving = true);
+    try {
+      await context.read<PostRepository>().setCallName(name);
+      widget.onDone();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not save. Check your connection and try again.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = _name.text.trim();
+    final wrong =
+        text.characters.length > maxCallNameLength || text.contains('@');
+    return _StepScaffold(
+      entrance: entrance,
+      step: 2,
+      total: widget.total,
+      onBack: _saving ? null : widget.onBack,
+      title: 'What should we call you?',
+      message: MembershipFlow.nameNote,
+      button: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LoomaButton.primary(
+            label: 'Continue',
+            loading: _saving,
+            onPressed: _clean == null ? null : _continue,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton(
+            onPressed: _saving ? null : widget.onDone,
+            child: const Text('Skip'),
+          ),
+        ],
+      ),
+      children: [
+        TextField(
+          key: const ValueKey('call-name'),
+          controller: _name,
+          enabled: !_saving,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.done,
+          autocorrect: false,
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _clean == null ? null : _continue(),
+          decoration: InputDecoration(
+            labelText: 'First name or nickname',
+            errorText:
+                wrong
+                    ? 'Up to $maxCallNameLength characters, and not an email '
+                        'address.'
+                    : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ───────────────────────── Step 3: birthday ─────────────────────────
 
 class _BirthdayStep extends StatefulWidget {
-  const _BirthdayStep({super.key, required this.onBack});
+  const _BirthdayStep({
+    super.key,
+    required this.onBack,
+    this.step = 2,
+    this.total = 3,
+  });
 
   final VoidCallback onBack;
+  final int step;
+  final int total;
 
   @override
   State<_BirthdayStep> createState() => _BirthdayStepState();
@@ -495,7 +658,8 @@ class _BirthdayStepState extends State<_BirthdayStep>
 
     return _StepScaffold(
       entrance: entrance,
-      step: 2,
+      step: widget.step,
+      total: widget.total,
       onBack: _saving ? null : widget.onBack,
       title: 'When’s your birthday?',
       message:

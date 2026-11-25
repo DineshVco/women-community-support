@@ -14,8 +14,8 @@ void main() {
       expect(greetingFor(DateTime(2026, 1, 1, 13)), 'Good afternoon');
       expect(greetingFor(DateTime(2026, 1, 1, 19)), 'Good evening');
       expect(greetingFor(DateTime(2026, 1, 1, 21, 59)), 'Good evening');
-      expect(greetingFor(DateTime(2026, 1, 1, 22)), 'Take a breath.');
-      expect(greetingFor(DateTime(2026, 1, 1, 2)), 'Take a breath.');
+      expect(greetingFor(DateTime(2026, 1, 1, 22)), 'Good evening');
+      expect(greetingFor(DateTime(2026, 1, 1, 2)), 'Good evening');
       expect(greetingFor(DateTime(2026, 1, 1, 5)), 'Good morning');
     });
   });

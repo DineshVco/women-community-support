@@ -368,9 +368,34 @@ class PostRepository {
         },
       );
 
-  /// Her first name for the Discuss greeting, on this phone only (see
-  /// greetingName). Never written anywhere.
+  /// The first word of her Google name (see greetingName), if any. Read
+  /// from the login on this phone, never written anywhere.
   String? get myGreetingName => greetingName(_auth.currentUser?.displayName);
+
+  /// The name the Discuss greeting uses: the one she chose ("What should we
+  /// call you?") or else the first word of her Google name. Live, so a
+  /// change in Me shows at once. Null: just "Good morning".
+  Stream<String?> watchGreetingName() {
+    try {
+      final google = myGreetingName;
+      return watchProfile()
+          .map((p) => p.callName ?? google)
+          .handleError((Object _) {});
+    } catch (_) {
+      // Signed out (or no login to read): no name, just "Good morning".
+      return Stream.value(null);
+    }
+  }
+
+  /// Saves (or, with null, removes) the name Looma greets her with. Only in
+  /// her private users/{uid} document, which only she can read; never in
+  /// posts, replies, aliases, reports or chat profiles.
+  Future<void> setCallName(String? name) {
+    final clean = cleanCallName(name);
+    return _me().set({
+      'callName': clean ?? FieldValue.delete(),
+    }, SetOptions(merge: true));
+  }
 
   /// The signed-in person's id, or null when signed out.
   String? get myUid => _auth.currentUser?.uid;

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +34,9 @@ class _NoAuth implements FirebaseAuth {
   dynamic noSuchMethod(Invocation i) => throw UnimplementedError('$i');
 }
 
+/// Names saved from "Your name" in Me.
+final _savedNames = <String?>[];
+
 class _Posts extends PostRepository {
   _Posts() : super(firestore: _NoDb(), auth: _NoAuth());
 
@@ -48,6 +52,9 @@ class _Posts extends PostRepository {
 
   @override
   Future<void> ensureCreatedAt() async {}
+
+  @override
+  Future<void> setCallName(String? name) async => _savedNames.add(name);
 }
 
 class _Chat extends ChatRepository {
@@ -405,5 +412,37 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(find.text('Done'), findsOneWidget);
+  });
+
+  testWidgets('Your name: only she sees it; she can change it here', (
+    tester,
+  ) async {
+    _savedNames.clear();
+    await _pumpMe(tester);
+    final row = find.byKey(const ValueKey('your-name'));
+    await tester.ensureVisible(row);
+    expect(
+      find.descendant(of: row, matching: find.text('Only you see this name.')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: row, matching: find.text('Not set')),
+      findsOneWidget,
+    );
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.text('What should we call you?'), findsOneWidget);
+    await tester.enterText(find.byType(CupertinoTextField), ' Kak Ti ');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(_savedNames, ['Kak Ti']);
+
+    // Empty removes it.
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(CupertinoTextField), '');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(_savedNames, ['Kak Ti', null]);
   });
 }

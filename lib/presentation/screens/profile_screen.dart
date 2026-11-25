@@ -10,6 +10,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/haptics.dart';
 import '../../data/models/chat_profile.dart';
 import '../../data/models/user_profile.dart';
+import '../../core/utils/greeting.dart';
 import '../../data/repositories/chat_repository.dart';
 import '../../data/microcopy.dart';
 import '../../data/repositories/post_repository.dart';
@@ -40,6 +41,11 @@ import '../../core/theme/app_icons.dart';
 ///  chat profile (avatar, alias, bio, badge) · Open to chat · interests ·
 ///  my space · moderation (moderators only) · privacy centre · settings.
 class ProfileScreen extends StatefulWidget {
+  /// Under "What should we call you?" in Me.
+  static const String callNameNote =
+      'Looma greets you with it on Discuss. Only you see this name. '
+      'Leave it empty to remove it.';
+
   const ProfileScreen({super.key});
 
   /// Easy to find, at the end of Me under "Account".
@@ -55,6 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final Stream<ChatProfile?> _chatProfile;
   late final Stream<UserProfile> _account;
   late final Stream<bool> _founding;
+  late final Stream<String?> _greetingName;
   late final Future<bool> _isModerator;
 
   bool _switching = false;
@@ -67,9 +74,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _chatProfile = _chat.watchMine();
     _account = _repo.watchProfile();
     _founding = _repo.watchFoundingMember();
+    _greetingName = _repo.watchGreetingName();
     _isModerator = _repo.isModerator();
     // Older accounts get a sign-up time now (starts the 24 hour wait).
     _repo.ensureCreatedAt().catchError((Object _) {});
+  }
+
+  /// "Your name": the name the Discuss greeting uses. Empty removes it.
+  Future<void> _editCallName(String? current) async {
+    final typed = await showTextDialog(
+      context,
+      title: 'What should we call you?',
+      message: ProfileScreen.callNameNote,
+      initial: current ?? '',
+      placeholder: 'First name or nickname',
+    );
+    if (typed == null || !mounted) return;
+    final name = cleanCallName(typed);
+    if (typed.trim().isNotEmpty && name == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Up to $maxCallNameLength characters, and not an email address.',
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      await _repo.setCallName(name);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save. Check your connection and try again.'),
+        ),
+      );
+    }
   }
 
   Future<void> _editChatProfile(ChatProfile? current) {
@@ -364,6 +405,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     GroupedSection(
                       header: 'Account',
                       children: [
+                        StreamBuilder<String?>(
+                          stream: _greetingName,
+                          builder:
+                              (context, name) => GroupedRow(
+                                key: const ValueKey('your-name'),
+                                icon: AppIcons.person,
+                                title: 'Your name',
+                                subtitle: 'Only you see this name.',
+                                value: name.data ?? 'Not set',
+                                onTap: () => _editCallName(name.data),
+                              ),
+                        ),
                         GroupedRow(
                           icon: AppIcons.guides,
                           title: 'View introduction',

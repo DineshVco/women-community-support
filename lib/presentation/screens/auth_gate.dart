@@ -176,6 +176,10 @@ class _ProfileGateState extends State<_ProfileGate> {
           child = MembershipFlow(
             key: const ValueKey('steps'),
             profile: snapshot.data!,
+            // No Google name to greet her with: ask (she can skip).
+            askName:
+                snapshot.data!.callName == null &&
+                context.read<PostRepository>().myGreetingName == null,
           );
         }
 

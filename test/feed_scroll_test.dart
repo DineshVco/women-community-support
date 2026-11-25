@@ -49,7 +49,7 @@ class _FakeRepo extends PostRepository {
   String? get myUid => 'me';
 
   @override
-  String? get myGreetingName => 'Bee';
+  Stream<String?> watchGreetingName() => Stream.value('Bee');
 
   @override
   Stream<List<Post>> watchFeed() async* {

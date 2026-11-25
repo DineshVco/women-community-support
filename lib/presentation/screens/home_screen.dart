@@ -74,6 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final ScrollController _scrollController = ScrollController();
 
+  /// The name the greeting uses (chosen in sign-up or Me, or her Google
+  /// first name); kept live, so a change in Me shows at once.
+  String? _greetingName;
+
   /// This week's Small wins thread (pinned) and themed week, if running.
   SmallWinsThread? _smallWins;
   ThemedWeek? _themedWeek;
@@ -95,6 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ..add(
         repo.watchThemedWeek().listen(
           (w) => setState(() => _themedWeek = w),
+          onError: (Object _) {},
+        ),
+      )
+      ..add(
+        repo.watchGreetingName().listen(
+          (name) => setState(() => _greetingName = name),
           onError: (Object _) {},
         ),
       );
@@ -296,12 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
             slivers: [
               SliverList(
                 delegate: SliverChildListDelegate([
-                  wide(
-                    FeedGreeting(
-                      // Her first name, on this phone only.
-                      name: context.read<PostRepository>().myGreetingName,
-                    ),
-                  ),
+                  wide(FeedGreeting(name: _greetingName)),
                   if (_themedWeek != null)
                     wide(ThemedWeekBanner(week: _themedWeek!)),
                   if (_smallWins != null)

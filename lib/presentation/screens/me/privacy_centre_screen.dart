@@ -76,8 +76,9 @@ class PrivacyCentreScreen extends StatefulWidget {
       'To be honest about the limits: the person who runs Looma\'s database '
           'can technically see everything stored in it. That includes your '
           'email (and, if you use Google, the name on your Google account), '
-          'your birth year, which posts and replies are yours, your '
-          'saved posts and your chat profile. Avoid sharing names, places or '
+          'the name you asked Looma to call you, your birth year, which '
+          'posts and replies are yours, your saved posts and your chat '
+          'profile. Avoid sharing names, places or '
           'details that could identify you or others.',
     ),
     (
